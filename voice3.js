@@ -139,19 +139,24 @@
   /* soft edge: the cloud thins out and shrinks well before the canvas border, so the frame never shows.
      Positions past ~50% of the half-size are pulled in (they can still slip over the edge, rarely), and fade + shrink. */
   const EDGE = [0, 0, 1];
-  function edge(x, y, hw, hh){
-    const ax = Math.abs(x/hw), ay = Math.abs(y/hh), d = Math.pow(Math.pow(ax, 2.6) + Math.pow(ay, 2.6), 1/2.6);
-    const k = 0.5, sp = 0.44;
+  let ET = 0;
+  function edge(x, y, hw, hh, i){
+    const ax = x/hw, ay = y/hh, d = Math.pow(Math.pow(Math.abs(ax), 2.2) + Math.pow(Math.abs(ay), 2.2), 1/2.2);
+    /* the soft border breathes and wanders: it bulges in slow waves around the angle and every dot has its own reach,
+       so the cloud ends in a loose, uneven fringe instead of a clean circle */
+    const th = Math.atan2(ay, ax), h = i == null ? .5 : ((i*2654435761) >>> 0) / 4294967296;
+    const wob = 0.09*Math.sin(3*th + ET*.23) + 0.06*Math.sin(5*th - ET*.17 + 1.3) + 0.05*Math.sin(2*th + ET*.11 + 4);
+    const k = 0.62 + wob + (h - .5)*0.22, sp = 0.5 + h*0.14;
     let f = 1;
-    if (d > k){ const d2 = k + sp*Math.tanh((d - k)/sp), r = d2/d; x *= r; y *= r; const t = clamp((d2 - k)/sp, 0, 1); f = 1 - Math.pow(t, 1.4)*0.98; }
+    if (d > k){ const d2 = k + sp*Math.tanh((d - k)/sp), r = d2/d; x *= r; y *= r; const t = clamp((d2 - k)/sp, 0, 1); f = 1 - Math.pow(t, 1.7)*0.95; }
     EDGE[0] = x; EDGE[1] = y; EDGE[2] = f; return EDGE;
   }
   Solo.prototype.draw = function (ctx, w, h, scale, alpha){
-    const R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, P = this.P, A = alpha == null ? 1 : alpha;
+    const R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, P = this.P, A = alpha == null ? 1 : alpha; ET = performance.now()/1000;
     this.ghosts.forEach(gh => { ctx.fillStyle = this.opt.rain ? noteColor(gh.u) : this.opt.mono; ctx.globalAlpha = Math.max(0, gh.a)*0.7*A; const c = Math.cos(gh.rot), s = Math.sin(gh.rot);
-      const ga = ctx.globalAlpha; for (let j = 0; j < gh.X.length; j++){ const E = edge((gh.X[j]*c - gh.Y[j]*s)*R, (gh.X[j]*s + gh.Y[j]*c)*R, cx, cy); if (E[2] < .04) continue; ctx.globalAlpha = ga*E[2]; const q = 1.2*(.5 + .5*E[2]); ctx.fillRect(cx + E[0] - q/2, cy + E[1] - q/2, q, q); } });
+      const ga = ctx.globalAlpha; for (let j = 0; j < gh.X.length; j++){ const E = edge((gh.X[j]*c - gh.Y[j]*s)*R, (gh.X[j]*s + gh.Y[j]*c)*R, cx, cy, j); if (E[2] < .04) continue; ctx.globalAlpha = ga*E[2]; const q = 1.2*(.5 + .5*E[2]); ctx.fillRect(cx + E[0] - q/2, cy + E[1] - q/2, q, q); } });
     ctx.fillStyle = this.color();
-    for (let i = 0; i < P.N; i++){ const E = edge(P.X[i]*R, P.Y[i]*R, cx, cy); if (E[2] < .04) continue; ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*A*E[2]; const z = P.Z[i]*1.05*(.45 + .55*E[2]); ctx.fillRect(cx + E[0] - z/2, cy + E[1] - z/2, z, z); }
+    for (let i = 0; i < P.N; i++){ const E = edge(P.X[i]*R, P.Y[i]*R, cx, cy, i); if (E[2] < .04) continue; ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*A*E[2]; const z = P.Z[i]*1.05*(.45 + .55*E[2]); ctx.fillRect(cx + E[0] - z/2, cy + E[1] - z/2, z, z); }
     ctx.globalAlpha = 1;
   };
   Solo.prototype.label = function (){
@@ -178,7 +183,7 @@
   function renderState(ctx, cx, cy, R, st, N, seed, color, alpha, dot, t){
     const Q = makeP(N, seed), S = Object.assign({ u:19, amp:.4, stab:.9, e:1, hold:1, crisp:true, noise:0, cent:.5, vo:1, bx:1 }, st), o = [0, 0];
     ctx.fillStyle = color;
-    for (let i = 0; i < N; i++){ targetOf(Q, S, i, 0, t == null ? 1.3 : t, o); const E = edge(o[0]*R, o[1]*R, cx, cy); if (E[2] < .04) continue; ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*alpha*E[2]; const z = Q.Z[i]*dot*(.45 + .55*E[2]); ctx.fillRect(cx + E[0] - z/2, cy + E[1] - z/2, z, z); }
+    for (let i = 0; i < N; i++){ targetOf(Q, S, i, 0, t == null ? 1.3 : t, o); const E = edge(o[0]*R, o[1]*R, cx, cy, i); if (E[2] < .04) continue; ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*alpha*E[2]; const z = Q.Z[i]*dot*(.45 + .55*E[2]); ctx.fillRect(cx + E[0] - z/2, cy + E[1] - z/2, z, z); }
     ctx.globalAlpha = 1;
   }
 
@@ -343,12 +348,12 @@
     const v = this.V[j], a = Math.floor(clamp(v.u, 0, 47)), gg = snap(v.u - a); return mix(HUE[a % 12], HUE[(a + 1) % 12], gg);
   };
   Multi.prototype.draw = function (ctx, w, h, scale, alpha){
-    const A = alpha == null ? 1 : alpha, R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, act = (this.info || { act:[0] }).act, Ka = act.length;
+    ET = performance.now()/1000; const A = alpha == null ? 1 : alpha, R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, act = (this.info || { act:[0] }).act, Ka = act.length;
     act.forEach((j, q) => {
       const base = this.colorOf(j);
       ctx.fillStyle = this.noise > .3 ? mix(toHex(base), this.mono, this.noise) : base;
       const a = (0.25 + 0.75*clamp(Math.max(this.V[j].e, this.noise), 0, 1))*A;
-      for (let i = q; i < this.N; i += Ka){ const E = edge(this.X[i]*R, this.Y[i]*R, cx, cy); if (E[2] < .04) continue; ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*a*E[2]; const z = this.ZS[i]*1.05*(.45 + .55*E[2]); ctx.fillRect(cx + E[0] - z/2, cy + E[1] - z/2, z, z); }
+      for (let i = q; i < this.N; i += Ka){ const E = edge(this.X[i]*R, this.Y[i]*R, cx, cy, i); if (E[2] < .04) continue; ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*a*E[2]; const z = this.ZS[i]*1.05*(.45 + .55*E[2]); ctx.fillRect(cx + E[0] - z/2, cy + E[1] - z/2, z, z); }
     });
     ctx.globalAlpha = 1;
   };
