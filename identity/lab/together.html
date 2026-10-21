@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#192524">
+<title>woisee · эксперимент: вместе</title>
+<link rel="stylesheet" href="../fonts.css">
+<style>
+:root{--paper:#FFFFFF;--paper-2:#F3F5F2;--soft:#E1E6E0;--ink:#192524;--muted:#5D6A67;--rule:rgba(25,37,36,.14);--signal:#F0472C;--vanilla:#FFFEFC;--lime:#ECF176;--rasp:#E780C0;--ebony:#192524;--f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;text-wrap:balance}p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+canvas{display:block}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.wm{font-weight:800;letter-spacing:-.05em;line-height:1}
+.top{border-bottom:1px solid var(--rule)}.top .wrap{display:flex;align-items:center;gap:16px;height:56px}
+.top .wm{font-size:22px}.top nav{margin-left:auto;display:flex;gap:16px;font-size:14px}.top a{color:var(--muted)}
+section.s{padding-top:64px;padding-bottom:16px}
+.sh{display:grid;grid-template-columns:120px 1fr;gap:20px;border-top:1px solid var(--ink);padding-top:18px;margin-bottom:28px}
+.sh .no{font-size:14px;font-weight:600}.sh h2{font-size:clamp(30px,4.4vw,54px);line-height:.95}
+.sh p{grid-column:2;max-width:66ch;font-size:18px;color:var(--muted);margin-top:12px}
+@media (max-width:700px){.sh{grid-template-columns:1fr;gap:10px}.sh p{grid-column:1}}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:99px;padding:8px 14px;font-size:14px;font-weight:500;background:var(--paper)}
+.btn.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.lab{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}@media (max-width:900px){.lab{grid-template-columns:1fr}}
+.stage{background:var(--ebony);border-radius:28px;position:relative;overflow:hidden;min-height:540px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage .over{position:absolute;left:18px;right:18px;top:16px;display:flex;justify-content:space-between;gap:12px;color:var(--vanilla);font-size:13px;pointer-events:none}
+.stage .big{position:absolute;left:18px;bottom:16px;right:18px;color:var(--vanilla);pointer-events:none}
+.stage .big b{display:block;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.stage .big span{font-size:14px;opacity:.75}
+.voices{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.vchip{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.vchip i{width:10px;height:10px;border-radius:50%;display:block}
+.vchip s{display:block;height:4px;border-radius:2px;background:currentColor;text-decoration:none;opacity:.7}
+.panel{display:flex;flex-direction:column;gap:12px}.row{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl{display:grid;grid-template-columns:86px 1fr 128px;align-items:center;gap:10px;font-size:14px}.ctrl span:last-child{text-align:right;font-weight:600;font-size:13px}
+.ctrl label{display:flex;align-items:center;gap:6px}.ctrl label i{width:10px;height:10px;border-radius:50%;display:block}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--ink);margin-top:-8px}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:var(--ink)}
+input[type=range]:disabled{opacity:.5}
+.lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.err{color:var(--signal);font-size:13px}.note{font-size:13px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:11px 10px 11px 0;border-top:1px solid var(--rule);vertical-align:top}
+th{font-size:13px;font-weight:600;color:var(--muted);border-top:1px solid var(--ink)}
+td:first-child{font-weight:700;white-space:nowrap}
+footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="wm">woisee</span><span class="note">эксперимент · вместе</span><nav><a href="index.html">нота, октава, радуга</a><a href="../v2/index.html">v2</a></nav></div></header>
+<main>
+<section class="s wrap" id="live">
+  <div class="sh"><span class="no">01</span><h2>Несколько голосов на одной пластине</h2>
+    <p>Каждый голос — своя часть материи со своей формой. Формы не просто лежат друг на друге: волны складываются, и вместе голоса рисуют узор, которого нет ни у одного по отдельности. Если двое поют почти одну ноту, узор пульсирует — это настоящие биения. Чем точнее строй, тем медленнее пульс. Совпали — узор замирает и течёт по кругу единым целым.</p></div>
+  <div class="lab">
+    <div class="stage"><canvas id="cv"></canvas>
+      <div class="over"><span id="mode">Модель</span><div class="voices" id="vlist"></div></div>
+      <div class="big"><b id="iv">один голос</b><span id="ivSub"></span></div></div>
+    <div class="panel">
+      <div class="row"><button class="btn sel" id="mModel">Модель</button><button class="btn" id="mVoice">Микрофон</button><button class="btn" id="mScene">Сценарий</button></div>
+      <div class="err" id="err" hidden></div>
+      <div id="modelUI" class="panel">
+        <div class="lbl">Голосов</div>
+        <div class="row"><button class="btn" data-k="1">1</button><button class="btn sel" data-k="2">2</button><button class="btn" data-k="3">3</button></div>
+        <div class="ctrl" data-v="0"><label for="u0"><i></i>Голос 1</label><input id="u0" type="range" min="0" max="47" step="0.01" value="12"><span></span></div>
+        <div class="ctrl" data-v="1"><label for="u1"><i></i>Голос 2</label><input id="u1" type="range" min="0" max="47" step="0.01" value="12.4"><span></span></div>
+        <div class="ctrl" data-v="2"><label for="u2"><i></i>Голос 3</label><input id="u2" type="range" min="0" max="47" step="0.01" value="19"><span></span></div>
+        <div class="lbl">Интервалы</div>
+        <div class="row" id="presets">
+          <button class="btn" data-p="0,0.4">Почти унисон</button><button class="btn" data-p="0,0">Унисон</button><button class="btn" data-p="0,4">Терция</button>
+          <button class="btn" data-p="0,7">Квинта</button><button class="btn" data-p="0,12">Октава</button><button class="btn" data-p="0,1">Секунда</button>
+          <button class="btn" data-p="0,4,7">Мажор</button><button class="btn" data-p="0,3,7">Минор</button>
+        </div>
+      </div>
+      <div id="micUI" class="panel" hidden>
+        <p class="note">Пойте вдвоём или втроём в один телефон, держите разные ноты или попробуйте спеть одну. До трёх голосов одновременно. Октава в унисон часто слышится как один голос: обертоны совпадают.</p>
+      </div>
+      <div class="lbl">Цвет</div>
+      <div class="row"><button class="btn sel" id="cNote">По ноте</button><button class="btn" id="cVoice">По голосу</button></div>
+      <p class="note">«Сценарий» без микрофона: двое начинают чуть вразнобой, подстраиваются в унисон, расходятся в терцию, квинту и октаву, потом третий голос собирает аккорд.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s wrap" id="how">
+  <div class="sh"><span class="no">02</span><h2>Как голоса взаимодействуют</h2><p>Те же правила, что для одного голоса, плюс одно новое: отношение между голосами.</p></div>
+  <table>
+    <thead><tr><th>Ситуация</th><th>Что делает форма</th><th>Почему так</th></tr></thead>
+    <tbody>
+      <tr><td>Унисон, строй найден</td><td>Формы совпадают, узор плотнее и чётче, чем у одного голоса. Течёт по кругу единым целым</td><td>Волны усиливают друг друга</td></tr>
+      <tr><td>Почти унисон</td><td>Узор пульсирует. Подписано, сколько биений в секунду. Подстроились — пульс замедляется до нуля</td><td>Две близкие частоты дают слышимые биения, их частота равна разнице частот</td></tr>
+      <tr><td>Октава</td><td>Та же симметрия, другие кольца: нижний голос держит центр, верхний — периферию</td><td>Одна нота в разных октавах</td></tr>
+      <tr><td>Квинта, кварта, терция</td><td>Два узора вплетаются друг в друга в устойчивый общий рисунок</td><td>Консонанс: биения не слышны</td></tr>
+      <tr><td>Секунда, тритон, септима</td><td>Общий рисунок держится, но по нему идёт постоянная мелкая дрожь</td><td>Диссонанс — напряжение, но не ошибка</td></tr>
+      <tr><td>Голос замолчал</td><td>Его материя рассыпается, остальные формы забирают пространство</td><td>Как пауза у одного голоса</td></tr>
+    </tbody>
+  </table>
+</section>
+</main>
+<footer><div class="wrap">woisee · эксперимент «вместе» · отдельная страница, остальные версии не изменены</div></footer>
+
+<script src="../v2/field.js"></script>
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const FL = window.Field;
+const VAN = '#FFFEFC', EBONY = '#192524', VCOL = ['#FFFEFC', '#ECF176', '#E780C0'];
+const HUE = ['#F4E04D','#B8D84A','#4DB86B','#2FA6A0','#3478D8','#4B4FB8','#7B41B3','#B33A92','#E8333E','#F05A2A','#F58C2B','#F7B733'];
+const NAMES = ['до','до♯','ре','ре♯','ми','фа','фа♯','соль','соль♯','ля','ля♯','си'];
+const OCTN = ['большой','малой','первой','второй'];
+const SYM = [2,2,3,3,4,5,5,6,6,7,7,8], SHARP = [0,1,0,1,0,0,1,0,1,0,1,0];
+const IV = ['унисон','малая секунда','большая секунда','малая терция','большая терция','кварта','тритон','квинта','малая секста','большая секста','малая септима','большая септима','октава'];
+const TENSE = { 1:1, 2:.6, 6:.8, 10:.6, 11:1 };
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const snap = f => f < .5 ? 4*f*f*f : 1 - Math.pow(-2*f + 2, 3)/2;
+const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+function fit(cv){ const d = DPR(), w = cv.clientWidth, h = cv.clientHeight, W = Math.round(w*d), H = Math.round(h*d); if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } const ctx = cv.getContext('2d'); ctx.setTransform(d,0,0,d,0,0); return { ctx, w, h }; }
+function hex(c){ return [1,3,5].map(i => parseInt(c.slice(i, i+2), 16)); }
+function mixc(a, b, t){ const A = hex(a), B = hex(b); return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v)*t)).join(',') + ')'; }
+// u — полутон от «до» большой октавы (C2, midi 36), 0..47
+const midiOf = u => u + 36, hzOf = u => 440*Math.pow(2, (u + 36 - 69)/12);
+function noteLabel(u){ const n = Math.round(u), c = Math.round((u - n)*100), o = Math.floor(n/12); return NAMES[((n % 12) + 12) % 12] + ' ' + (OCTN[o] || '') + (Math.abs(c) >= 3 ? (c > 0 ? ' +' : ' −') + Math.abs(c) + ' ц' : ''); }
+
+/* ---------- поле одного голоса ---------- */
+function zNote(n, r, th){ n = clamp(n, 0, 47); const pc = n % 12, k = Math.floor(n/12) + 1, m = SYM[pc], tw = SHARP[pc], rr = k*Math.PI*r*1.15; return Math.cos(m*(th + Math.PI/2 + tw*r*1.7))*Math.cos(rr) + 0.18*Math.cos(rr); }
+function zVoice(u, r, th){ const a = Math.floor(u), g = snap(u - a); return g < 0.01 ? zNote(a, r, th) : g > 0.99 ? zNote(a + 1, r, th) : (1 - g)*zNote(a, r, th) + g*zNote(a + 1, r, th); }
+
+/* ---------- голоса ---------- */
+const MAXV = 3;
+const V = [0,1,2].map(j => ({ u:12, lev:0, e:0, stab:.9, hold:0, rot:j*2.1, on:false }));
+const VT = [0,1,2].map(() => ({ u:12, lev:.5, e:0, stab:.9, hold:0, on:false }));
+let mode = 'model', K = 2, colorMode = 'note', t = 0, noise = 0, noiseT = 0, beat = { fb: 0, on: false, t: 0 };
+
+// пары: интервал, отклонение от строя, частота биений
+function pairInfo(a, b){
+  const lo = Math.min(a.u, b.u), hi = Math.max(a.u, b.u), d = hi - lo, n = Math.round(d), dev = d - n;
+  const fb = hzOf(lo + n)*(Math.pow(2, Math.abs(dev)/12) - 1);   // частота биений, Гц
+  let locked = Math.abs(dev) < 0.12, fbo = fb;
+  if (mode === 'voice' && beat.on && d < 0.5){ fbo = beat.fb; locked = beat.fb < 0.8; }   // слышимые биения важнее оценки высоты
+  const cls = n % 12 === 0 && n > 0 ? 12 : n % 12;
+  return { n, dev: locked ? 0 : (Math.abs(dev) < 0.12 ? 0.2*Math.sign(dev || 1) : dev), fb: fbo, locked, cls, tense: TENSE[n % 12] || 0, name: n > 12 ? IV[cls] + (n > 12 && cls !== 12 ? ' через октаву' : '') : IV[n] };
+}
+
+/* ---------- материя ---------- */
+const N = innerWidth < 700 ? 5200 : 8400;
+const r0 = FL.rng(17), X0 = new Float32Array(N), Y0 = new Float32Array(N), X = new Float32Array(N), Y = new Float32Array(N), CAP = new Float32Array(N), JX = new Float32Array(N), JY = new Float32Array(N), ZS = new Float32Array(N);
+for (let i = 0; i < N; i++){ X0[i] = FL.gs(r0)*0.42; Y0[i] = FL.gs(r0)*0.4; X[i] = X0[i]; Y[i] = Y0[i]; CAP[i] = Math.pow(r0(), 0.18); JX[i] = FL.gs(r0); JY[i] = FL.gs(r0); ZS[i] = 0.7 + r0()*r0()*1.3; }
+function owners(){ const act = []; for (let j = 0; j < MAXV; j++) if (V[j].on || V[j].e > 0.15) act.push(j); return act.length ? act : [0]; }
+
+function step(dt){
+  const act = owners(), Ka = act.length;
+  // взаимодействия: биения и напряжение для каждого голоса
+  const pulse = [0,0,0], tension = [0,0,0], lockedAll = [true,true,true], ws = V.map(v => v.e*(0.4 + 0.6*v.lev));
+  for (let a = 0; a < Ka; a++) for (let b = a + 1; b < Ka; b++){
+    const A = V[act[a]], B = V[act[b]]; if (A.e < .3 || B.e < .3) continue;
+    const p = pairInfo(A, B);
+    if (!p.locked && Math.abs(p.dev) < 0.5){ const ph = 0.5 - 0.5*Math.cos(2*Math.PI*clamp(p.fb, 0.3, 7)*t); pulse[act[a]] = Math.max(pulse[act[a]], ph*(1 - Math.abs(p.dev)*1.2)); pulse[act[b]] = Math.max(pulse[act[b]], ph*(1 - Math.abs(p.dev)*1.2)); }
+    if (!p.locked){ lockedAll[act[a]] = false; lockedAll[act[b]] = false; }
+    tension[act[a]] = Math.max(tension[act[a]], p.tense); tension[act[b]] = Math.max(tension[act[b]], p.tense);
+  }
+  // вращение: строй найден — одна скорость на всех, иначе каждый своя
+  const allLocked = act.every(j => lockedAll[j]);
+  act.forEach((j, q) => { const sp = allLocked ? 0.3 : 0.18 + 0.16*q; V[j].rot += dt*sp*V[j].hold*V[j].e; });
+  if (allLocked && Ka > 1){ const m = act.reduce((s, j) => s + V[j].rot, 0)/Ka; act.forEach(j => V[j].rot += (m - V[j].rot)*(1 - Math.pow(0.97, dt*60))); }
+  const mv0 = 1 - Math.pow(1 - .12, dt*60), mv1 = 1 - Math.pow(1 - .03, dt*60), e = 0.004;
+  for (let i = 0; i < N; i++){
+    const k = act[i % Ka], v = V[k];
+    const c = Math.cos(v.rot), s = Math.sin(v.rot), env = 0.85 + 0.3*v.lev;
+    const x = (X0[i]*c - Y0[i]*s)*env, y = (X0[i]*s + Y0[i]*c)*env;
+    // поле: свой голос + вклад остальных (суперпозиция), вклад пульсирует при биениях
+    const F = (px, py) => { const r = Math.hypot(px, py), th = Math.atan2(py, px); let z = zVoice(v.u, r, th); for (let q = 0; q < Ka; q++){ const j = act[q]; if (j === k) continue; z += 0.55*ws[j]*(1 - 0.6*pulse[k])*zVoice(V[j].u, r, th); } return z; };
+    const z = F(x, y), zx = (F(x + e, y) - z)/e, zy = (F(x, y + e) - z)/e, g2 = zx*zx + zy*zy + 1e-4;
+    let dx = -z*zx/g2, dy = -z*zy/g2; const dl = Math.hypot(dx, dy); if (dl > .16){ dx *= .16/dl; dy *= .16/dl; }
+    const g = v.u - Math.floor(v.u), blur = 4*snap(g)*(1 - snap(g));
+    const order = v.e*(0.4 + 0.6*v.stab)*(0.55 + 0.45*v.hold)*(1 - blur*0.5)*(1 - 0.5*pulse[k])*(1 - 0.5*noise)*CAP[i];
+    const jit = 0.0035 + (1 - v.stab)*0.03 + blur*0.025 + tension[k]*0.006*(0.6 + 0.4*Math.sin(t*23 + i)) + pulse[k]*0.012 + noise*0.03;
+    const w = Math.sin(t*6 + i)*0.5 + 0.5;
+    const tx = x + dx*order + JX[i]*jit*(0.4 + w), ty = y + dy*order + JY[i]*jit*(0.4 + w);
+    const mv = v.e > .5 ? mv0 : mv1;
+    X[i] += (tx - X[i])*mv; Y[i] += (ty - Y[i])*mv;
+  }
+  return { act, pulse, allLocked };
+}
+
+function colorOf(j){ return colorMode === 'voice' ? VCOL[j] : (() => { const a = Math.floor(clamp(V[j].u, 0, 47)), g = snap(V[j].u - a); return mixc(HUE[a % 12], HUE[(a + 1) % 12], g); })(); }
+const cv = $('#cv');
+function draw(info){
+  const { ctx, w, h } = fit(cv); ctx.fillStyle = EBONY; ctx.fillRect(0, 0, w, h);
+  const R = Math.min(w, h)*0.5, cx = w/2, cy = h/2, act = info.act, Ka = act.length;
+  act.forEach((j, q) => {
+    ctx.fillStyle = noise > .3 ? mixc(colorMode === 'voice' ? VCOL[j] : HUE[Math.round(V[j].u) % 12], VAN, noise) : colorOf(j);
+    const a = 0.25 + 0.75*clamp(V[j].e, 0, 1);
+    for (let i = q; i < N; i += Ka){ ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*a; const z = ZS[i]*1.05; ctx.fillRect(cx + X[i]*R - z/2, cy + Y[i]*R - z/2, z, z); }
+  });
+  ctx.globalAlpha = 1;
+  // подписи
+  const live = act.filter(j => V[j].on && V[j].e > .5);
+  $('#vlist').innerHTML = live.map(j => `<div class="vchip" style="color:${colorOf(j)}"><i style="background:${colorOf(j)}"></i><span style="color:var(--vanilla)">Голос ${j + 1} · ${noteLabel(V[j].u)}</span><s style="width:${Math.round(14 + 40*V[j].lev)}px"></s></div>`).join('');
+  let title = 'тишина', sub = 'материя рассыпана';
+  if (noise > .5 && !live.length){ title = 'шум'; sub = 'дыхание или шипящие — без нот'; }
+  else if (live.length === 1){ title = 'один голос'; sub = noteLabel(V[live[0]].u); }
+  else if (live.length === 2){
+    const p = pairInfo(V[live[0]], V[live[1]]); title = !p.locked && Math.abs(p.dev) < .5 && p.n === 0 ? 'почти унисон' : !p.locked && Math.abs(p.dev) < .5 ? 'почти ' + p.name : p.name;
+    sub = p.locked ? (p.tense ? 'строй найден · напряжённый интервал, узор дрожит' : 'строй найден · узор течёт единым целым') : Math.abs(p.dev) < .5 ? 'биения ' + p.fb.toFixed(1).replace('.', ',') + ' в секунду · подстройтесь, пока пульс не замрёт' : 'между интервалами';
+  } else if (live.length === 3){
+    const us = live.map(j => V[j].u).sort((a, b) => a - b), i1 = Math.round(us[1] - us[0]) % 12, i2 = Math.round(us[2] - us[0]) % 12;
+    const ps = [[0,1],[0,2],[1,2]].map(([a, b]) => pairInfo(V[live[a]], V[live[b]])), ok = ps.every(p => p.locked);
+    title = i1 === 4 && i2 === 7 ? 'мажорное трезвучие' : i1 === 3 && i2 === 7 ? 'минорное трезвучие' : i1 === 0 && i2 === 0 ? 'унисон втроём' : 'три голоса';
+    const worst = ps.filter(p => !p.locked && Math.abs(p.dev) < .5).sort((a, b) => b.fb - a.fb)[0];
+    sub = ok ? 'строй найден · аккорд течёт единым целым' : worst ? 'биения ' + worst.fb.toFixed(1).replace('.', ',') + ' в секунду · кто-то чуть мимо' : 'голоса между интервалами';
+  }
+  $('#iv').textContent = title; $('#ivSub').textContent = sub;
+}
+
+/* ---------- плавность ---------- */
+function ease(dt){
+  const k = a => 1 - Math.pow(1 - a, dt*60);
+  for (let j = 0; j < MAXV; j++){
+    const v = V[j], T = VT[j];
+    if (T.on){ v.u += (T.u - v.u)*k(mode === 'voice' ? .25 : .07); }
+    v.lev += (T.lev - v.lev)*k(T.lev > v.lev ? .15 : .04);
+    v.stab += (T.stab - v.stab)*k(.08);
+    const eT = T.on ? 1 : 0; v.e += (eT - v.e)*k(eT > v.e ? .07 : .015);
+    v.hold += ((T.on && T.stab > .6 ? 1 : 0) - v.hold)*k(T.on ? .02 : .06);
+    v.on = T.on;
+  }
+  noise += (noiseT - noise)*k(noiseT > noise ? .12 : .04);
+}
+
+/* ---------- модель ---------- */
+function modelTargets(){
+  for (let j = 0; j < MAXV; j++){ VT[j].on = j < K; VT[j].u = +$('#u' + j).value; VT[j].lev = .5; VT[j].stab = .92; }
+  noiseT = 0;
+}
+// сценарий: [время, [u1,u2,u3|null]]
+const SCENE = [[0,[12,12.45,null]],[3.2,[12,12.15,null]],[5,[12,12,null]],[8,[12,16,null]],[11,[12,19,null]],[14,[12,24,null]],[17.5,[12,16,19]],[21,[12,16,18.6]],[23.5,[12,16,19]],[27,null]];
+let sceneT = -1;
+function sceneTargets(dt){
+  sceneT += dt; let cur = null;
+  for (const [tt, us] of SCENE) if (sceneT >= tt) cur = us;
+  if (!cur){ sceneT = -1; setMode('model'); return; }
+  cur.forEach((u, j) => { VT[j].on = u !== null; if (u !== null) VT[j].u = u; VT[j].lev = .5; VT[j].stab = .92; });
+  noiseT = 0;
+}
+
+/* ---------- микрофон: несколько основных тонов ---------- */
+let AC = null, an = null, stream = null, spec = null, mag = null, res = null, td = null, floorDb = -70;
+const tracks = [null, null, null];
+async function micStart(){
+  stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } });
+  AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') await AC.resume();
+  an = AC.createAnalyser(); an.fftSize = 8192; an.smoothingTimeConstant = 0.2;
+  AC.createMediaStreamSource(stream).connect(an);
+  spec = new Float32Array(an.frequencyBinCount); mag = new Float32Array(an.frequencyBinCount); res = new Float32Array(an.frequencyBinCount); td = new Float32Array(2048);
+}
+function micStop(){ if (stream) stream.getTracks().forEach(tr => tr.stop()); if (AC) AC.close(); AC = an = stream = null; tracks.fill(null); }
+const CANDS = []; for (let m = 0; m <= 12*Math.log2(1000/70)*10; m++) CANDS.push(70*Math.pow(2, m/120));
+function peakAt(arr, b){ const wdt = Math.max(1, b*0.018), lo = Math.max(1, Math.floor(b - wdt)), hi = Math.min(arr.length - 2, Math.ceil(b + wdt)); let mx = 0, at = lo; for (let i = lo; i <= hi; i++) if (arr[i] > mx){ mx = arr[i]; at = i; } return [mx, at]; }
+function multiPitch(){
+  an.getFloatFrequencyData(spec); const sr = AC.sampleRate, bin = sr/an.fftSize, n = spec.length;
+  for (let i = 0; i < n; i++){ mag[i] = Math.sqrt(Math.pow(10, spec[i]/20)); res[i] = mag[i]; }
+  const sorted = Array.from(mag.subarray(Math.floor(100/bin), Math.floor(4000/bin))).sort((a, b) => a - b), floorM = sorted[sorted.length >> 1] + 1e-9;
+  // спектральная плоскость — шум или нота
+  let lg = 0, am = 0, cnt = 0; for (let i = Math.floor(150/bin); i < Math.floor(8000/bin); i++){ const p = mag[i]*mag[i] + 1e-20; lg += Math.log(p); am += p; cnt++; }
+  const flat = Math.exp(lg/cnt)/(am/cnt);
+  const out = []; let first = 0;
+  for (let it = 0; it < 3; it++){
+    let best = 0, bf = 0;
+    for (const f0 of CANDS){ let s = 0, strong = 0; for (let h = 1; h <= 10; h++){ const f = h*f0; if (f > 5000) break; const [m] = peakAt(res, f/bin); s += m*(f0 + 20)/(h*f0 + 320); if (h <= 4 && m > 5*floorM) strong++; } if (strong >= 2 && s > best){ best = s; bf = f0; } }
+    if (!bf) break; if (it === 0) first = best; else if (best < 0.5*first) break;
+    // кратные уже найденного тона (2×, 3×, 4×) чаще всего — его же обертоны: нужен очень сильный сигнал
+    const mult = out.some(o => { const q = bf/o.f, rq = Math.round(q); return rq >= 2 && Math.abs(q - rq) < 0.02*rq; });
+    if (mult && best < 0.8*first) break;
+    if (out.some(o => Math.abs(12*Math.log2(bf/o.f)) < 1)) break;
+    // уточнение по гармоникам и вычитание
+    let num = 0, den = 0;
+    for (let h = 1; h <= 10; h++){ const f = h*bf; if (f > 5000) break; const [m, at] = peakAt(res, f/bin); const a0 = res[at - 1], a1 = res[at], a2 = res[at + 1], dd = a0 - 2*a1 + a2, sh = dd ? 0.5*(a0 - a2)/dd : 0; num += m*((at + sh)*bin/h); den += m;
+      const wdt = Math.max(2, (f/bin)*0.03); for (let i = Math.max(0, Math.floor(f/bin - wdt)); i <= Math.min(n - 1, Math.ceil(f/bin + wdt)); i++) res[i] *= 0.02; }
+    out.push({ f: num/den, sal: best });
+  }
+  return { out, first, flat };
+}
+let micAcc = 0, envBuf = [];
+// Биения: двое поют почти одну ноту — по высоте их не разделить, но громкость пульсирует с частотой разницы
+function detectBeats(){
+  const L = envBuf.length; if (L < 80) return null;
+  const xs = envBuf.slice(-110), ts = xs.map(e => e[0]), v = xs.map(e => e[1]);
+  const m = v.reduce((a, b) => a + b, 0)/v.length; if (m <= 0) return null;
+  const sd = Math.sqrt(v.reduce((a, b) => a + (b - m)*(b - m), 0)/v.length), depth = sd/m;
+  if (depth < 0.18) return null;
+  const fr = (ts.length - 1)/(ts[ts.length - 1] - ts[0]), cs = []; let best = 0;
+  const l0 = Math.max(2, Math.round(fr/8)), l1 = Math.round(fr/0.8);
+  for (let lag = l0; lag <= l1; lag++){ let c = 0, n = 0; for (let i = lag; i < v.length; i++){ c += (v[i] - m)*(v[i - lag] - m); n++; } c = c/(n*sd*sd); cs.push(c); if (c > best) best = c; }
+  if (best < 0.45) return null;
+  // первый локальный пик, близкий к максимуму, — сам период, а не его кратное
+  for (let q = 1; q < cs.length - 1; q++) if (cs[q] >= cs[q - 1] && cs[q] >= cs[q + 1] && cs[q] > 0.8*best){
+    const a0 = cs[q - 1], a1 = cs[q], a2 = cs[q + 1], dd = a0 - 2*a1 + a2, sh = dd ? 0.5*(a0 - a2)/dd : 0;
+    return { fb: fr/(l0 + q + sh), depth };
+  }
+  return null;
+}
+function micTargets(dt){
+  an.getFloatTimeDomainData(td); let s2 = 0; for (let i = 0; i < td.length; i++) s2 += td[i]*td[i];
+  const db = 20*Math.log10(Math.sqrt(s2/td.length) + 1e-7);
+  envBuf.push([t, Math.sqrt(s2/td.length)]); if (envBuf.length > 140) envBuf.shift();
+  if (db < floorDb) floorDb += (db - floorDb)*0.3; else floorDb += dt*0.25; floorDb = clamp(floorDb, -95, -30);
+  const act = db > floorDb + 8;
+  micAcc += dt; if (micAcc < 1/30) return; const step = micAcc; micAcc = 0;
+  const { out, first, flat } = act ? multiPitch() : { out: [], first: 0, flat: 0 };
+  noiseT = act && !out.length ? 1 : act && flat > .35 ? .5 : 0;
+  // сопоставление с треками (голос = непрерывная линия высоты)
+  const used = [false, false, false];
+  out.forEach(d => {
+    const u = clamp(69 + 12*Math.log2(d.f/440) - 36, 0, 47), lev = clamp(d.sal/first, .2, 1)*clamp((db - floorDb - 8)/25, .25, 1);
+    let bj = -1, bd = 1.6; tracks.forEach((tr, j) => { if (tr && !used[j] && Math.abs(tr.u - u) < bd){ bd = Math.abs(tr.u - u); bj = j; } });
+    if (bj < 0) bj = tracks.findIndex((tr, j) => !tr && !used[j]);
+    if (bj < 0) return;
+    const tr = tracks[bj] || (tracks[bj] = { u, lev, miss: 0, hist: [], age: 0 });
+    tr.u += (u - tr.u)*0.6; tr.lev = lev; tr.miss = 0; tr.age++; tr.hist.push(u); if (tr.hist.length > 12) tr.hist.shift(); used[bj] = true;
+  });
+  tracks.forEach((tr, j) => { if (tr && !used[j]){ tr.miss += step; if (tr.miss > (tr.age >= 4 ? 0.35 : 0.1)) tracks[j] = null; } });
+  // один слышимый тон + биения = почти унисон двух голосов
+  const liveTr = tracks.filter(tr => tr && tr.age >= 4 && tr.miss < 0.15);
+  beat.t -= step; if (beat.t <= 0){ beat.t = 0.25; const bt = liveTr.length === 1 ? detectBeats() : null; beat.on = !!bt; if (bt) beat.fb += (bt.fb - beat.fb)*0.5; }
+  tracks.forEach((tr, j) => {
+    VT[j].on = !!tr && tr.miss < 0.15 && tr.age >= 4;   // новый голос подтверждается за ~0,13 с
+    if (tr){ VT[j].u = tr.u; VT[j].lev = tr.lev; const m = tr.hist.reduce((a, b) => a + b, 0)/tr.hist.length, sd = Math.sqrt(tr.hist.reduce((a, b) => a + (b - m)*(b - m), 0)/tr.hist.length); VT[j].stab = clamp(1 - (sd - .1)/.9, 0, 1); }
+  });
+  if (beat.on && liveTr.length === 1){
+    const j0 = tracks.indexOf(liveTr[0]), j1 = [0,1,2].find(j => !tracks[j]);
+    if (j1 !== undefined){ const f = hzOf(liveTr[0].u), dev = 12*Math.log2(1 + beat.fb/f); VT[j1].on = true; VT[j1].u = clamp(liveTr[0].u + dev, 0, 47); VT[j0].u = clamp(liveTr[0].u - dev/2, 0, 47); VT[j1].u = clamp(liveTr[0].u + dev/2, 0, 47); VT[j1].lev = liveTr[0].lev; VT[j1].stab = VT[j0].stab; }
+  }
+}
+
+/* ---------- цикл ---------- */
+let vis = false; new IntersectionObserver(es => es.forEach(e => vis = e.isIntersecting)).observe($('.stage'));
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now; t += dt;
+  if (mode === 'voice' && an) micTargets(dt); else if (mode === 'scene') sceneTargets(dt); else modelTargets();
+  ease(dt);
+  if (vis){ const info = step(dt); draw(info); }
+  updateSliders();
+  requestAnimationFrame(frame);
+}
+function updateSliders(){
+  for (let j = 0; j < MAXV; j++){
+    const row = $(`.ctrl[data-v="${j}"]`); row.hidden = mode === 'model' && j >= K;
+    row.querySelector('i').style.background = colorMode === 'voice' ? VCOL[j] : HUE[Math.round(+$('#u' + j).value) % 12];
+    if (mode !== 'model'){ $('#u' + j).value = V[j].u.toFixed(2); }
+    row.querySelector('span').textContent = (mode === 'model' && j >= K) ? '' : noteLabel(+$('#u' + j).value);
+  }
+}
+
+/* ---------- кнопки ---------- */
+function setMode(m){
+  if (m !== 'voice' && an) micStop();
+  mode = m; $('#mModel').classList.toggle('sel', m === 'model'); $('#mVoice').classList.toggle('sel', m === 'voice'); $('#mScene').classList.toggle('sel', m === 'scene');
+  $('#micUI').hidden = m !== 'voice'; $$('#modelUI .row, #modelUI .lbl').forEach(el => el.hidden = m !== 'model');
+  $$('#modelUI input').forEach(el => el.disabled = m !== 'model');
+  $('#mode').textContent = m === 'voice' ? '● Микрофон слушает' : m === 'scene' ? 'Сценарий' : 'Модель';
+  if (m === 'model') sceneT = -1;
+}
+$('#mModel').addEventListener('click', () => setMode('model'));
+$('#mScene').addEventListener('click', () => { sceneT = 0; setMode('scene'); });
+$('#mVoice').addEventListener('click', async () => {
+  if (an) return setMode('voice'); $('#err').hidden = true;
+  try { await micStart(); setMode('voice'); }
+  catch(e){ $('#err').textContent = location.protocol !== 'https:' ? 'Микрофон работает только по https.' : 'Нет доступа к микрофону. Разрешите его в настройках браузера.'; $('#err').hidden = false; }
+});
+$$('[data-k]').forEach(b => b.addEventListener('click', () => { K = +b.dataset.k; $$('[data-k]').forEach(x => x.classList.toggle('sel', x === b)); }));
+$$('[data-p]').forEach(b => b.addEventListener('click', () => {
+  const ofs = b.dataset.p.split(',').map(Number), base = Math.round(+$('#u0').value);
+  K = ofs.length; $$('[data-k]').forEach(x => x.classList.toggle('sel', +x.dataset.k === K));
+  ofs.forEach((o, j) => { $('#u' + j).value = clamp(base + o, 0, 47); });
+  $$('[data-p]').forEach(x => x.classList.toggle('sel', x === b));
+}));
+$$('#modelUI input').forEach(el => el.addEventListener('input', () => $$('[data-p]').forEach(x => x.classList.remove('sel'))));
+$('#cNote').addEventListener('click', () => { colorMode = 'note'; $('#cNote').classList.add('sel'); $('#cVoice').classList.remove('sel'); });
+$('#cVoice').addEventListener('click', () => { colorMode = 'voice'; $('#cVoice').classList.add('sel'); $('#cNote').classList.remove('sel'); });
+window.__state = () => ({ V: V.map(v => ({ u: +v.u.toFixed(2), e: +v.e.toFixed(2), on: v.on })), noise: +noise.toFixed(2), iv: $('#iv').textContent, sub: $('#ivSub').textContent });
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
