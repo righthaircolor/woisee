@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#192524">
+<title>woisee · эксперимент: нота, октава, радуга</title>
+<link rel="stylesheet" href="../fonts.css">
+<style>
+:root{--paper:#FFFFFF;--paper-2:#F3F5F2;--soft:#E1E6E0;--ink:#192524;--muted:#5D6A67;--rule:rgba(25,37,36,.14);--signal:#F0472C;--vanilla:#FFFEFC;--ebony:#192524;--f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;text-wrap:balance}p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+canvas{display:block}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.wm{font-weight:800;letter-spacing:-.05em;line-height:1}
+.top{border-bottom:1px solid var(--rule)}.top .wrap{display:flex;align-items:center;gap:16px;height:56px}
+.top .wm{font-size:22px}.top nav{margin-left:auto;display:flex;gap:16px;font-size:14px}.top a{color:var(--muted)}
+section.s{padding-top:64px;padding-bottom:16px}
+.sh{display:grid;grid-template-columns:120px 1fr;gap:20px;border-top:1px solid var(--ink);padding-top:18px;margin-bottom:28px}
+.sh .no{font-size:14px;font-weight:600}.sh h2{font-size:clamp(30px,4.4vw,54px);line-height:.95}
+.sh p{grid-column:2;max-width:64ch;font-size:18px;color:var(--muted);margin-top:12px}
+@media (max-width:700px){.sh{grid-template-columns:1fr;gap:10px}.sh p{grid-column:1}}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:99px;padding:8px 14px;font-size:14px;font-weight:500;background:var(--paper)}
+.btn.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.lab{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}@media (max-width:900px){.lab{grid-template-columns:1fr}}
+.stage{background:var(--ebony);border-radius:28px;position:relative;overflow:hidden;min-height:520px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage .over{position:absolute;left:18px;right:18px;top:16px;display:flex;justify-content:space-between;color:var(--vanilla);font-size:13px;pointer-events:none}
+.stage .big{position:absolute;left:18px;bottom:16px;color:var(--vanilla);pointer-events:none}
+.stage .big b{display:block;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.stage .big span{font-size:14px;opacity:.7}
+.panel{display:flex;flex-direction:column;gap:12px}.row{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl{display:grid;grid-template-columns:110px 1fr 76px;align-items:center;gap:10px;font-size:14px}.ctrl span:last-child{text-align:right;font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--ink);margin-top:-8px}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:var(--ink)}
+input[type=range]:disabled{opacity:.55}
+.lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.err{color:var(--signal);font-size:13px}.note{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:70px repeat(12,minmax(0,1fr));gap:4px;align-items:center}
+.grid .h{font-size:12px;font-weight:600;text-align:center;color:var(--muted)}
+.grid .o{font-size:12px;font-weight:600;color:var(--muted)}
+.grid canvas{width:100%;aspect-ratio:1/1;border-radius:10px;background:var(--ebony)}
+.gridwrap{overflow-x:auto}.gridwrap .grid{min-width:760px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:900px){.two{grid-template-columns:1fr}}
+.card{background:var(--ebony);border-radius:28px;padding:18px;color:var(--vanilla)}
+.card canvas{width:100%;aspect-ratio:1/1}
+.card .row{margin-top:12px}.card .btn{background:transparent;color:var(--vanilla);border-color:rgba(255,254,252,.25)}
+.card .btn.sel{background:var(--vanilla);color:var(--ink)}
+.card .note{color:rgba(255,254,252,.6)}
+footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="wm">woisee</span><span class="note">эксперимент · нота, октава, радуга</span><nav><a href="../v2/index.html">v2</a><a href="../index.html">v1</a></nav></div></header>
+<main>
+
+<section class="s wrap" id="live">
+  <div class="sh"><span class="no">01</span><h2>Нота рисует, октава строит</h2>
+    <p>Октава задаёт число колец формы. Нота внутри октавы — симметрию: до — 2 луча, ре — 3, ми — 4… си — 8. Диезы — та же симметрия, закрученная в спираль. Цвет — нота на радужном круге. Собранная форма течёт по кругу, прежняя нота остаётся гаснущим следом и переплетается с новой.</p></div>
+  <div class="lab">
+    <div class="stage"><canvas id="cv"></canvas>
+      <div class="over"><span id="mode">Модель</span><span id="state"></span></div>
+      <div class="big"><b id="noteName">до</b><span id="noteSub"></span></div></div>
+    <div class="panel">
+      <div class="row"><button class="btn sel" id="mModel">Модель</button><button class="btn" id="mVoice">Мой голос</button><button class="btn" id="mMel">Мелодия</button><button class="btn" id="mCal" hidden>Заново найти ноту</button></div>
+      <div class="err" id="err" hidden></div>
+      <div class="ctrl"><label for="sN">Нота</label><input id="sN" type="range" min="0" max="11" step="1" value="0"><span id="oN">до</span></div>
+      <div class="ctrl"><label for="sO">Октава</label><input id="sO" type="range" min="-1" max="2" step="1" value="0"><span id="oO">комфортная</span></div>
+      <div class="ctrl"><label for="sL">Громкость</label><input id="sL" type="range" min="0" max="100" step="1" value="45"><span id="oL">45</span></div>
+      <div class="ctrl"><label for="sS">Устойчивость</label><input id="sS" type="range" min="0" max="100" step="1" value="90"><span id="oS">90</span></div>
+      <div class="row" id="mBtns"><button class="btn" id="bK">Атака</button><button class="btn" id="bP">Пауза</button></div>
+      <div class="lbl">Вид</div>
+      <div class="row">
+        <button class="btn sel" id="tRain">Радуга</button>
+        <button class="btn sel" id="tCrisp">Чёткие формы</button>
+        <button class="btn sel" id="tOrbit">Движение по кругу</button>
+        <button class="btn sel" id="tWeave">Переплетение</button>
+      </div>
+      <p class="note">Выключите «Чёткие формы», чтобы вернуться к кружеву v2, а «Радугу» — к монохрому. «Мелодия» без микрофона проигрывает короткую фразу, чтобы увидеть переплетение.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s wrap" id="table">
+  <div class="sh"><span class="no">02</span><h2>12 нот × 4 октавы</h2>
+    <p>Вся система одной таблицей. По горизонтали — нота и её цвет, по вертикали — октава от комфортной. Строка читается как одна семья форм, столбец — как одна нота, которая с высотой обрастает кольцами.</p></div>
+  <div class="gridwrap"><div class="grid" id="grid"></div></div>
+</section>
+
+<section class="s wrap" id="weave">
+  <div class="sh"><span class="no">03</span><h2>Переплетение и карта голоса</h2>
+    <p>Слева — фраза из нескольких нот, наложенных друг на друга: старые ноты бледнее, последняя — ярче. Справа — карта голоса за месяц: круг из 12 нот, октава — расстояние от центра. Неделя за неделей видно, как расширяется диапазон.</p></div>
+  <div class="two">
+    <div class="card"><canvas id="phrase"></canvas>
+      <div class="row"><button class="btn sel" data-ph="0">Сирена</button><button class="btn" data-ph="1">Качели</button><button class="btn" data-ph="2">Гамма</button><button class="btn" id="phMono">Монохром</button></div>
+      <p class="note" style="margin-top:8px" id="phNote"></p></div>
+    <div class="card"><canvas id="map"></canvas>
+      <div class="row"><button class="btn" data-wk="1">Неделя 1</button><button class="btn" data-wk="2">2</button><button class="btn" data-wk="3">3</button><button class="btn sel" data-wk="4">4</button><button class="btn" id="mapMono">Монохром</button></div>
+      <p class="note" style="margin-top:8px" id="mapNote"></p></div>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">woisee · эксперимент · отдельная папка, v1 и v2 не изменены</div></footer>
+
+<script src="../voiceform.js"></script>
+<script src="../v2/field.js"></script>
+<script>
+(function(){
+'use strict';
+const VF = window.VoiceForm, FL = window.Field;
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const VAN = '#FFFEFC', EBONY = '#192524';
+// Радужный круг нот (по референсу): до — жёлтый … соль — пурпурный, соль♯ — красный
+const HUE = ['#F4E04D','#B8D84A','#4DB86B','#2FA6A0','#3478D8','#4B4FB8','#7B41B3','#B33A92','#E8333E','#F05A2A','#F58C2B','#F7B733'];
+const NAMES = ['до','до♯','ре','ре♯','ми','фа','фа♯','соль','соль♯','ля','ля♯','си'];
+const SYM = [2,2,3,3,4,5,5,6,6,7,7,8], SHARP = [0,1,0,1,0,0,1,0,1,0,1,0];
+const OCT = ['ниже','комфортная','выше','ещё выше'];
+const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+function fit(cv, w, h){ const d = DPR(); w = w || cv.clientWidth; h = h || cv.clientHeight; const W = Math.max(1,Math.round(w*d)), H = Math.max(1,Math.round(h*d)); if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } const ctx = cv.getContext('2d'); ctx.setTransform(d,0,0,d,0,0); return { ctx, w, h }; }
+const snap = f => f < .5 ? 4*f*f*f : 1 - Math.pow(-2*f + 2, 3)/2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function hex(c){ return [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)]; }
+function mix(a, b, t){ const A = hex(a), B = hex(b); return 'rgb(' + A.map((v, i) => Math.round(v + (B[i] - v)*t)).join(',') + ')'; }
+
+/* ---------- форма от ноты ----------
+   u — номер полутона от «до» октавой ниже комфортной: 0..47.
+   pc = u mod 12 → симметрия (лучи), диез → закрутка; октава → число колец k. */
+function params(ui){ ui = clamp(ui, 0, 47); const pc = ui % 12, o = Math.floor(ui/12) - 1; return { m: SYM[pc], tw: SHARP[pc], k: o + 2, pc, o }; }
+function zc(P, x, y){
+  const r = Math.hypot(x, y), th = Math.atan2(y, x) + Math.PI/2;
+  return Math.cos(P.m*(th + P.tw*r*1.7)) * Math.cos(P.k*Math.PI*r*1.15) + 0.18*Math.cos(P.k*Math.PI*r*1.15);
+}
+function zAt(S, x, y){
+  const u0 = Math.floor(S.u), g = snap(S.u - u0);
+  if (!S.crisp){ const n = clamp(2 + (S.u - 12)/3, 0, 8), i0 = Math.floor(n), i1 = Math.min(8, i0 + 1), h = snap(n - i0); return (1-h)*FL.zf(FL.MODES[i0], x, y) + h*FL.zf(FL.MODES[i1], x, y); }
+  return (1-g)*zc(params(u0), x, y) + g*zc(params(u0 + 1), x, y);
+}
+function rng(seed){ return FL.rng(seed); }
+function makeP(N, seed){
+  const r = rng(seed), P = { N, X0:new Float32Array(N), Y0:new Float32Array(N), X:new Float32Array(N), Y:new Float32Array(N), C:new Float32Array(N), J:new Float32Array(N*2), Z:new Float32Array(N) };
+  for (let i = 0; i < N; i++){ P.X0[i] = FL.gs(r)*0.42; P.Y0[i] = FL.gs(r)*0.4; P.X[i] = P.X0[i]; P.Y[i] = P.Y0[i]; P.C[i] = Math.pow(r(), 0.18); P.J[2*i] = FL.gs(r); P.J[2*i+1] = FL.gs(r); P.Z[i] = 0.7 + r()*r()*1.3; }
+  return P;
+}
+// Цель частицы: точка в облаке (повёрнутая «течением» по кругу) → к ближайшей узловой линии
+function targetOf(P, S, i, rot, t, out){
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const env = 0.85 + 0.3*S.amp;
+  const x = (P.X0[i]*c - P.Y0[i]*s)*env, y = (P.X0[i]*s + P.Y0[i]*c)*env, e = 0.004;
+  const g = S.u - Math.floor(S.u), blur = 4*snap(g)*(1 - snap(g));
+  const crisp = S.crisp ? 1 : 0;
+  const order = S.e*(0.4 + 0.6*S.stab)*(0.55 + 0.45*S.hold)*(1 - blur*0.6);
+  const z = zAt(S, x, y), zx = (zAt(S, x + e, y) - z)/e, zy = (zAt(S, x, y + e) - z)/e, g2 = zx*zx + zy*zy + 1e-4;
+  let dx = -z*zx/g2, dy = -z*zy/g2; const dl = Math.hypot(dx, dy), mx = crisp ? 0.16 : 0.22; if (dl > mx){ dx *= mx/dl; dy *= mx/dl; }
+  const o = order*(crisp ? P.C[i] : Math.pow(P.C[i], 2));
+  const jit = (crisp ? 0.0035 : 0.006) + (1 - S.stab)*0.03 + (1 - S.hold)*0.008 + blur*0.03;
+  const w = t == null ? 0.7 : Math.sin(t*6 + i)*0.5 + 0.5;
+  out[0] = x + dx*o + P.J[2*i]*jit*(0.4 + w); out[1] = y + dy*o + P.J[2*i+1]*jit*(0.4 + w);
+}
+
+/* ---------- состояние ---------- */
+const voice = new VF.Voice();
+const S = { u:12, amp:.4, stab:.9, e:.08, hold:0, crisp:true }, T = { u:12, amp:.4, stab:.9, e:1, hold:0 };
+let mode = 'model', paused = false, kick = 0, front = 9, rot = 0, t = 0, holdM = 0, mel = null;
+const opt = { rain:true, crisp:true, orbit:true, weave:true };
+const MEL = [12,16,19,24,19,16,14,17,21,12]; // фраза для «Мелодии»
+function modelTarget(dt){
+  if (mel){ mel.t += dt; const k = Math.floor(mel.t/1.6); if (k >= MEL.length){ mel = null; $('#mMel').classList.remove('sel'); } else { T.u = MEL[k]; T.e = (mel.t % 1.6) > 1.35 ? 0.08 : 1; T.stab = .92; T.amp = .5; holdM = Math.min(1, (mel.t % 1.6)/1.0); T.hold = holdM; $('#sN').value = MEL[k] % 12; $('#sO').value = Math.floor(MEL[k]/12) - 1; return; } }
+  const pc = +$('#sN').value, o = +$('#sO').value, l = +$('#sL').value/100, s = +$('#sS').value/100;
+  const drift = (1-s)*(0.7*Math.sin(t*1.7) + 0.4*Math.sin(t*4.3));
+  T.u = clamp((o + 1)*12 + pc + drift, 0, 47); T.amp = 0.15 + 0.85*Math.pow(l, 0.6); T.stab = s; T.e = paused ? 0.08 : 1;
+  holdM = (!paused && s > .6) ? Math.min(1, holdM + dt/2) : Math.max(0, holdM - dt*.8); T.hold = holdM;
+}
+function voiceTarget(){
+  const f = voice.f;
+  if (f.voiced && f.ref){ const refOct = Math.floor(f.ref/12) - 1; T.u = clamp(f.midi - 12*refOct, 0, 47); }
+  T.amp = 0.15 + 0.85*Math.pow(Math.min(1, f.level || 0), 0.6);
+  T.stab = f.voiced ? f.stab : T.stab; T.e = f.silent ? 0.08 : f.noise ? 0.4 : 1; T.hold = voice.hold;
+  if (voice.T.kick){ kick = voice.T.kick; front = 0; voice.T.kick = 0; }
+}
+function ease(dt){
+  const k = a => 1 - Math.pow(1 - a, dt*60);
+  S.u += (T.u - S.u)*k(0.07); S.amp += (T.amp - S.amp)*k(T.amp > S.amp ? .15 : .04);
+  S.stab += (T.stab - S.stab)*k(.08); S.e += (T.e - S.e)*k(T.e > S.e ? .07 : .012); S.hold += (T.hold - S.hold)*k(.06);
+  S.crisp = opt.crisp;
+}
+
+/* ---------- живая сцена ---------- */
+const P = makeP(innerWidth < 700 ? 5000 : 8000, 5);
+const ghosts = []; let lastStable = null, stableT = 0;
+const tmp = [0, 0];
+function colorFor(u){ if (!opt.rain) return VAN; const a = Math.floor(clamp(u,0,47)), g = snap(u - a); return mix(HUE[a % 12], HUE[(a + 1) % 12], g); }
+function step(dt){
+  rot += opt.orbit ? dt*0.32*S.hold*S.e : 0;
+  const mv = 1 - Math.pow(1 - (S.e > .5 ? .12 : .03), dt*60);
+  for (let i = 0; i < P.N; i++){
+    targetOf(P, S, i, rot, t, tmp);
+    let tx = tmp[0], ty = tmp[1];
+    if (front < 3 && kick > .02){ const r = Math.hypot(tx, ty) || 1e-6, d = Math.abs(r - front); if (d < .18){ const f = (.18 - d)*.6*kick; tx += tx/r*f; ty += ty/r*f; } }
+    P.X[i] += (tx - P.X[i])*mv; P.Y[i] += (ty - P.Y[i])*mv;
+  }
+  front += dt*1.8; kick *= Math.pow(.97, dt*60);
+  // переплетение: устойчивая нота, сменившаяся другой, остаётся следом
+  const un = Math.round(S.u);
+  if (S.hold > .8 && Math.abs(S.u - un) < .15 && S.e > .5){ stableT += dt; if (lastStable === null) lastStable = un; if (un !== lastStable) lastStable = un; }
+  if (opt.weave && lastStable !== null && Math.abs(S.u - lastStable) > 0.6 && stableT > 0.8){
+    const n = Math.round(P.N*0.45), X = new Float32Array(n), Y = new Float32Array(n);
+    for (let j = 0; j < n; j++){ const i = (j*2) % P.N; X[j] = P.X[i]; Y[j] = P.Y[i]; }
+    ghosts.unshift({ X, Y, col: colorFor(lastStable), a: .75, rot: 0 }); if (ghosts.length > 3) ghosts.pop();
+    lastStable = null; stableT = 0;
+  }
+  ghosts.forEach(g => { g.a -= dt/7; g.rot += opt.orbit ? dt*0.12 : 0; }); while (ghosts.length && ghosts[ghosts.length-1].a <= 0) ghosts.pop();
+}
+const cv = $('#cv');
+function drawLive(){
+  const { ctx, w, h } = fit(cv); ctx.fillStyle = EBONY; ctx.fillRect(0,0,w,h);
+  const R = Math.min(w,h)*0.5, cx = w/2, cy = h/2;
+  ghosts.forEach(g => { ctx.fillStyle = g.col; ctx.globalAlpha = Math.max(0, g.a)*0.7; const c = Math.cos(g.rot), s = Math.sin(g.rot);
+    for (let j = 0; j < g.X.length; j++){ const x = g.X[j]*c - g.Y[j]*s, y = g.X[j]*s + g.Y[j]*c; ctx.fillRect(cx + x*R - .6, cy + y*R - .6, 1.2, 1.2); } });
+  ctx.fillStyle = colorFor(S.u);
+  for (let i = 0; i < P.N; i++){ ctx.globalAlpha = 0.35 + 0.65*((i*7919 % 100)/100); const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
+  ctx.globalAlpha = 1;
+  const pr = params(Math.round(S.u));
+  $('#noteName').textContent = S.e < .3 ? '·' : NAMES[pr.pc];
+  $('#noteSub').textContent = S.e < .3 ? 'пауза' : (opt.crisp ? pr.m + ' лучей' + (pr.tw ? ', спираль' : '') + ' · колец: ' + pr.k : 'кружево') + ' · октава ' + OCT[pr.o + 1];
+  const g = S.u - Math.floor(S.u), blur = 4*snap(g)*(1 - snap(g));
+  $('#state').textContent = S.e < .3 ? 'материя рассыпается' : (blur > .5 || S.stab < .45) ? 'между нотами' : S.hold > .85 ? (opt.orbit ? 'форма собрана · течёт по кругу' : 'форма собрана') : 'собирается';
+}
+
+/* ---------- RAF ---------- */
+let vis = { live:false };
+new IntersectionObserver(es => es.forEach(e => vis.live = e.isIntersecting)).observe($('.stage'));
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now; t += dt;
+  if (mode === 'voice' && voice.on){ voice.update(dt); voiceTarget(); } else modelTarget(dt);
+  ease(dt);
+  if (vis.live){ step(dt); drawLive(); }
+  if (mode === 'voice' && voice.on){ const pr = params(Math.round(T.u)); $('#sN').value = pr.pc; $('#sO').value = pr.o; }
+  $('#oN').textContent = NAMES[+$('#sN').value]; $('#oO').textContent = OCT[+$('#sO').value + 1]; $('#oL').textContent = $('#sL').value; $('#oS').textContent = $('#sS').value;
+  requestAnimationFrame(frame);
+}
+
+/* ---------- кнопки ---------- */
+function tog(id, key, after){ $(id).addEventListener('click', () => { opt[key] = !opt[key]; $(id).classList.toggle('sel', opt[key]); if (after) after(); }); }
+tog('#tRain', 'rain', renderAll); tog('#tCrisp', 'crisp', renderAll); tog('#tOrbit', 'orbit'); tog('#tWeave', 'weave', () => { if (!opt.weave) ghosts.length = 0; });
+['#sN','#sO','#sL','#sS'].forEach(id => $(id).addEventListener('input', () => { paused = false; $('#bP').classList.remove('sel'); mel = null; $('#mMel').classList.remove('sel'); }));
+$('#bK').addEventListener('click', () => { kick = 1; front = 0; paused = false; $('#bP').classList.remove('sel'); });
+$('#bP').addEventListener('click', () => { paused = !paused; $('#bP').classList.toggle('sel', paused); });
+$('#mMel').addEventListener('click', () => { if (voice.on){ voice.stop(); setMode('model'); } mel = { t:0 }; $('#mMel').classList.add('sel'); paused = false; });
+function setMode(m){
+  mode = m; $('#mModel').classList.toggle('sel', m === 'model'); $('#mVoice').classList.toggle('sel', m === 'voice');
+  $('#mCal').hidden = m !== 'voice'; $('#mBtns').hidden = m === 'voice';
+  ['#sN','#sO','#sL','#sS'].forEach(id => $(id).disabled = m === 'voice');
+  $('#mode').textContent = m === 'voice' ? '● Микрофон слушает' : 'Модель';
+}
+$('#mVoice').addEventListener('click', async () => {
+  if (voice.on) return setMode('voice'); mel = null; $('#mMel').classList.remove('sel'); $('#err').hidden = true;
+  try { await voice.start(); setMode('voice'); }
+  catch(e){ $('#err').textContent = location.protocol !== 'https:' ? 'Микрофон работает только по https.' : 'Нет доступа к микрофону. Разрешите его в настройках браузера.'; $('#err').hidden = false; }
+});
+$('#mModel').addEventListener('click', () => { if (voice.on) voice.stop(); setMode('model'); });
+$('#mCal').addEventListener('click', () => voice.recalibrate());
+
+/* ---------- статичный рендер формы ---------- */
+function renderForm(ctx, cx, cy, R, u, N, seed, color, alpha, dot, rotA){
+  const Q = makeP(N, seed), st = { u, amp:.4, stab:.95, e:1, hold:1, crisp:opt.crisp }, o = [0,0];
+  ctx.fillStyle = color;
+  for (let i = 0; i < N; i++){ targetOf(Q, st, i, rotA || 0, null, o); ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*alpha; const z = Q.Z[i]*dot; ctx.fillRect(cx + o[0]*R - z/2, cy + o[1]*R - z/2, z, z); }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- таблица ---------- */
+const grid = $('#grid');
+grid.appendChild(Object.assign(document.createElement('div'), { className:'h', textContent:'' }));
+NAMES.forEach((n, i) => { const d = document.createElement('div'); d.className = 'h'; d.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HUE[i]};margin-right:4px"></span>${n}`; grid.appendChild(d); });
+const cells = [];
+for (let o = 2; o >= -1; o--){
+  const lab = document.createElement('div'); lab.className = 'o'; lab.textContent = OCT[o + 1]; grid.appendChild(lab);
+  for (let pc = 0; pc < 12; pc++){ const c = document.createElement('canvas'); grid.appendChild(c); cells.push([c, (o + 1)*12 + pc]); }
+}
+function renderGrid(){ cells.forEach(([c, u], k) => { const s = c.clientWidth; const { ctx } = fit(c, s, s); ctx.fillStyle = EBONY; ctx.fillRect(0,0,s,s); renderForm(ctx, s/2, s/2, s*0.5, u, Math.round(380 + s*s*0.12), 300 + k, opt.rain ? HUE[u % 12] : VAN, 1, Math.max(0.6, s/110)); }); }
+
+/* ---------- фраза ---------- */
+const PHR = [
+  { name:'Сирена', notes:[9,11,13,15,17,19,21,23], txt:'Скольжение вверх: каждая нота меняет цвет и симметрию, на переходе в октаву появляется новое кольцо.' },
+  { name:'Качели', notes:[12,16,12,19,14,17], txt:'Интонация вверх-вниз: две-три формы переплетаются, общий узор держит повторяющаяся «до».' },
+  { name:'Гамма', notes:[12,14,16,17,19,21,23,24], txt:'До мажор: семь натуральных нот, от 2 до 8 лучей, сверху — «до» следующей октавы.' },
+];
+let ph = 0, phMono = false;
+function renderPhrase(){
+  const c = $('#phrase'), s = c.clientWidth; const { ctx } = fit(c, s, s); ctx.fillStyle = EBONY; ctx.fillRect(0,0,s,s);
+  const notes = PHR[ph].notes, rain = opt.rain && !phMono;
+  notes.forEach((u, k) => { const age = (k + 1)/notes.length; renderForm(ctx, s/2, s/2, s*0.5, u, Math.round((2600 + s*s*0.024)/Math.sqrt(notes.length)), 700 + k*13, rain ? HUE[u % 12] : VAN, (rain ? 0.2 : 0.15) + 0.75*age*age, Math.max(0.6, s/600)*(0.8 + 0.4*age), k*0.13); });
+  $('#phNote').textContent = PHR[ph].txt;
+}
+$$('[data-ph]').forEach(b => b.addEventListener('click', () => { ph = +b.dataset.ph; $$('[data-ph]').forEach(x => x.classList.toggle('sel', x === b)); renderPhrase(); }));
+$('#phMono').addEventListener('click', () => { phMono = !phMono; $('#phMono').classList.toggle('sel', phMono); renderPhrase(); });
+
+/* ---------- карта голоса ---------- */
+let wk = 4, mapMono = false;
+function renderMap(){
+  const c = $('#map'), s = c.clientWidth; const { ctx } = fit(c, s, s); ctx.fillStyle = EBONY; ctx.fillRect(0,0,s,s);
+  const cx = s/2, cy = s/2, rain = opt.rain && !mapMono;
+  // тонкие ориентиры: 12 направлений нот
+  ctx.fillStyle = 'rgba(255,254,252,.5)'; ctx.font = `600 ${Math.max(10, s/48)}px "Inter Tight",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  NAMES.forEach((n, pc) => { const a = -Math.PI/2 + pc/12*Math.PI*2; ctx.fillText(n, cx + Math.cos(a)*s*0.46, cy + Math.sin(a)*s*0.46); });
+  // голос, у которого диапазон растёт: неделя 1 — ~октава вокруг комфортной, неделя 4 — почти три
+  const r = rng(91 + wk), lo = 12 - [0,2,4,7,9][wk], hi = 12 + [0,10,14,19,25][wk];
+  let count = 0;
+  for (let w = 1; w <= wk; w++){
+    const lw = 12 - [0,2,4,7,9][w], hw = 12 + [0,10,14,19,25][w];
+    for (let q = 0; q < 18; q++){
+      const u = Math.round(lw + Math.pow(r(), w === wk ? 0.9 : 1.2)*(hw - lw)), pc = u % 12, o = Math.floor(u/12) - 1;
+      const a = -Math.PI/2 + (pc + (r() - .5)*0.4)/12*Math.PI*2, rad = s*(0.1 + (u/47)*0.3);
+      renderForm(ctx, cx + Math.cos(a)*rad, cy + Math.sin(a)*rad, s*0.075, u, Math.round(160 + s*0.35), 900 + w*100 + q, rain ? HUE[pc] : VAN, w === wk ? 1 : 0.4, Math.max(0.6, s/700));
+      count++;
+    }
+  }
+  const nm = u => NAMES[u % 12];
+  $('#mapNote').textContent = 'Неделя ' + wk + ': диапазон от «' + nm(lo) + '» ' + OCT[Math.floor(lo/12)] + ' до «' + nm(hi) + '» ' + OCT[Math.min(3, Math.floor(hi/12))] + '. Ниже нота — ближе к центру.';
+}
+$$('[data-wk]').forEach(b => b.addEventListener('click', () => { wk = +b.dataset.wk; $$('[data-wk]').forEach(x => x.classList.toggle('sel', x === b)); renderMap(); }));
+$('#mapMono').addEventListener('click', () => { mapMono = !mapMono; $('#mapMono').classList.toggle('sel', mapMono); renderMap(); });
+
+function renderAll(){ renderGrid(); renderPhrase(); renderMap(); }
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderAll, 200); });
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(renderAll);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
