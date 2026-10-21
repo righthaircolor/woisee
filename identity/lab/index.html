@@ -62,7 +62,7 @@ footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-
 
 <section class="s wrap" id="live">
   <div class="sh"><span class="no">01</span><h2>Нота рисует, октава строит</h2>
-    <p>Октава задаёт число колец формы. Нота внутри октавы — симметрию: до — 2 луча, ре — 3, ми — 4… си — 8. Диезы — та же симметрия, закрученная в спираль. Цвет — нота на радужном круге. Собранная форма течёт по кругу, прежняя нота остаётся гаснущим следом и переплетается с новой.</p></div>
+    <p>Октава задаёт число колец формы. Нота внутри октавы — симметрию: до — 2 луча, ре — 3, ми — 4… си — 8. Диезы — та же симметрия, закрученная в спираль. Цвет — нота на радужном круге. Собранная форма течёт по кругу, прежняя нота остаётся гаснущим следом и переплетается с новой.</p><p>Звуки без ноты — «с», «ш», выдох — второй канал: узор растворяется, облако течёт вихрем и становится белым. «С» — мелкая быстрая рябь, «ш» — крупнее, выдох — широкое течение; длинный выдох раздувает облако, пауза собирает обратно. Звонкие «з», «ж» — узор и шум вместе.</p></div>
   <div class="lab">
     <div class="stage"><canvas id="cv"></canvas>
       <div class="over"><span id="mode">Модель</span><span id="state"></span></div>
@@ -75,6 +75,8 @@ footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-
       <div class="ctrl"><label for="sL">Громкость</label><input id="sL" type="range" min="0" max="100" step="1" value="45"><span id="oL">45</span></div>
       <div class="ctrl"><label for="sS">Устойчивость</label><input id="sS" type="range" min="0" max="100" step="1" value="90"><span id="oS">90</span></div>
       <div class="row" id="mBtns"><button class="btn" id="bK">Атака</button><button class="btn" id="bP">Пауза</button></div>
+      <div class="lbl">Звуки без ноты</div>
+      <div class="row" id="sndBtns"><button class="btn" data-snd="s">С-с-с</button><button class="btn" data-snd="sh">Ш-ш-ш</button><button class="btn" data-snd="breath">Выдох</button><button class="btn" data-snd="z">З-з-з</button><button class="btn" data-snd="m">М-м-м</button></div>
       <div class="lbl">Вид</div>
       <div class="row">
         <button class="btn sel" id="tRain">Радуга</button>
@@ -150,43 +152,83 @@ function makeP(N, seed){
 // Цель частицы: точка в облаке (повёрнутая «течением» по кругу) → к ближайшей узловой линии
 function targetOf(P, S, i, rot, t, out){
   const c = Math.cos(rot), s = Math.sin(rot);
-  const env = 0.85 + 0.3*S.amp;
+  const env = (0.85 + 0.3*S.amp)*S.bx;
   const x = (P.X0[i]*c - P.Y0[i]*s)*env, y = (P.X0[i]*s + P.Y0[i]*c)*env, e = 0.004;
   const g = S.u - Math.floor(S.u), blur = 4*snap(g)*(1 - snap(g));
   const crisp = S.crisp ? 1 : 0;
-  const order = S.e*(0.4 + 0.6*S.stab)*(0.55 + 0.45*S.hold)*(1 - blur*0.6);
+  const order = S.e*(0.4 + 0.6*S.stab)*(0.55 + 0.45*S.hold)*(1 - blur*0.6)*S.vo*(1 - 0.45*S.noise);
   const z = zAt(S, x, y), zx = (zAt(S, x + e, y) - z)/e, zy = (zAt(S, x, y + e) - z)/e, g2 = zx*zx + zy*zy + 1e-4;
   let dx = -z*zx/g2, dy = -z*zy/g2; const dl = Math.hypot(dx, dy), mx = crisp ? 0.16 : 0.22; if (dl > mx){ dx *= mx/dl; dy *= mx/dl; }
   const o = order*(crisp ? P.C[i] : Math.pow(P.C[i], 2));
-  const jit = (crisp ? 0.0035 : 0.006) + (1 - S.stab)*0.03 + (1 - S.hold)*0.008 + blur*0.03;
+  const jit = (crisp ? 0.0035 : 0.006) + (1 - S.stab)*0.03*S.vo + (1 - S.hold)*0.008 + blur*0.03 + S.noise*0.012*(0.5 + S.cent);
   const w = t == null ? 0.7 : Math.sin(t*6 + i)*0.5 + 0.5;
-  out[0] = x + dx*o + P.J[2*i]*jit*(0.4 + w); out[1] = y + dy*o + P.J[2*i+1]*jit*(0.4 + w);
+  let nx = 0, ny = 0;
+  if (t != null && S.noise > 0.01){
+    // рябь: «с» — мелкая и быстрая, «ш» — крупнее, выдох — широкое медленное течение
+    // единое (не случайное) поле течения: частицы сбиваются в видимые завихрения
+    const A = S.noise*(0.03 + 0.07*S.amp)*(1.45 - 0.95*S.cent), kq = 2.5 + 15*S.cent, sp = 0.8 + 6*S.cent;
+    nx = A*(Math.sin(kq*y + t*sp) + 0.5*Math.sin(1.7*kq*x - t*sp*1.3));
+    ny = A*(Math.cos(kq*x - t*sp*0.9) + 0.5*Math.cos(1.9*kq*y + t*sp*1.1));
+  }
+  out[0] = x + dx*o + nx + P.J[2*i]*jit*(0.4 + w); out[1] = y + dy*o + ny + P.J[2*i+1]*jit*(0.4 + w);
 }
 
 /* ---------- состояние ---------- */
 const voice = new VF.Voice();
-const S = { u:12, amp:.4, stab:.9, e:.08, hold:0, crisp:true }, T = { u:12, amp:.4, stab:.9, e:1, hold:0 };
+const S = { u:12, amp:.4, stab:.9, e:.08, hold:0, crisp:true, noise:0, cent:.5, vo:1, bx:1 }, T = { u:12, amp:.4, stab:.9, e:1, hold:0, noise:0, cent:.5, vo:1 };
+let snd = null, exh = 0, exhLast = 0, silT = 0, spec = null;
 let mode = 'model', paused = false, kick = 0, front = 9, rot = 0, t = 0, holdM = 0, mel = null;
 const opt = { rain:true, crisp:true, orbit:true, weave:true };
 const MEL = [12,16,19,24,19,16,14,17,21,12]; // фраза для «Мелодии»
 function modelTarget(dt){
   if (mel){ mel.t += dt; const k = Math.floor(mel.t/1.6); if (k >= MEL.length){ mel = null; $('#mMel').classList.remove('sel'); } else { T.u = MEL[k]; T.e = (mel.t % 1.6) > 1.35 ? 0.08 : 1; T.stab = .92; T.amp = .5; holdM = Math.min(1, (mel.t % 1.6)/1.0); T.hold = holdM; $('#sN').value = MEL[k] % 12; $('#sO').value = Math.floor(MEL[k]/12) - 1; return; } }
   const pc = +$('#sN').value, o = +$('#sO').value, l = +$('#sL').value/100, s = +$('#sS').value/100;
+  T.noise = 0; T.vo = 1; T.cent = .5;
+  if (snd && !paused){
+    const SND = { s:{ n:1, c:.9, v:0, a:.55 }, sh:{ n:1, c:.55, v:0, a:.6 }, breath:{ n:1, c:.12, v:0, a:.3 }, z:{ n:.6, c:.8, v:1, a:.5 }, m:{ n:0, c:.3, v:1, a:.25 } }[snd];
+    T.noise = SND.n; T.cent = SND.c; T.vo = SND.v; T.amp = 0.15 + 0.85*Math.pow(SND.a, 0.6); T.e = 1; T.stab = SND.v ? s : .2;
+    T.u = clamp((o + 1)*12 + pc, 0, 47);
+    if (SND.v){ holdM = Math.min(1, holdM + dt/2); } else { holdM = 0; }
+    T.hold = holdM; exh = SND.n > .5 && !SND.v ? exh + dt : 0; if (exh) exhLast = exh;
+    return;
+  }
+  exh = 0;
   const drift = (1-s)*(0.7*Math.sin(t*1.7) + 0.4*Math.sin(t*4.3));
   T.u = clamp((o + 1)*12 + pc + drift, 0, 47); T.amp = 0.15 + 0.85*Math.pow(l, 0.6); T.stab = s; T.e = paused ? 0.08 : 1;
   holdM = (!paused && s > .6) ? Math.min(1, holdM + dt/2) : Math.max(0, holdM - dt*.8); T.hold = holdM;
+  if (paused) T.vo = S.vo;
 }
-function voiceTarget(){
-  const f = voice.f;
-  if (f.voiced && f.ref){ const refOct = Math.floor(f.ref/12) - 1; T.u = clamp(f.midi - 12*refOct, 0, 47); }
-  T.amp = 0.15 + 0.85*Math.pow(Math.min(1, f.level || 0), 0.6);
-  T.stab = f.voiced ? f.stab : T.stab; T.e = f.silent ? 0.08 : f.noise ? 0.4 : 1; T.hold = voice.hold;
+function spectral(){
+  const an = voice.an, sr = voice.ctx.sampleRate; if (!spec || spec.length !== an.frequencyBinCount) spec = new Float32Array(an.frequencyBinCount);
+  an.getFloatFrequencyData(spec);
+  const bin = sr/an.fftSize; let num = 0, den = 0, lg = 0, cnt = 0;
+  for (let i = Math.floor(150/bin); i < Math.min(spec.length, Math.floor(11000/bin)); i++){ const pw = Math.pow(10, spec[i]/10) + 1e-20; num += pw*i*bin; den += pw; lg += Math.log(pw); cnt++; }
+  return { cent: num/den, flat: Math.exp(lg/cnt)/(den/cnt) };
+}
+function voiceTarget(dt){
+  const f = voice.f, sp = spectral();
+  const act = f.db > f.floor + 6;
+  let voiced = f.voiced, midi = f.midi;
+  if (!voiced && act){ const p = VF.yin(voice.dec, voice.ctx.sampleRate/2, 70, 1100); if (p.clarity > 0.72 && p.f > 70){ voiced = true; midi = 69 + 12*Math.log2(p.f/440); } }   // тихое «м-м-м»
+  silT = act ? 0 : silT + dt;
+  const silent = silT > 0.3;
+  const cN = clamp((Math.log2(Math.max(200, sp.cent)) - Math.log2(800))/(Math.log2(9000) - Math.log2(800)), 0, 1);
+  let nz = act ? clamp((sp.flat - 0.05)/0.25, 0, 1) : 0; if (act && !voiced) nz = Math.max(nz, 0.85);
+  const ref = f.ref != null ? f.ref : 55;
+  if (voiced){ const refOct = Math.floor(ref/12) - 1, raw = clamp(midi - 12*refOct, 0, 47); T.u = Math.abs(raw - Math.round(raw)) < 0.42 ? Math.round(raw) : raw; }   // живой голос редко точен: привязка к ближайшей ноте
+  T.noise = silent ? 0 : nz; T.cent = act ? cN : T.cent; T.vo = silent ? T.vo : voiced ? 1 : 0;
+  const lev = clamp((f.db - f.floor - 6)/30, 0, 1);
+  T.amp = 0.15 + 0.85*Math.pow(voiced ? Math.min(1, f.level || 0) : lev, 0.6);
+  T.stab = voiced ? f.stab : T.stab; T.e = silent ? 0.08 : 1; T.hold = voiced ? voice.hold : 0;
+  if (!voiced && nz > .5 && !silent){ exh += dt; exhLast = exh; } else if (silent) exh = 0;
   if (voice.T.kick){ kick = voice.T.kick; front = 0; voice.T.kick = 0; }
 }
 function ease(dt){
   const k = a => 1 - Math.pow(1 - a, dt*60);
   S.u += (T.u - S.u)*k(0.07); S.amp += (T.amp - S.amp)*k(T.amp > S.amp ? .15 : .04);
   S.stab += (T.stab - S.stab)*k(.08); S.e += (T.e - S.e)*k(T.e > S.e ? .07 : .012); S.hold += (T.hold - S.hold)*k(.06);
+  S.noise += (T.noise - S.noise)*k(T.noise > S.noise ? .12 : .04); S.cent += (T.cent - S.cent)*k(.08); S.vo += (T.vo - S.vo)*k(T.vo > S.vo ? .1 : .05);
+  const bxT = 1 + 0.22*Math.min(1, exh/6)*S.noise; S.bx += (bxT - S.bx)*k(bxT > S.bx ? .03 : .008);   // выдох раздувает, пауза-вдох собирает
   S.crisp = opt.crisp;
 }
 
@@ -194,9 +236,11 @@ function ease(dt){
 const P = makeP(innerWidth < 700 ? 5000 : 8000, 5);
 const ghosts = []; let lastStable = null, stableT = 0;
 const tmp = [0, 0];
-function colorFor(u){ if (!opt.rain) return VAN; const a = Math.floor(clamp(u,0,47)), g = snap(u - a); return mix(HUE[a % 12], HUE[(a + 1) % 12], g); }
+function noteColor(u){ const a = Math.floor(clamp(u,0,47)), g = snap(u - a); return mix(HUE[a % 12], HUE[(a + 1) % 12], g); }
+function colorFor(u){ if (!opt.rain) return VAN; return S.noise*(1 - 0.6*S.vo) > 0.02 ? mix(rgbHex(noteColor(u)), VAN, Math.min(1, S.noise*(1 - 0.6*S.vo))) : noteColor(u); }
+function rgbHex(c){ const m = c.match(/\d+/g); return '#' + m.map(v => (+v).toString(16).padStart(2, '0')).join(''); }
 function step(dt){
-  rot += opt.orbit ? dt*0.32*S.hold*S.e : 0;
+  rot += (opt.orbit ? dt*0.32*S.hold*S.e*S.vo : 0) + dt*S.noise*(0.3 + 1.2*S.amp)*(0.6 + 0.8*S.cent);
   const mv = 1 - Math.pow(1 - (S.e > .5 ? .12 : .03), dt*60);
   for (let i = 0; i < P.N; i++){
     targetOf(P, S, i, rot, t, tmp);
@@ -211,7 +255,7 @@ function step(dt){
   if (opt.weave && lastStable !== null && Math.abs(S.u - lastStable) > 0.6 && stableT > 0.8){
     const n = Math.round(P.N*0.45), X = new Float32Array(n), Y = new Float32Array(n);
     for (let j = 0; j < n; j++){ const i = (j*2) % P.N; X[j] = P.X[i]; Y[j] = P.Y[i]; }
-    ghosts.unshift({ X, Y, col: colorFor(lastStable), a: .75, rot: 0 }); if (ghosts.length > 3) ghosts.pop();
+    ghosts.unshift({ X, Y, col: opt.rain ? noteColor(lastStable) : VAN, a: .75, rot: 0 }); if (ghosts.length > 3) ghosts.pop();
     lastStable = null; stableT = 0;
   }
   ghosts.forEach(g => { g.a -= dt/7; g.rot += opt.orbit ? dt*0.12 : 0; }); while (ghosts.length && ghosts[ghosts.length-1].a <= 0) ghosts.pop();
@@ -222,14 +266,25 @@ function drawLive(){
   const R = Math.min(w,h)*0.5, cx = w/2, cy = h/2;
   ghosts.forEach(g => { ctx.fillStyle = g.col; ctx.globalAlpha = Math.max(0, g.a)*0.7; const c = Math.cos(g.rot), s = Math.sin(g.rot);
     for (let j = 0; j < g.X.length; j++){ const x = g.X[j]*c - g.Y[j]*s, y = g.X[j]*s + g.Y[j]*c; ctx.fillRect(cx + x*R - .6, cy + y*R - .6, 1.2, 1.2); } });
-  ctx.fillStyle = colorFor(S.u);
-  for (let i = 0; i < P.N; i++){ ctx.globalAlpha = 0.35 + 0.65*((i*7919 % 100)/100); const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
+  const col = colorFor(S.u), nzA = clamp((S.noise - 0.1)/0.6, 0, 1)*(1 - 0.7*S.vo);
+  ctx.fillStyle = col;
+  for (let i = 0; i < P.N; i++){ ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*(1 - 0.75*nzA); const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
+  if (nzA > 0.02){
+    // шум рисуется штрихами вдоль течения: «с» — короткие и частые, выдох — длинные и мягкие
+    const L = (1.8 + 7*(1 - S.cent))*(0.6 + S.amp)*nzA;
+    ctx.strokeStyle = col; ctx.lineWidth = S.cent > .6 ? 0.8 : 1.2; ctx.globalAlpha = 0.55*nzA; ctx.beginPath();
+    for (let i = 0; i < P.N; i++){ const x = P.X[i], y = P.Y[i], r = Math.hypot(x, y) || 1e-6, px = cx + x*R, py = cy + y*R; ctx.moveTo(px, py); ctx.lineTo(px - y/r*L, py + x/r*L); }
+    ctx.stroke();
+  }
   ctx.globalAlpha = 1;
-  const pr = params(Math.round(S.u));
-  $('#noteName').textContent = S.e < .3 ? '·' : NAMES[pr.pc];
-  $('#noteSub').textContent = S.e < .3 ? 'пауза' : (opt.crisp ? pr.m + ' лучей' + (pr.tw ? ', спираль' : '') + ' · колец: ' + pr.k : 'кружево') + ' · октава ' + OCT[pr.o + 1];
+  const pr = params(Math.round(S.u)), exs = exhLast > 0.3 ? ' · выдох ' + exhLast.toFixed(1).replace('.', ',') + ' с' : '';
   const g = S.u - Math.floor(S.u), blur = 4*snap(g)*(1 - snap(g));
-  $('#state').textContent = S.e < .3 ? 'материя рассыпается' : (blur > .5 || S.stab < .45) ? 'между нотами' : S.hold > .85 ? (opt.orbit ? 'форма собрана · течёт по кругу' : 'форма собрана') : 'собирается';
+  const pureNoise = S.noise > .5 && S.vo < .5;
+  const nzName = S.cent > .68 ? 'с-с-с' : S.cent > .38 ? 'ш-ш-ш' : 'выдох';
+  if (S.e < .3){ $('#noteName').textContent = '·'; $('#noteSub').textContent = 'пауза' + exs; }
+  else if (pureNoise){ $('#noteName').textContent = nzName; $('#noteSub').textContent = 'шум без ноты · ' + (S.cent > .68 ? 'мелкая быстрая рябь' : S.cent > .38 ? 'крупная рябь' : 'широкое течение') + exs; }
+  else { $('#noteName').textContent = NAMES[pr.pc] + (S.noise > .3 ? ' + шум' : ''); $('#noteSub').textContent = (S.noise > .3 ? 'звонкий шипящий · ' : '') + (opt.crisp ? pr.m + ' лучей' + (pr.tw ? ', спираль' : '') + ' · колец: ' + pr.k : 'кружево') + ' · октава ' + OCT[pr.o + 1]; }
+  $('#state').textContent = S.e < .3 ? 'материя рассыпается · вдох собирает облако' : pureNoise ? 'шум: узора нет, облако течёт вихрем' : (blur > .5 || S.stab < .45) ? 'между нотами' : S.hold > .85 ? (opt.orbit ? 'форма собрана · течёт по кругу' : 'форма собрана') : 'собирается';
 }
 
 /* ---------- RAF ---------- */
@@ -238,7 +293,7 @@ new IntersectionObserver(es => es.forEach(e => vis.live = e.isIntersecting)).obs
 let last = performance.now();
 function frame(now){
   const dt = Math.min(.05, (now - last)/1000); last = now; t += dt;
-  if (mode === 'voice' && voice.on){ voice.update(dt); voiceTarget(); } else modelTarget(dt);
+  if (mode === 'voice' && voice.on){ voice.update(dt); voiceTarget(dt); } else modelTarget(dt);
   ease(dt);
   if (vis.live){ step(dt); drawLive(); }
   if (mode === 'voice' && voice.on){ const pr = params(Math.round(T.u)); $('#sN').value = pr.pc; $('#sO').value = pr.o; }
@@ -249,13 +304,14 @@ function frame(now){
 /* ---------- кнопки ---------- */
 function tog(id, key, after){ $(id).addEventListener('click', () => { opt[key] = !opt[key]; $(id).classList.toggle('sel', opt[key]); if (after) after(); }); }
 tog('#tRain', 'rain', renderAll); tog('#tCrisp', 'crisp', renderAll); tog('#tOrbit', 'orbit'); tog('#tWeave', 'weave', () => { if (!opt.weave) ghosts.length = 0; });
-['#sN','#sO','#sL','#sS'].forEach(id => $(id).addEventListener('input', () => { paused = false; $('#bP').classList.remove('sel'); mel = null; $('#mMel').classList.remove('sel'); }));
+['#sN','#sO','#sL','#sS'].forEach(id => $(id).addEventListener('input', () => { paused = false; $('#bP').classList.remove('sel'); mel = null; $('#mMel').classList.remove('sel'); if (snd && snd !== 'z' && snd !== 'm'){ snd = null; $$('[data-snd]').forEach(x => x.classList.remove('sel')); } }));
 $('#bK').addEventListener('click', () => { kick = 1; front = 0; paused = false; $('#bP').classList.remove('sel'); });
+$$('[data-snd]').forEach(b => b.addEventListener('click', () => { snd = snd === b.dataset.snd ? null : b.dataset.snd; $$('[data-snd]').forEach(x => x.classList.toggle('sel', x.dataset.snd === snd)); paused = false; $('#bP').classList.remove('sel'); mel = null; $('#mMel').classList.remove('sel'); if (!snd) exhLast = 0; }));
 $('#bP').addEventListener('click', () => { paused = !paused; $('#bP').classList.toggle('sel', paused); });
 $('#mMel').addEventListener('click', () => { if (voice.on){ voice.stop(); setMode('model'); } mel = { t:0 }; $('#mMel').classList.add('sel'); paused = false; });
 function setMode(m){
   mode = m; $('#mModel').classList.toggle('sel', m === 'model'); $('#mVoice').classList.toggle('sel', m === 'voice');
-  $('#mCal').hidden = m !== 'voice'; $('#mBtns').hidden = m === 'voice';
+  $('#mCal').hidden = m !== 'voice'; $('#mBtns').hidden = m === 'voice'; $('#sndBtns').hidden = m === 'voice';
   ['#sN','#sO','#sL','#sS'].forEach(id => $(id).disabled = m === 'voice');
   $('#mode').textContent = m === 'voice' ? '● Микрофон слушает' : 'Модель';
 }
@@ -269,7 +325,7 @@ $('#mCal').addEventListener('click', () => voice.recalibrate());
 
 /* ---------- статичный рендер формы ---------- */
 function renderForm(ctx, cx, cy, R, u, N, seed, color, alpha, dot, rotA){
-  const Q = makeP(N, seed), st = { u, amp:.4, stab:.95, e:1, hold:1, crisp:opt.crisp }, o = [0,0];
+  const Q = makeP(N, seed), st = { u, amp:.4, stab:.95, e:1, hold:1, crisp:opt.crisp, noise:0, cent:.5, vo:1, bx:1 }, o = [0,0];
   ctx.fillStyle = color;
   for (let i = 0; i < N; i++){ targetOf(Q, st, i, rotA || 0, null, o); ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*alpha; const z = Q.Z[i]*dot; ctx.fillRect(cx + o[0]*R - z/2, cy + o[1]*R - z/2, z, z); }
   ctx.globalAlpha = 1;
