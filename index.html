@@ -265,29 +265,43 @@ p{margin:0}
 .blackbtn svg{width:22px;height:22px}
 
 
-/* voice form */
-.vf{display:flex;flex-direction:column;gap:10px}
-.vf-stage{position:relative;background:var(--paper-2);border-radius:30px;aspect-ratio:1/.82;max-width:100%;overflow:hidden}
+/* voice form: dots on a transparent ground */
+.vf-stage{position:relative;margin:-6px calc(-1 * max(18px,env(safe-area-inset-right,0px))) -6px calc(-1 * max(18px,env(safe-area-inset-left,0px)));aspect-ratio:1/.92}
 .vf-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.vf-over{position:absolute;left:18px;bottom:14px;display:flex;align-items:baseline;gap:10px;pointer-events:none}
+.vf-over{position:absolute;left:max(18px,env(safe-area-inset-left,0px));bottom:6px;display:flex;align-items:baseline;gap:10px;pointer-events:none}
 .vf-over b{font-size:22px;font-weight:600;letter-spacing:-.02em}
 .vf-over span{font-size:40px;font-weight:300;line-height:1}
-.vf-foot{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px}
-.vf-st{display:flex;align-items:center;gap:7px;font-weight:600;white-space:nowrap}
-.vf-st i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--signal);display:block;flex:none}
-.vf-st i.on{background:var(--signal);animation:rec 1.6s ease-in-out infinite}
-@keyframes rec{50%{opacity:.35}}
-.vf-hint{color:var(--muted);text-align:right}
-.hero-grid{display:grid;grid-template-columns:1fr minmax(0,132px);gap:14px;align-items:end}
-.plate-sm{width:100%;aspect-ratio:1;max-width:100%;border-radius:22px;display:block;background:var(--ebony)}
-.plates{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.plates .h{font-size:11px;text-align:center;color:var(--muted)}
-.plates .h.t{color:var(--signal)}
-.plates canvas,.plates i{width:100%;aspect-ratio:1;max-width:100%;border-radius:10px;display:block;background:var(--ebony)}
-.plates i.pre{background:transparent;border:1px solid var(--soft)}
-.plates i.fut{border-style:dashed}
-.plates canvas.now{outline:2px solid var(--signal);outline-offset:2px}
-.win-plate{width:100%;aspect-ratio:1;max-width:100%;border-radius:30px;display:block;background:var(--ebony)}
+.hero-grid{display:grid;grid-template-columns:1fr minmax(0,150px);gap:10px;align-items:end}
+.plate-sm{width:100%;aspect-ratio:1;max-width:100%;display:block;margin:-10px -10px -10px 0}
+.tlw{position:relative;height:40px;margin:2px -4px 0}
+.tlw canvas{width:100%;height:40px;display:block}
+.tlw .redpill{position:absolute;top:42px;left:0}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.cal .h{font-size:11px;text-align:center;color:var(--muted)}
+.cal .h.t{color:var(--signal)}
+.cal-d{display:block;width:100%;aspect-ratio:1;max-width:100%;padding:0;border-radius:50%}
+.cal-d canvas{width:100%;height:100%;display:block}
+button.cal-d:active{transform:scale(.94)}
+.win-plate{width:100%;aspect-ratio:1;max-width:100%;display:block}
+.day-trace{width:100%;max-width:340px;aspect-ratio:1;display:block;margin:0 auto}
+.measure{display:flex;flex-direction:column;gap:12px;width:100%;text-align:left;border:1.5px solid var(--ink);border-radius:30px;padding:20px}
+.measure .m-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.measure .idx{font-size:13px;color:var(--signal);font-weight:600}
+.measure h3{font-size:30px;line-height:1}
+.measure .sub{font-size:14px;color:var(--muted);margin-top:6px}
+.m-rec{text-align:right}
+.m-rec b{display:block;font-weight:300;font-size:56px;line-height:.85;letter-spacing:-.05em}
+.m-rec span{font-size:12px;color:var(--muted)}
+.m-chart{width:100%;height:56px;display:block}
+.ex-chart{width:100%;height:180px;display:block;margin-top:8px}
+.b-measure{--c:var(--signal)}
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(25,37,36,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--paper);border-radius:30px 30px 0 0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheet h3{font-size:26px;line-height:1.05}
+.sheet-acts{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.sheet .primary{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:99px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px}
+.ghost.wide{align-self:stretch;text-align:center;padding:14px}
+.icon-btn.plain{background:var(--paper-2);flex:none}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -301,6 +315,7 @@ p{margin:0}
 
 <section class="ex" id="ex" hidden></section>
 <div class="tbar" id="tbar" hidden></div>
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <script src="voiceform.js"></script><script src="field.js"></script>
 <script>
 /* ---------- blocks and exercises (from the guide) ---------- */
@@ -451,7 +466,7 @@ const FOCI=[
  {id:'expr',name:'Выразительность',ex:['pause','tempo','swing','volume']},
  {id:'free',name:'Свобода',ex:['jaw','tongue','yawn','attack','lips','siren']}
 ];
-const CORE=['shoulders','neck','face','diaphragm','dog','exhale','hum','straw','eight','gym','syll','twisters'];
+const CORE=['shoulders','neck','face','diaphragm','dog','hum','straw','eight','gym','syll','twisters'];
 const DUR_TEXT={15:'Базовая разминка: тело, дыхание, звук и дикция.',20:'Разминка и ещё несколько упражнений на акцент дня.',30:'Полное занятие, начиная с упражнения лёжа на полу.'};
 
 const TWISTERS=['На дворе трава, на траве дрова, не руби дрова на траве двора.','Корабли лавировали, лавировали, да не вылавировали.','Бык тупогуб, тупогубенький бычок, у быка бела губа была тупа.','Шла Саша по шоссе и сосала сушку.','Карл у Клары украл кораллы, а Клара у Карла украла кларнет.','От топота копыт пыль по полю летит.','Ехал Грека через реку, видит Грека — в реке рак. Сунул Грека руку в реку, рак за руку Греку цап!','Сшит колпак не по-колпаковски, надо колпак переколпаковать.'];
@@ -470,42 +485,48 @@ const SOUNDS={s:'С',sh:'Ш',z:'З',zh:'Ж'};
 
 /* ---------- voice form: the cloud that the voice organises (see "woisee: голос собирает форму") ---------- */
 const HAS_FORM=typeof window.Field!=='undefined'&&typeof window.VoiceForm!=='undefined';
-const FC={ink:'#192524',vanilla:'#FFFEFC',rasp:'#E780C0',lime:'#ECF176',kale:'#5EA879',ebony:'#192524',signal:'#F0472C'};
-/* one main link per exercise: what the hint under the form tells you to watch */
-const VLINK={
- pitch:{ids:['siren','swing','eight','yawn'],hint:'Следите, как меняется узор'},
- stab:{ids:['hum','straw','resonators','vowels'],hint:'Держите звук, пока узор не станет чётким'},
- vol:{ids:['volume','send'],hint:'Облако растёт, узор остаётся'},
- attack:{ids:['attack','lips','tongue','syll','twisters','tempo'],hint:'Мягкое начало — без волны'},
- pause:{ids:['pause','reading','cork'],hint:'Пусть узор расплывётся, потом соберите снова'},
- noise:{ids:['dog','exhale','shoulders'],hint:'На «з» и «ж» появляется узор, на «с» и «ш» — дымка'}
+const FC={ink:'#192524',vanilla:'#FFFEFC',rasp:'#E780C0',lime:'#ECF176',kale:'#5EA879',ebony:'#192524',signal:'#F0472C',soft:'#C9CEC8'};
+/* plate colours per background: dots only, never a filled plate */
+const PAL={
+  white:{body:'#E780C0',breath:'#C2C73A',phon:'#5EA879',artic:'#192524',pale:'#B8BEB7'},
+  lime:{body:'#D9539F',breath:'#7C8120',phon:'#3F8A5B',artic:'#192524',pale:'#B7BC52'}
 };
-const HINT_OVERRIDE={dog:'Шум без высоты — облако дрожит без узора',shoulders:'«Ха-а-а» — облако вздрагивает и отпускает'};
-function vlink(id){for(const k in VLINK)if(VLINK[k].ids.includes(id))return k;return null;}
+const REDUCED=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* one main link per exercise (kept in data, not shown as text: the dots speak for themselves) */
+const VLINK={
+ pitch:['siren','swing','eight','yawn'],
+ stab:['hum','straw','resonators','vowels'],
+ vol:['volume','send'],
+ attack:['attack','lips','tongue','syll','twisters','tempo'],
+ pause:['pause','reading','cork'],
+ noise:['dog','shoulders']
+};
+function vlink(id){for(const k in VLINK)if(VLINK[k].includes(id))return k;return null;}
 function usesMic(id){return !!vlink(id);}
-function formHint(id){const k=vlink(id);return HINT_OVERRIDE[id]||(k?VLINK[k].hint:'Дышите вместе с облаком');}
 
 const vf={F:null,S:null,T:null,voice:null,listening:false,raf:0,t:0,last:0,rec:null,err:false};
 function micAllowed(){return HAS_FORM&&data.profile.micOff!==true&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);}
+function needMicAsk(){return usesMic(ex.id)&&micAllowed()&&!data.profile.mic;}
 
 function formPanel(e){
-  if(!HAS_FORM)return '';
-  const mic=usesMic(ex.id)&&micAllowed();
-  const firstTime=mic&&data.profile.mic!=='granted';
-  return `<section class="vf">
-    <div class="vf-stage"><canvas id="vfCv" aria-label="Форма из частиц, которую собирает голос"></canvas>${e.type==='breath'?'<div class="vf-over"><b id="pcLbl">Готовы?</b><span id="pcNum" class="num"></span></div>':''}</div>
-    <div class="vf-foot"><span class="vf-st" id="vfSt">${mic?'<i></i>Микрофон включится по «Старт»':'Образец'}</span><span class="vf-hint">${esc(formHint(ex.id))}</span></div>
-    ${firstTime?`<p class="note">Во время упражнения woisee слушает голос и собирает из него форму. Звук не записывается и не покидает телефон. Телефон спросит разрешение на микрофон один раз.</p>`:''}
-  </section>`;
+  if(!HAS_FORM||ex.id==='exhale')return '';
+  return `<div class="vf-stage"><canvas id="vfCv" aria-hidden="true"></canvas>${e.type==='breath'?'<div class="vf-over"><b id="pcLbl">Готовы?</b><span id="pcNum" class="num"></span></div>':''}</div>`;
 }
 function formOpen(){
   if(!HAS_FORM||!$('vfCv'))return;
-  if(!vf.F)vf.F=Field.make(innerWidth<700?4000:6000,9);
+  if(!vf.F)vf.F=Field.make(innerWidth<700?4500:6500,9);
   vf.S=Field.state({e:.08,hold:0});vf.T=Field.state();vf.t=0;vf.err=false;
   vf.rec={notes:[],att:0,noise:0,pause:0,cur:null,mic:false};
   cancelAnimationFrame(vf.raf);vf.last=performance.now();vf.raf=requestAnimationFrame(formFrame);
 }
 function formClose(){cancelAnimationFrame(vf.raf);vf.raf=0;stopListening();}
+/* the one-time question about the microphone lives in a sheet, not in the exercise */
+function askMic(){
+  openSheet(`<h3>Голос соберёт форму</h3>
+    <p>В голосовых упражнениях woisee слушает микрофон: ровный звук собирает точки в узор, пауза их рассыпает.</p>
+    <p class="note">Звук не записывается и не покидает телефон. Сохраняются только признаки голоса для картинки дня. Выключить можно в настройках на странице прогресса.</p>
+    <div class="sheet-acts"><button class="primary" data-act="micyes">Включить микрофон</button><button class="ghost wide" data-act="micno">Без микрофона</button></div>`);
+}
 async function startListening(){
   if(!usesMic(ex.id)||!micAllowed()||vf.listening)return;
   try{
@@ -515,17 +536,9 @@ async function startListening(){
     vf.listening=true;vf.rec.mic=true;
     if(data.profile.mic!=='granted'){data.profile.mic='granted';saveProfile();}
   }catch(e){vf.err=true;vf.listening=false;if(data.profile.mic!=='denied'){data.profile.mic='denied';saveProfile();}}
-  formStatus();
 }
-function stopListening(){if(vf.voice&&vf.voice.on){try{vf.voice.stop();}catch(e){}}vf.listening=false;closeSeg();formStatus();}
-function formStatus(){
-  const el=$('vfSt');if(!el)return;
-  if(vf.listening)el.innerHTML='<i class="on"></i>Микрофон слушает';
-  else if(vf.err)el.textContent='Образец · микрофон недоступен';
-  else if(usesMic(ex.id)&&micAllowed())el.innerHTML=ex.status==='pause'?'<i></i>Пауза · микрофон выключен':'<i></i>Микрофон включится по «Старт»';
-  else el.textContent='Образец';
-}
-/* sample targets when no live voice: a breathing cloud, or a demo of the exercise's main link */
+function stopListening(){if(vf.voice&&vf.voice.on){try{vf.voice.stop();}catch(e){}}vf.listening=false;closeSeg();}
+/* without a live voice: a breathing cloud, or a demo of the exercise's main link */
 function sampleTarget(dt){
   const T=vf.T,e=EX[ex.id],k=vlink(ex.id),el=elapsed();
   if(e.type==='breath'){
@@ -549,12 +562,12 @@ function formFrame(now){
     if(vf.T.kick>0)vf.rec.att++;
     track(dt);
     if(vf.voice.f.calibrated&&!data.profile.ref){data.profile.ref=vf.voice.ref;saveProfile();}
-  }else if(!matchMedia('(prefers-reduced-motion: reduce)').matches||vf.t<.1)sampleTarget(dt);
+  }else if(!REDUCED()||vf.t<.1)sampleTarget(dt);
   Field.ease(vf.S,vf.T,dt);
   const cv=$('vfCv'),d=Math.min(devicePixelRatio||1,2),w=cv.clientWidth,h=cv.clientHeight;
   if(cv.width!==Math.round(w*d)||cv.height!==Math.round(h*d)){cv.width=Math.round(w*d);cv.height=Math.round(h*d);}
   const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
-  Field.step(vf.F,vf.S,dt,vf.t);Field.draw(ctx,vf.F,w/2,h/2,Math.min(w,h)*.5,FC.ink,.95);
+  Field.step(vf.F,vf.S,dt,vf.t);Field.draw(ctx,vf.F,w/2,h/2,Math.min(w,h)*.56,FC.ink,1.05);
   vf.raf=requestAnimationFrame(formFrame);
 }
 /* features for the picture of the day: long steady notes, attacks, noise and pauses. No audio is kept. */
@@ -581,7 +594,7 @@ function logExercise(){
   ex.logged=true;saveDay(k);
 }
 
-/* ---------- picture of the day: one plate per calendar day, sectors clockwise from 12 ---------- */
+/* ---------- picture of the day: sectors clockwise from 12, dots on a transparent ground ---------- */
 function dayEntries(k){
   const d=data.days[k];if(!d)return [];
   const log=(d.log||[]).slice(),used=new Set(),out=[];
@@ -596,67 +609,163 @@ function dayEntries(k){
   return out;
 }
 function seedOf(k){return parseInt(k.replace(/-/g,''),10)%2147483647;}
-function drawDay(ctx,s,ex_,upto,seed,frac){
-  ctx.fillStyle=FC.ebony;ctx.fillRect(0,0,s,s);
-  if(!ex_.length)return;
-  const R=s*.34,cx=s/2,cy=s/2,dot=Math.max(.6,s/520),dens=(s/600)*(s/600);
-  const total=ex_.reduce((a,e)=>a+e.sec,0);let a0=-Math.PI/2;
-  ex_.forEach((e,k)=>{
+function drawDay(ctx,s,list,upto,seed,pal){
+  pal=pal||PAL.white;
+  ctx.clearRect(0,0,s,s);
+  if(!list.length)return;
+  const R=s*.4,cx=s/2,cy=s/2,dot=Math.max(.9,s/380),dens=(s/600)*(s/600);
+  const total=list.reduce((a,e)=>a+e.sec,0);let a0=-Math.PI/2;
+  list.forEach((e,k)=>{
     const span=Math.PI*2*e.sec/total,done=e.done&&k<upto,r=Field.rng(seed*31+k*7+1);
     let parts=[null];
-    if(done&&(e.b==='phon'||e.b==='artic')){
-      parts=e.notes&&e.notes.length?e.notes.slice(0,6):[{n:e.b==='artic'?6:2,stab:.8,sec:1}];
-    }else if(done&&e.b==='breath'&&e.notes&&e.notes.length)parts=e.notes.slice(0,3);
+    if(done&&(e.b==='phon'||e.b==='artic'))parts=e.notes&&e.notes.length?e.notes.slice(0,6):[{n:e.b==='artic'?6:2,stab:.8,sec:1}];
+    else if(done&&e.b==='breath'&&e.notes&&e.notes.length)parts=e.notes.slice(0,3);
     parts.forEach((nt,q)=>{
       const sub=span/parts.length,start=a0+sub*q;
-      const n=Math.round((done?(e.b==='body'||e.b==='breath'?15:22):6)*e.sec/parts.length*dens+20);
+      const n=Math.round((done?(e.b==='body'||e.b==='breath'?16:24):7)*e.sec/parts.length*dens+22);
       const f=Field.make(n,seed*31+k*7+q);
       for(let i=0;i<n;i++){
         const th=start+r()*sub+Field.gs(r)*.06,rad=Math.sqrt(-2*Math.log(1-r()*.995))*(e.b==='artic'?.3:e.b==='phon'?.4:.46);
         f.X0[i]=Math.cos(th)*rad;f.Y0[i]=Math.sin(th)*rad*.9;
       }
-      let st,col,al=.85;
-      if(!done){st=Field.state({e:0,hold:0,stab:.6,amp:.5});col=FC.vanilla;al=.32;}
-      else if(e.b==='body'||e.b==='stage'){st=Field.state({e:0,hold:0,stab:.7,amp:.5});col=FC.rasp;al=.75;}
-      else if(e.b==='breath'&&!nt){st=Field.state({noise:1,e:.6,stab:.15,hold:0,amp:.5});col=FC.lime;al=.6;}
-      else{st=Field.state({n:nt.n,stab:nt.stab,amp:.5,hold:Math.min(1,.4+(nt.sec||1)/5)});col=e.b==='artic'?FC.vanilla:e.b==='breath'?FC.lime:FC.kale;al=.95;}
-      F_alpha(ctx,f,st,cx,cy,R,col,dot,al*(frac==null?1:frac));
+      let st,col,al=.9;
+      if(!done){st=Field.state({e:0,hold:0,stab:.6,amp:.5});col=pal.pale;al=.8;}
+      else if(e.b==='body'||e.b==='stage'){st=Field.state({e:0,hold:0,stab:.7,amp:.5});col=pal.body;}
+      else if(e.b==='breath'&&!nt){st=Field.state({noise:1,e:.6,stab:.15,hold:0,amp:.5});col=pal.breath;}
+      else{st=Field.state({n:nt.n,stab:nt.stab,amp:.5,hold:Math.min(1,.4+(nt.sec||1)/5)});col=pal[e.b]||pal.phon;al=1;}
+      Field.settle(f,st);Field.draw(ctx,f,cx,cy,R,col,dot,al);
     });
     a0+=span;
   });
 }
-function F_alpha(ctx,f,st,cx,cy,R,col,dot,al){Field.settle(f,st);Field.draw(ctx,f,cx,cy,R,col,dot,al);}
-function fitCv(cv,s){const d=Math.min(devicePixelRatio||1,2),W=Math.round(s*d);if(cv.width!==W||cv.height!==W){cv.width=W;cv.height=W;}const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);return c;}
+function fitCv(cv,w,h){h=h||w;const d=Math.min(devicePixelRatio||1,2),W=Math.round(w*d),H=Math.round(h*d);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);return c;}
+/* calendar day: a circle like the logo, with red dots inside — more practice, more dots */
+function drawDayCircle(cv,k){
+  const s=cv.clientWidth;if(!s)return;
+  const ctx=fitCv(cv,s),r=s/2-1.5,c=s/2,today=dkey(),d=data.days[k],has=ok(k)||(d&&(d.log||[]).length);
+  ctx.clearRect(0,0,s,s);
+  ctx.beginPath();ctx.arc(c,c,r,0,Math.PI*2);
+  if(k>today){ctx.strokeStyle=FC.soft;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);return;}
+  if(!has){ctx.fillStyle='#E4E8E3';ctx.fill();if(k===today){ctx.strokeStyle=FC.signal;ctx.lineWidth=2;ctx.stroke();}return;}
+  ctx.fillStyle=FC.ebony;ctx.fill();
+  const rng=Field.rng(seedOf(k)),mins=(d.seconds||0)/60,voiced=(d.log||[]).reduce((a,x)=>a+(x.notes||[]).length,0);
+  const n=Math.round(Math.min(220,40+mins*7+voiced*6)),ox=c-r*.22,oy=c+r*.2,sig=r*(.26+Math.min(.18,voiced*.01));
+  ctx.fillStyle=FC.signal;
+  for(let i=0;i<n;i++){
+    const x=ox+Field.gs(rng)*sig,y=oy+Field.gs(rng)*sig;
+    if(Math.hypot(x-c,y-c)>r-2)continue;
+    const z=(.8+rng()*1.1)*Math.max(.8,s/48);ctx.globalAlpha=.55+rng()*.45;ctx.fillRect(x-z/2,y-z/2,z,z);
+  }
+  ctx.globalAlpha=1;
+  if(k===today){ctx.beginPath();ctx.arc(c,c,r,0,Math.PI*2);ctx.strokeStyle=FC.signal;ctx.lineWidth=2;ctx.stroke();}
+}
 function paintPlates(root){
   if(!HAS_FORM)return;
-  (root||document).querySelectorAll('canvas[data-plate]').forEach(cv=>{
+  root=root||document;
+  root.querySelectorAll('canvas[data-plate]').forEach(cv=>{
     const k=cv.dataset.plate,s=cv.clientWidth;if(!s)return;
-    const ctx=fitCv(cv,s);
-    if(cv.dataset.empty){ctx.fillStyle=FC.ebony;ctx.fillRect(0,0,s,s);return;}
-    const e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k));
+    const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'white']);
   });
+  root.querySelectorAll('canvas[data-day]').forEach(cv=>drawDayCircle(cv,cv.dataset.day));
+  root.querySelectorAll('canvas[data-exchart]').forEach(cv=>drawExDots(cv,cv.dataset.exchart,!!cv.dataset.mini));
 }
-function plateCount(k){const d=data.days[k];if(!d||!d.plan)return null;return {n:d.plan.filter(id=>(d.done||[]).includes(id)).length,of:d.plan.length};}
-/* end of day: sectors appear clockwise over ~2.4 s, then save or share */
-function revealPlate(cv,k){
+/* end of day: sectors appear clockwise over ~2.4 s */
+function revealPlate(cv,k,pal){
   if(!HAS_FORM||!cv)return;
   const s=cv.clientWidth,ctx=fitCv(cv,s),e=dayEntries(k),seed=seedOf(k);
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){drawDay(ctx,s,e,e.length,seed);return;}
+  if(REDUCED()){drawDay(ctx,s,e,e.length,seed,pal);return;}
   const t0=performance.now();let shown=-1;
-  const stepFn=now=>{const p=Math.min(1,(now-t0)/2400),u=Math.ceil(p*e.length);if(u!==shown){shown=u;drawDay(ctx,s,e,u,seed);}if(p<1&&cv.isConnected)requestAnimationFrame(stepFn);};
+  const stepFn=now=>{const p=Math.min(1,(now-t0)/2400),u=Math.ceil(p*e.length);if(u!==shown){shown=u;drawDay(ctx,s,e,u,seed,pal);}if(p<1&&cv.isConnected)requestAnimationFrame(stepFn);};
   requestAnimationFrame(stepFn);
 }
 async function sharePlate(k){
   const cv=document.createElement('canvas'),S=1080,ctx=fitCv(cv,S);
-  const e=dayEntries(k);drawDay(ctx,S,e,e.length,seedOf(k));
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.fillStyle=FC.vanilla;ctx.font='800 '+Math.round(cv.width*.045)+'px "Inter Tight", sans-serif';ctx.fillText('woisee',cv.width*.06,cv.height*.94);
+  ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,S,S);
+  const tmp=document.createElement('canvas'),tctx=fitCv(tmp,S);const e=dayEntries(k);drawDay(tctx,S,e,e.length,seedOf(k),PAL.white);
+  ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tmp,0,0);
+  ctx.fillStyle=FC.ink;ctx.font='800 '+Math.round(cv.width*.045)+'px "Inter Tight", sans-serif';ctx.fillText('woisee',cv.width*.06,cv.height*.94);
   ctx.font='400 '+Math.round(cv.width*.03)+'px "Inter Tight", sans-serif';ctx.textAlign='right';ctx.fillText(dateLong(parseKey(k)),cv.width*.94,cv.height*.94);
   const blob=await new Promise(r=>cv.toBlob(r,'image/png'));if(!blob)return;
   const file=new File([blob],'woisee-'+k+'.png',{type:'image/png'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'woisee'});return;}}catch(err){if(err&&err.name==='AbortError')return;}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
 }
+/* a day, opened from the calendar: the trace of the voice */
+function openDay(k){
+  const d=data.days[k]||{},list=dayEntries(k),f=FOCI.find(x=>x.id===d.focus);
+  const doneN=list.filter(x=>x.done).length,voiced=(d.log||[]).filter(x=>x.mic).length;
+  const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel];
+  const exs=d.exhale&&Object.keys(d.exhale).length?Object.keys(SOUNDS).filter(s=>d.exhale[s]).map(s=>`[${SOUNDS[s]}] ${Math.round(d.exhale[s])} с`).join(' · '):'';
+  openSheet(`<div class="sec-h"><h3>${esc(weekday(parseKey(k)))}, ${esc(dateLong(parseKey(k)))}</h3><button class="icon-btn plain" data-act="closesheet" aria-label="Закрыть">${ICON_X}</button></div>
+    ${HAS_FORM?`<canvas class="day-trace" data-plate="${k}" aria-label="След голоса за день"></canvas>`:''}
+    <ul class="hist">
+      <li><span>Время</span><span class="m num">${Math.round((d.seconds||0)/60)} мин</span></li>
+      <li><span>Упражнения</span><span class="m num">${doneN}${d.plan?' из '+d.plan.length:''}${voiced?' · с голосом '+voiced:''}</span></li>
+      ${f?`<li><span>Акцент</span><span class="m">${esc(f.name)}</span></li>`:''}
+      ${exs?`<li><span>Долгий выдох</span><span class="m num">${exs}</span></li>`:''}
+      ${feel?`<li><span>Голос после</span><span class="m">${feel}</span></li>`:''}
+    </ul>
+    <p class="note">Розовые точки — тело, жёлтые — дыхание, зелёные узоры — фонация, тёмное кружево — артикуляция. По часовой стрелке от 12, в порядке занятий.</p>
+    ${HAS_FORM&&list.some(x=>x.done)?`<button class="ghost wide" data-act="shareplate" data-v="${k}">Сохранить картинку</button>`:''}`);
+  paintPlates($('sheet'));
+}
+
+/* ---------- timeline of the day from dots: done is dense ink, now is red and alive, ahead is pale ---------- */
+const tl={raf:0,P:null,W:0,key:''};
+function tlStart(){
+  cancelAnimationFrame(tl.raf);tl.raf=0;
+  const cv=$('tlCv'),d=todayPlan();if(!cv||!d)return;
+  const W=cv.clientWidth,H=cv.clientHeight,band=22,top=(H-band)/2;
+  const plan=d.plan,cur=nextUndone(plan,d.done,null),total=sumD(plan),gap=3,usable=W-gap*(plan.length-1);
+  const rng=(window.Field?Field.rng:(s=>{let x=s;return()=>(x=(x*16807)%2147483647)/2147483647;}))(seedOf(dkey()));
+  const P=[];let x=0,curX=0;
+  plan.forEach(id=>{
+    const w=Math.max(4,usable*EX[id].d/total),st=d.done.includes(id)?2:id===cur?1:0;
+    if(st===1)curX=x;
+    const n=Math.round(w*band*(st===2?.32:st===1?.3:.16));
+    for(let i=0;i<n;i++)P.push({hx:x+rng()*w,hy:top+rng()*band,p1:rng()*6.28,p2:rng()*6.28,sp:.6+rng()*1.4,st,z:.9+rng()*1.3});
+    x+=w+gap;
+  });
+  tl.P=P;tl.W=W;
+  const pill=$('tlPill');if(pill){pill.hidden=!cur;pill.style.left=Math.min(W-70,curX)+'px';}
+  const t0=performance.now();
+  const frame=now=>{
+    const c=$('tlCv');if(!c||ex.open){tl.raf=0;return;}
+    const t=(now-t0)/1000,ctx=fitCv(c,W,H);ctx.clearRect(0,0,W,H);
+    const still=REDUCED();
+    for(const q of tl.P){
+      const A=q.st===1?4.2:q.st===2?.9:1.6,tt=still?0:t;
+      const px=q.hx+Math.sin(tt*q.sp+q.p1)*A+(q.st===1?Math.sin(tt*.7+q.p2)*2.5:0),py=q.hy+Math.cos(tt*q.sp*1.3+q.p2)*A;
+      ctx.fillStyle=q.st===2?FC.ink:q.st===1?FC.signal:FC.soft;ctx.globalAlpha=q.st===0?.9:.85;
+      ctx.fillRect(px-q.z/2,py-q.z/2,q.z,q.z);
+    }
+    ctx.globalAlpha=1;
+    if(!still)tl.raf=requestAnimationFrame(frame);
+  };
+  tl.raf=requestAnimationFrame(frame);
+}
+
+/* ---------- long exhale measurements as columns of dots: one dot = 2 seconds ---------- */
+function exPoints(s){return Object.keys(data.days).sort().filter(k=>data.days[k].exhale&&data.days[k].exhale[s]).slice(-10).map(k=>({k,v:data.days[k].exhale[s]}));}
+function drawExDots(cv,s,mini){
+  const W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
+  const ctx=fitCv(cv,W,H),pts=exPoints(s);ctx.clearRect(0,0,W,H);
+  const step=mini?4:2,B=mini?3:18,T=mini?3:6,max=Math.max(44,Math.ceil(Math.max(0,...pts.map(p=>p.v))/4)*4+4),y=v=>T+(H-T-B)*(1-v/max);
+  ctx.strokeStyle='rgba(25,37,36,.25)';ctx.setLineDash([2,4]);ctx.lineWidth=1;
+  [30,40].forEach(v=>{ctx.beginPath();ctx.moveTo(0,y(v));ctx.lineTo(W,y(v));ctx.stroke();});ctx.setLineDash([]);
+  if(!mini){ctx.fillStyle='#5D6A67';ctx.font='10px "Inter Tight", sans-serif';ctx.textAlign='right';ctx.fillText('цель 30–40 с',W-2,y(40)-4);}
+  const cols=Math.max(pts.length,mini?8:7),slot=W/cols,dz=Math.max(3,Math.min(slot*.42,(H-T-B)/(max/step)*.82));
+  pts.forEach((p,i)=>{
+    const cx=slot*(i+.5),last=i===pts.length-1,k=Math.round(p.v/step);
+    ctx.fillStyle=last?FC.signal:FC.ink;
+    for(let j=0;j<k;j++){const vy=y((j+.5)*step);ctx.beginPath();ctx.arc(cx,vy,dz/2,0,Math.PI*2);ctx.fill();}
+    if(!mini){const dd=parseKey(p.k);ctx.fillStyle='#5D6A67';ctx.textAlign='center';ctx.font='10px "Inter Tight", sans-serif';ctx.fillText(dd.getDate()+'.'+pad(dd.getMonth()+1),cx,H-4);
+      ctx.fillStyle=FC.ink;ctx.font='600 11px "Inter Tight", sans-serif';ctx.fillText(Math.round(p.v),cx,y(p.v)-dz);}
+  });
+}
+
+function openSheet(html){$('sheet').innerHTML=html;$('scrim').hidden=false;}
+function closeSheet(){$('scrim').hidden=true;$('sheet').innerHTML='';}
 
 
 /* ---------- helpers ---------- */
@@ -744,6 +853,7 @@ function render(){
   for(const t of ['path','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
   $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():viewLibrary();
   paintPlates($('view'));
+  if(HAS_FORM&&state.tab==='path')tlStart();
 }
 function topbar(){
   const st=streak();
@@ -766,6 +876,7 @@ function viewPath(){
   const plan=d.plan,done=d.done,cur=nextUndone(plan,done,null),n=plan.filter(id=>done.includes(id)).length;
   const f=focusFor(dkey()),t=new Date();
   const tl=plan.map(id=>`<span class="s ${done.includes(id)?'dn':''} ${id===cur?'cur':''}" style="flex-grow:${EX[id].d}">${id===cur?'<span class="redpill">сейчас</span>':''}</span>`).join('');
+  const bs=(data.profile.bests||{}).s,te=(data.days[dkey()]||{}).exhale||{};
   let stack='';
   BLOCKS.forEach((b,bi)=>{
     const ids=plan.filter(id=>EX[id].b===b.id);if(!ids.length)return;
@@ -777,10 +888,14 @@ function viewPath(){
   <section class="hero">
     <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><p class="kicker">${d.dur} минут<br>акцент: ${esc(f.name)}</p></div>
     <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<canvas class="plate-sm" data-plate="${dkey()}" aria-label="Картинка дня"></canvas>`:''}</div>
-    <div class="tl" aria-hidden="true">${tl}</div>
+    ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
     <div class="tl-foot"><span class="note num">≈ ${Math.round(sumD(plan)/60)} мин упражнений</span><button class="lnk" data-act="choose">Изменить время</button></div>
   </section>
   ${!cur?`<section class="donecard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
+  <button class="measure" data-act="single" data-v="exhale">
+    <div class="m-top"><div><span class="idx">Замер</span><h3>Долгий выдох</h3><p class="sub">${te.s?'Сегодня на [С]: '+Math.round(te.s)+' с':'Сегодня ещё не замеряли'} · С · Ш · З · Ж</p></div><div class="m-rec"><b class="num">${bs?Math.round(bs):'—'}</b><span>рекорд [С], сек</span></div></div>
+    ${HAS_FORM&&bs?'<canvas class="m-chart" data-exchart="s" data-mini="1" aria-hidden="true"></canvas>':''}
+  </button>
   <section class="stack">${stack}</section>
   <p class="note">Ни одно упражнение не должно вызывать боль. Лёгкое растяжение — нормально, резкая боль — сигнал остановиться.</p>`;
 }
@@ -795,7 +910,8 @@ function viewProgress(){
   let dots=['П','В','С','Ч','П','С','В'].map((h,i)=>`<span class="h ${i===todayIdx?'t':''}">${h}</span>`).join('');
   const first=Object.keys(data.days).filter(ok).sort()[0]||k;
   for(let i=0;i<35;i++){const kk=dkey(addDays(mon,i));
-    if(HAS_FORM){dots+=kk>k||kk<first?`<i class="pre ${kk>k?'fut':''}"></i>`:`<canvas class="${kk===k?'now':''}" data-plate="${kk}" ${ok(kk)||(data.days[kk]&&(data.days[kk].log||[]).length)?'':'data-empty="1"'} title="${kk}"></canvas>`;}
+    if(HAS_FORM){const has=ok(kk)||(data.days[kk]&&(data.days[kk].log||[]).length);
+      dots+=has?`<button class="cal-d" data-act="day" data-v="${kk}" aria-label="${esc(dateLong(parseKey(kk)))}: след голоса"><canvas data-day="${kk}"></canvas></button>`:`<span class="cal-d"><canvas data-day="${kk}" aria-hidden="true"></canvas></span>`;}
     else dots+=`<i class="${kk===k?'now':kk>k?'fut':ok(kk)?'on':''}" title="${kk}"></i>`;}
   const hist=Object.keys(data.days).filter(kk=>ok(kk)||(data.days[kk].exhale&&Object.keys(data.days[kk].exhale).length)).sort().reverse().slice(0,8).map(kk=>{
     const d=data.days[kk],f=FOCI.find(x=>x.id===d.focus),ex_=d.exhale&&d.exhale.s?` · выдох ${Math.round(d.exhale.s)} с`:'';
@@ -803,15 +919,14 @@ function viewProgress(){
     return `<li><span>${esc(dateLong(parseKey(kk)))}${f?' · '+esc(f.name):''}</span><span class="m num">${Math.round((d.seconds||0)/60)} мин${ex_}${feel?'<br>'+feel:''}</span></li>`;}).join('');
   return `<header class="top"><button class="back" data-act="tab" data-v="${state.from||'path'}">${ICON_BACK}Назад</button><span class="logo">woisee</span></header>
   <div class="p-hero"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<small>подряд</small></span></div>
-  <div class="${HAS_FORM?'plates':'dots'}">${dots}</div>
-  ${HAS_FORM?'<p class="note">Каждый квадрат — картинка дня. Пустая тёмная пластина — день без занятий.</p>':''}
+  <div class="${HAS_FORM?'cal':'dots'}">${dots}</div>
+  ${HAS_FORM?'<p class="note">Красные точки — сколько голоса было в этот день. Нажмите на день, чтобы увидеть его след.</p>':''}
   <div class="trio">
     <div><b class="num">${keys.length}</b><span>${plural(keys.length,'день','дня','дней')} практики</span></div>
     <div><b class="num">${totalMin}</b><span>минут всего</span></div>
     <div><b class="num">${keys.length?Math.round(totalMin/keys.length):0}</b><span>мин в среднем</span></div>
   </div>
   ${hist?`<section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>История</h3></div><ul class="hist">${hist}</ul></section>`:''}
-  <p class="note">Рекорды долгого выдоха — в самом упражнении «Долгий выдох».</p>
   <div class="toggle"><span>Звуковой сигнал в конце таймера</span><button class="sw" data-act="sound" aria-pressed="${data.profile.sound!==false}" aria-label="Звуковой сигнал"></button></div>
   ${HAS_FORM?`<div class="toggle" style="border-top:0;margin-top:-1px"><span>Микрофон в упражнениях<br><small class="note">Голос собирает форму. Звук не записывается.</small></span><button class="sw" data-act="mic" aria-pressed="${data.profile.micOff!==true}" aria-label="Микрофон в упражнениях"></button></div>
   ${data.profile.ref?`<button class="lnk" data-act="resetref" style="align-self:flex-start">Заново определить мою комфортную ноту</button>`:''}`:''}
@@ -822,8 +937,9 @@ function viewProgress(){
 }
 function viewLibrary(){
   let h=topbar()+`<h1 class="big-title">Упражнения</h1><p class="note">Все упражнения из руководства. Откройте любое, чтобы прочитать и сделать отдельно.</p><div class="lib">`;
+  h+=`<h3 class="b-measure"><i></i>Замер</h3><button class="item" data-act="single" data-v="exhale"><span>${esc(EX.exhale.t)}</span><span class="d num">${(data.profile.bests||{}).s?'рекорд '+Math.round(data.profile.bests.s)+' с':'нет замера'}</span></button>`;
   for(const b of ['body','breath','phon','artic','stage']){
-    const ids=Object.keys(EX).filter(id=>EX[id].b===b);
+    const ids=Object.keys(EX).filter(id=>EX[id].b===b&&id!=='exhale');
     h+=`<h3 class="b-${b}"><i></i>${esc(BNAME[b])}</h3>${ids.map(id=>`<button class="item" data-act="single" data-v="${id}"><span>${esc(EX[id].t)}</span><span class="d num">${id==='exhale'&&(data.profile.bests||{}).s?'рекорд '+Math.round(data.profile.bests.s)+' с · ':''}${fmt(EX[id].d)}</span></button>`).join('')}`;
   }
   return h+'</div>';
@@ -854,7 +970,7 @@ function openEx(id,mode){
   Object.assign(ex,{open:true,id,mode,status:'ready',acc:0,since:null,extra:0,counted:0,phase:-1,logged:false});
   ex.sw.running=false;ex.sw.last=null;
   $('ex').hidden=false;$('tbar').hidden=false;document.body.style.overflow='hidden';
-  renderCard();renderBar();formOpen();
+  renderCard();renderBar();formOpen();paintPlates($('ex'));
   $('ex').scrollTop=0;
   clearInterval(ex.timer);ex.timer=setInterval(tick,200);
 }
@@ -870,17 +986,10 @@ function closeEx(){
   render();window.scrollTo(0,0);
 }
 function exhaleHist(s){
-  const pts=Object.keys(data.days).sort().filter(k=>data.days[k].exhale&&data.days[k].exhale[s]).slice(-10).map(k=>({k,v:data.days[k].exhale[s]}));
-  const head=`<div class="sec-h" style="border-top:1px solid var(--rule);padding-top:12px"><span style="font-weight:600">Ваши замеры на [${SOUNDS[s]}]</span><span class="note">лучший за день</span></div>`;
-  if(!pts.length)return head+`<p class="note" style="margin-top:6px">Здесь появится график по дням. Цель — 30–40 секунд.</p>`;
-  const W=320,H=150,L=4,Rr=4,T=18,B=22,max=Math.max(45,Math.ceil(Math.max(...pts.map(p=>p.v))/5)*5+5);
-  const y=v=>T+(H-T-B)*(1-v/max),slot=(W-L-Rr)/Math.max(pts.length,5),bw=Math.min(26,slot*.6);
-  const band=`<rect x="0" y="${y(40).toFixed(1)}" width="${W}" height="${(y(30)-y(40)).toFixed(1)}" fill="var(--lime)" opacity=".7"/><text x="${W-2}" y="${(y(40)-4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--muted)">цель 30–40 с</text>`;
-  const bars=pts.map((p,i)=>{const x=L+slot*i+(slot-bw)/2,last=i===pts.length-1,dd=parseKey(p.k);
-    return `<rect x="${x.toFixed(1)}" y="${y(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0)-y(p.v)).toFixed(1)}" rx="3" fill="${last?'var(--signal)':'var(--ink)'}"/>
-    <text x="${(x+bw/2).toFixed(1)}" y="${(y(p.v)-5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">${Math.round(p.v)}</text>
-    <text x="${(x+bw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--muted)">${dd.getDate()}.${pad(dd.getMonth()+1)}</text>`;}).join('');
-  return head+`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;margin-top:8px" role="img" aria-label="Замеры выдоха по дням">${band}<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--rule)"/>${bars}</svg>`;
+  const pts=exPoints(s);
+  const head=`<div class="sec-h" style="border-top:1px solid var(--rule);padding-top:12px"><span style="font-weight:600">Ваши замеры на [${SOUNDS[s]}]</span><span class="note">точка — 2 секунды</span></div>`;
+  if(!pts.length)return head+`<p class="note" style="margin-top:6px">Здесь появятся замеры по дням. Цель — 30–40 секунд.</p>`;
+  return head+`<canvas class="ex-chart" data-exchart="${s}" role="img" aria-label="Замеры выдоха по дням"></canvas>`;
 }
 const poemHTML=p=>esc(p.x)+`<span class="by">${esc(p.a)}${p.t?', «'+esc(p.t)+'»':''}</span>`;
 function widget(e){
@@ -959,6 +1068,7 @@ function tick(){
 }
 function go(){
   audioInit();
+  if(HAS_FORM&&ex.status==='ready'&&needMicAsk()){askMic();return;}
   if(ex.status==='ready'||ex.status==='pause'){
     const first=ex.status==='ready';
     ex.since=now();ex.status='run';lockScreen();renderBar();
@@ -1006,7 +1116,7 @@ function showDayDone(){
     ${feelBlock(d.feel)}
     <button class="blackbtn" data-act="close">На главную ${ICON_ARROW}</button></div>`;
   $('ex').scrollTop=0;
-  if(HAS_FORM)revealPlate($('winPlate'),k);
+  if(HAS_FORM)revealPlate($('winPlate'),k,PAL.lime);
 }
 function swToggle(){
   const sw=ex.sw,btn=$('swBtn');audioInit();
@@ -1019,7 +1129,7 @@ function swToggle(){
       if(v>prevBest){data.profile.bests=Object.assign({},data.profile.bests,{[sw.sound]:v});saveProfile();
         const r=$('swRec');r.hidden=false;r.textContent=prevBest?`Новый рекорд на [${SOUNDS[sw.sound]}]: ${v} сек`:`Первый замер на [${SOUNDS[sw.sound]}]: ${v} сек`;tone(880,0.4,0.15);
         const bl=$('best-'+sw.sound);if(bl)bl.textContent='рекорд '+Math.round(v);}
-      const hh=$('swHist');if(hh)hh.innerHTML=exhaleHist(sw.sound);
+      const hh=$('swHist');if(hh){hh.innerHTML=exhaleHist(sw.sound);paintPlates(hh);}
     }
   }
   tick();
@@ -1052,6 +1162,7 @@ document.addEventListener('change',ev=>{
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{
+  if(ev.target.id==='scrim'){closeSheet();return;}
   const b=ev.target.closest('[data-act]');if(!b)return;
   const a=b.dataset.act,v=b.dataset.v;
   switch(a){
@@ -1071,11 +1182,15 @@ document.addEventListener('click',ev=>{
     case 'next':nextEx();break;
     case 'sound':data.profile.sound=data.profile.sound===false;saveProfile();audioInit();render();break;
     case 'psnd':state.sound=v;render();break;
-    case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swLbl').textContent='секунд на ['+SOUNDS[v]+']';$('swHist').innerHTML=exhaleHist(v);tick();}break;
+    case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swLbl').textContent='секунд на ['+SOUNDS[v]+']';$('swHist').innerHTML=exhaleHist(v);paintPlates($('swHist'));tick();}break;
     case 'sw':swToggle();break;
     case 'export':exportData();break;
     case 'import':$('bkFile').click();break;
     case 'shareplate':sharePlate(v);break;
+    case 'day':openDay(v);break;
+    case 'closesheet':closeSheet();break;
+    case 'micyes':data.profile.mic='asked';saveProfile();closeSheet();go();break;
+    case 'micno':data.profile.micOff=true;saveProfile();closeSheet();go();break;
     case 'mic':data.profile.micOff=!(data.profile.micOff===true);saveProfile();render();break;
     case 'resetref':data.profile.ref=null;if(vf.voice)vf.voice.recalibrate();saveProfile();render();break;
     case 'tw':ex.tw=(ex.tw+1)%TWISTERS.length;$('twText').textContent=TWISTERS[ex.tw];break;
