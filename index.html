@@ -302,7 +302,7 @@ button.cal-d:active{transform:scale(.94)}
 .sheet .primary{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:99px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px}
 .ghost.wide{align-self:stretch;text-align:center;padding:14px}
 .icon-btn.plain{background:var(--paper-2);flex:none}
-/* tab Замер */
+/* tab Голос */
 .seg2{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:99px;padding:4px;gap:4px}
 .seg2 button{padding:11px 0;border-radius:99px;text-align:center;font-weight:600;font-size:15px}
 .seg2 button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
@@ -320,7 +320,7 @@ button.cal-d:active{transform:scale(.94)}
 
 <div class="nav"><nav>
   <button data-act="tab" data-v="path" id="t-path">Сегодня</button>
-  <button data-act="tab" data-v="measure" id="t-measure">Замер</button>
+  <button data-act="tab" data-v="measure" id="t-measure">Голос</button>
   <button data-act="tab" data-v="library" id="t-library">Упражнения</button>
 </nav></div>
 
@@ -368,7 +368,7 @@ const EX={
   steps:['Встаньте, слегка наклонившись вперёд, руки положите на колени.','Рот приоткрыт, язык лежит свободно.','Дышите часто и поверхностно, как собака в жаркий день.','На каждом вдохе и выдохе чувствуйте толчки живота.','Следуйте подсказкам: 30 секунд дышите, 15 отдыхаете, ещё 30 дышите.'],
   feel:'работает живот, горло остаётся мягким. Если закружилась голова, остановитесь.'},
  exhale:{b:'breath',t:'Долгий выдох: С · Ш · З · Ж',d:60,type:'exhale',
-  why:'Опора — это не большой вдох, а управляемый выдох. Чем дольше и ровнее вы умеете выдыхать, тем длиннее фраза звучит без напряжения в горле в конце. Здесь же вы замеряете свой прогресс.',
+  why:'Опора — это не большой вдох, а управляемый выдох. Чем дольше и ровнее вы умеете выдыхать, тем длиннее фраза звучит без напряжения в горле в конце. Здесь же видно, как растёт результат.',
   steps:['Встаньте прямо, ноги на ширине плеч. Сделайте спокойный вдох животом.','Выберите звук [С] ниже и нажмите «Старт выдоха».','Выдыхайте на [с], как проколотая шина: долго, ровно, без рывков. Мышцы живота мягко поддерживают поток.','Когда воздух закончится, нажмите «Стоп». Время сохранится.','Повторите на [ш], затем на звонких [з] и [ж]. Звонким нужно больше контроля.'],
   feel:'ровный поток и мягкая работа пресса. Цель — 30–40 секунд, начинаем с 15. Без головокружения.'},
  box:{b:'breath',t:'Дыхание на счёт 4-4-8-4',d:100,type:'breath',
@@ -778,30 +778,30 @@ function drawExDots(cv,s,mini){
 function openSheet(html){$('sheet').innerHTML=html;$('scrim').hidden=false;}
 function closeSheet(){$('scrim').hidden=true;$('sheet').innerHTML='';}
 
-/* ---------- tab «Замер»: long exhale measurements + free mode with the microphone ---------- */
+/* ---------- tab «Голос»: long exhale results + free mode with the microphone ---------- */
 const ms={sound:'s',running:false,start:0,last:null,raf:0,rec:''};
 const fm={F:null,S:null,T:null,raf:0,t:0,last:0,on:false,err:false};
 
 function viewMeasure(){
-  const m=state.mtab||'exhale';
+  const m=state.mtab||'free';
   return topbar()+`
-  <div style="display:flex;flex-direction:column;gap:14px"><h1 class="big-title">Замер</h1>
+  <div style="display:flex;flex-direction:column;gap:14px"><h1 class="big-title">Голос</h1>
   <div class="seg2" role="tablist">
-    <button role="tab" data-act="mtab" data-v="exhale" aria-selected="${m==='exhale'}">Выдох</button>
     <button role="tab" data-act="mtab" data-v="free" aria-selected="${m==='free'}">Свободно</button>
+    <button role="tab" data-act="mtab" data-v="exhale" aria-selected="${m==='exhale'}">Выдох</button>
   </div></div>
   ${m==='exhale'?viewExhale():viewFree()}`;
 }
 function viewExhale(){
   const b=data.profile.bests||{},s=ms.sound,today=(data.days[dkey()]||{}).exhale||{},e=EX.exhale;
   return `<section class="msr">
-    <div class="snds">${Object.keys(SOUNDS).map(x=>`<button class="snd" data-act="msnd" data-v="${x}" aria-pressed="${x===s}"><b>${SOUNDS[x]}</b><span class="num">${b[x]?'рекорд '+Math.round(b[x]):'нет замера'}</span></button>`).join('')}</div>
+    <div class="snds">${Object.keys(SOUNDS).map(x=>`<button class="snd" data-act="msnd" data-v="${x}" aria-pressed="${x===s}"><b>${SOUNDS[x]}</b><span class="num">${b[x]?'рекорд '+Math.round(b[x]):'пока нет'}</span></button>`).join('')}</div>
     <div class="sw-line"><div><div class="sw-num" id="msNum">${(ms.last||0).toFixed(1)}</div><span class="note">секунд на [${SOUNDS[s]}]${today[s]?' · сегодня лучший '+Math.round(today[s]):''}</span></div>
       <button class="sw-btn ${ms.running?'run':''}" data-act="msw" id="msBtn">${ms.running?'Стоп':ms.last!=null?'Ещё<br>попытка':'Старт<br>выдоха'}</button></div>
     <p class="rec" id="msRec" ${ms.rec?'':'hidden'}>${esc(ms.rec)}</p>
     <div id="msHist">${exhaleHist(s)}</div>
   </section>
-  <section class="sec"><h4>Как замерять</h4><ol class="steps">${e.steps.map((x,i)=>`<li><span class="n num">${i+1}</span><span>${esc(x.replace('ниже ',''))}</span></li>`).join('')}</ol></section>
+  <section class="sec"><h4>Как делать</h4><ol class="steps">${e.steps.map((x,i)=>`<li><span class="n num">${i+1}</span><span>${esc(x.replace('ниже ',''))}</span></li>`).join('')}</ol></section>
   <div class="feelbox"><b>Цель</b>${esc(e.feel)}</div>`;
 }
 function recordExhale(sound,v){
@@ -817,7 +817,7 @@ function msToggle(){
     const fr=()=>{if(!ms.running)return;const n=$('msNum');if(n)n.textContent=((performance.now()-ms.start)/1000).toFixed(1);ms.raf=requestAnimationFrame(fr);};ms.raf=requestAnimationFrame(fr);return;}
   ms.running=false;cancelAnimationFrame(ms.raf);unlockScreen();
   const v=Math.round((performance.now()-ms.start)/100)/10;ms.last=v;
-  if(v>=2){const prev=recordExhale(ms.sound,v);if(v>prev){ms.rec=prev?`Новый рекорд на [${SOUNDS[ms.sound]}]: ${v} сек`:`Первый замер на [${SOUNDS[ms.sound]}]: ${v} сек`;tone(880,.4,.15);}}
+  if(v>=2){const prev=recordExhale(ms.sound,v);if(v>prev){ms.rec=prev?`Новый рекорд на [${SOUNDS[ms.sound]}]: ${v} сек`:`Первый результат на [${SOUNDS[ms.sound]}]: ${v} сек`;tone(880,.4,.15);}}
   render();
 }
 function msStop(){if(ms.running){ms.running=false;cancelAnimationFrame(ms.raf);unlockScreen();}}
@@ -836,7 +836,7 @@ function freeStart(){
   fm.last=performance.now();fm.raf=requestAnimationFrame(freeFrame);
 }
 function freeFrame(now){
-  if(state.tab!=='measure'||state.mtab!=='free'||!$('freeCv')||ex.open){fm.raf=0;return;}
+  if(state.tab!=='measure'||(state.mtab||'free')!=='free'||!$('freeCv')||ex.open){fm.raf=0;return;}
   const dt=Math.min(.05,(now-fm.last)/1000);fm.last=now;fm.t+=dt;
   if(fm.on&&vf.voice&&vf.voice.on){
     vf.voice.update(dt);Field.fromVoice(vf.voice,fm.T);
@@ -950,7 +950,7 @@ function render(){
   $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():state.tab==='measure'?viewMeasure():viewLibrary();
   paintPlates($('view'));
   if(HAS_FORM&&state.tab==='path')tlStart();
-  if(HAS_FORM&&state.tab==='measure'&&state.mtab==='free')freeStart();
+  if(HAS_FORM&&state.tab==='measure'&&(state.mtab||'free')==='free')freeStart();
 }
 function topbar(){
   const st=streak();
@@ -1079,15 +1079,15 @@ function closeEx(){
 }
 function exhaleHist(s){
   const pts=exPoints(s);
-  const head=`<div class="sec-h" style="border-top:1px solid var(--rule);padding-top:12px"><span style="font-weight:600">Ваши замеры на [${SOUNDS[s]}]</span><span class="note">точка — 2 секунды</span></div>`;
-  if(!pts.length)return head+`<p class="note" style="margin-top:6px">Здесь появятся замеры по дням. Цель — 30–40 секунд.</p>`;
-  return head+`<canvas class="ex-chart" data-exchart="${s}" role="img" aria-label="Замеры выдоха по дням"></canvas>`;
+  const head=`<div class="sec-h" style="border-top:1px solid var(--rule);padding-top:12px"><span style="font-weight:600">Ваши выдохи на [${SOUNDS[s]}]</span><span class="note">точка — 2 секунды</span></div>`;
+  if(!pts.length)return head+`<p class="note" style="margin-top:6px">Здесь появятся ваши выдохи по дням. Цель — 30–40 секунд.</p>`;
+  return head+`<canvas class="ex-chart" data-exchart="${s}" role="img" aria-label="Долгий выдох по дням"></canvas>`;
 }
 const poemHTML=p=>esc(p.x)+`<span class="by">${esc(p.a)}${p.t?', «'+esc(p.t)+'»':''}</span>`;
 function widget(e){
   switch(e.type){
     case 'exhale':{const b=data.profile.bests||{};
-      return `<div class="swatch" id="focusW"><div class="snds">${Object.keys(SOUNDS).map(s=>`<button class="snd" data-act="snd" data-v="${s}" aria-pressed="${ex.sw.sound===s}"><b>${SOUNDS[s]}</b><span class="num" id="best-${s}">${b[s]?'рекорд '+Math.round(b[s]):'нет замера'}</span></button>`).join('')}</div>
+      return `<div class="swatch" id="focusW"><div class="snds">${Object.keys(SOUNDS).map(s=>`<button class="snd" data-act="snd" data-v="${s}" aria-pressed="${ex.sw.sound===s}"><b>${SOUNDS[s]}</b><span class="num" id="best-${s}">${b[s]?'рекорд '+Math.round(b[s]):'пока нет'}</span></button>`).join('')}</div>
       <div class="sw-line"><div><div class="sw-num" id="swNum">0.0</div><span class="note" id="swLbl">секунд на [${SOUNDS[ex.sw.sound]}]</span></div><button class="sw-btn" data-act="sw" id="swBtn">Старт<br>выдоха</button></div>
       <p class="rec" id="swRec" hidden></p><div id="swHist">${exhaleHist(ex.sw.sound)}</div></div>`;}
     case 'breath':return `<div class="pacer" id="focusW"><div class="wrap"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(25,37,36,.4)" stroke-width="1.5" stroke-dasharray="3 6"/><circle id="pcC" cx="100" cy="100" r="40" fill="var(--ink)"/></svg><div class="lbl"><b id="pcLbl">Готовы?</b><span id="pcNum"></span></div></div><p>Вдох 4 · задержка 4 · выдох 8 · задержка 4</p></div>`;
@@ -1219,7 +1219,7 @@ function swToggle(){
       const k=dkey(),d=getDay(k),prevBest=(data.profile.bests||{})[sw.sound]||0;
       if(!d.exhale[sw.sound]||v>d.exhale[sw.sound]){d.exhale[sw.sound]=v;saveDay(k);}
       if(v>prevBest){data.profile.bests=Object.assign({},data.profile.bests,{[sw.sound]:v});saveProfile();
-        const r=$('swRec');r.hidden=false;r.textContent=prevBest?`Новый рекорд на [${SOUNDS[sw.sound]}]: ${v} сек`:`Первый замер на [${SOUNDS[sw.sound]}]: ${v} сек`;tone(880,0.4,0.15);
+        const r=$('swRec');r.hidden=false;r.textContent=prevBest?`Новый рекорд на [${SOUNDS[sw.sound]}]: ${v} сек`:`Первый результат на [${SOUNDS[sw.sound]}]: ${v} сек`;tone(880,0.4,0.15);
         const bl=$('best-'+sw.sound);if(bl)bl.textContent='рекорд '+Math.round(v);}
       const hh=$('swHist');if(hh){hh.innerHTML=exhaleHist(sw.sound);paintPlates(hh);}
     }
