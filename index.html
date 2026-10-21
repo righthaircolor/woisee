@@ -57,7 +57,10 @@ p{margin:0}
 .app{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:18px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .logo{font-weight:800;font-size:24px;letter-spacing:-.05em}
-.streak{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500}
+.streak{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;border:1px solid var(--rule);border-radius:99px;padding:7px 10px 7px 12px}
+.streak svg{width:14px;height:14px;margin-left:-2px}
+.back{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600;margin-left:-6px}
+.back svg{width:22px;height:22px}
 .streak i{width:10px;height:10px;border-radius:50%;background:var(--signal);display:block}
 .kicker{font-size:14px;color:var(--muted)}
 .rule{border:0;border-top:1px solid var(--rule);margin:0}
@@ -171,7 +174,7 @@ p{margin:0}
 
 /* floating nav capsule */
 .nav{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:5;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));pointer-events:none}
-.nav nav{max-width:420px;margin:0 auto;background:var(--ink);border-radius:99px;padding:6px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.nav nav{max-width:300px;margin:0 auto;background:var(--ink);border-radius:99px;padding:6px;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.18)}
 .nav button{padding:13px 0;border-radius:99px;color:var(--paper-2);font-size:14px;font-weight:500;text-align:center}
 .nav button[aria-current="page"]{background:var(--paper-2);color:var(--ink)}
 
@@ -269,7 +272,6 @@ p{margin:0}
 
 <div class="nav"><nav>
   <button data-act="tab" data-v="path" id="t-path">Сегодня</button>
-  <button data-act="tab" data-v="progress" id="t-progress">Прогресс</button>
   <button data-act="tab" data-v="library" id="t-library">Упражнения</button>
 </nav></div>
 
@@ -455,6 +457,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const ICON_ARROW='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 const ICON_PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6.5v11l9-5.5z"/></svg>';
+const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
 const ICON_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const dateLong=d=>d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 const weekday=d=>{const w=d.toLocaleDateString('ru-RU',{weekday:'long'});return w.charAt(0).toUpperCase()+w.slice(1);};
@@ -522,12 +525,12 @@ function nextUndone(plan,done,after){
 /* ---------- views ---------- */
 const state={tab:'path',choosing:false,sound:'s'};
 function render(){
-  for(const t of ['path','progress','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
+  for(const t of ['path','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
   $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():viewLibrary();
 }
 function topbar(){
   const st=streak();
-  return `<header class="top"><span class="logo">woisee</span><span class="streak num"><i></i>${st} ${plural(st,'день','дня','дней')} подряд</span></header>`;
+  return `<header class="top"><span class="logo">woisee</span><button class="streak num" data-act="streak" aria-label="Открыть прогресс"><i></i>${st} ${plural(st,'день','дня','дней')} подряд<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></header>`;
 }
 function viewChoose(){
   const k=dkey(),f=focusFor(k),d=data.days[k],t=new Date();
@@ -574,18 +577,11 @@ function viewProgress(){
   const st=streak(),today=new Date(),k=dkey(),todayIdx=(today.getDay()+6)%7,mon=addDays(today,-todayIdx-28);
   let dots=['П','В','С','Ч','П','С','В'].map((h,i)=>`<span class="h ${i===todayIdx?'t':''}">${h}</span>`).join('');
   for(let i=0;i<35;i++){const kk=dkey(addDays(mon,i));dots+=`<i class="${kk===k?'now':kk>k?'fut':ok(kk)?'on':''}" title="${kk}"></i>`;}
-  const b=data.profile.bests||{},s=state.sound,best=b[s]||0;
-  const R=80,C=2*Math.PI*R,frac=Math.min(1,best/40);
-  const donut=`<svg class="donut" viewBox="0 0 200 200" role="img" aria-label="Рекорд выдоха относительно цели 40 секунд">
-    <circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--soft)" stroke-width="34"/>
-    <circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--signal)" stroke-width="34" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 100 100)"/>
-    <text x="100" y="96" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="Inter Tight, sans-serif">цель</text>
-    <text x="100" y="116" text-anchor="middle" font-size="20" font-weight="600" fill="var(--ink)" font-family="Inter Tight, sans-serif">40 с</text></svg>`;
   const hist=Object.keys(data.days).filter(kk=>ok(kk)||(data.days[kk].exhale&&Object.keys(data.days[kk].exhale).length)).sort().reverse().slice(0,8).map(kk=>{
     const d=data.days[kk],f=FOCI.find(x=>x.id===d.focus),ex_=d.exhale&&d.exhale.s?` · выдох ${Math.round(d.exhale.s)} с`:'';
     const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel]||'';
     return `<li><span>${esc(dateLong(parseKey(kk)))}${f?' · '+esc(f.name):''}</span><span class="m num">${Math.round((d.seconds||0)/60)} мин${ex_}${feel?'<br>'+feel:''}</span></li>`;}).join('');
-  return topbar()+`
+  return `<header class="top"><button class="back" data-act="tab" data-v="${state.from||'path'}">${ICON_BACK}Назад</button><span class="logo">woisee</span></header>
   <div class="p-hero"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<small>подряд</small></span></div>
   <div class="dots">${dots}</div>
   <div class="trio">
@@ -593,13 +589,8 @@ function viewProgress(){
     <div><b class="num">${totalMin}</b><span>минут всего</span></div>
     <div><b class="num">${keys.length?Math.round(totalMin/keys.length):0}</b><span>мин в среднем</span></div>
   </div>
-  <section class="donut-card">
-    <div class="sec-h"><h3>Долгий выдох</h3><span class="note">рекорды</span></div>
-    ${donut}
-    <div class="donut-foot"><span class="note">Рекорд на [${SOUNDS[s]}]<br>цель 30–40 секунд</span><b class="num">${best?Math.round(best):0}</b></div>
-    <div class="snd-row">${Object.keys(SOUNDS).map(x=>`<button data-act="psnd" data-v="${x}" aria-pressed="${x===s}"><b>${SOUNDS[x]}</b><span class="num">${b[x]?Math.round(b[x])+' сек':'нет замера'}</span></button>`).join('')}</div>
-  </section>
   ${hist?`<section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>История</h3></div><ul class="hist">${hist}</ul></section>`:''}
+  <p class="note">Рекорды долгого выдоха — в самом упражнении «Долгий выдох».</p>
   <div class="toggle"><span>Звуковой сигнал в конце таймера</span><button class="sw" data-act="sound" aria-pressed="${data.profile.sound!==false}" aria-label="Звуковой сигнал"></button></div>
   <section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>Резервная копия</h3></div>
     <p class="note">Прогресс хранится на этом телефоне. Раз в месяц сохраняйте копию в «Файлы» — с ней можно восстановить всё на новом телефоне.</p>
@@ -610,7 +601,7 @@ function viewLibrary(){
   let h=topbar()+`<h1 class="big-title">Упражнения</h1><p class="note">Все упражнения из руководства. Откройте любое, чтобы прочитать и сделать отдельно.</p><div class="lib">`;
   for(const b of ['body','breath','phon','artic','stage']){
     const ids=Object.keys(EX).filter(id=>EX[id].b===b);
-    h+=`<h3 class="b-${b}"><i></i>${esc(BNAME[b])}</h3>${ids.map(id=>`<button class="item" data-act="single" data-v="${id}"><span>${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span></button>`).join('')}`;
+    h+=`<h3 class="b-${b}"><i></i>${esc(BNAME[b])}</h3>${ids.map(id=>`<button class="item" data-act="single" data-v="${id}"><span>${esc(EX[id].t)}</span><span class="d num">${id==='exhale'&&(data.profile.bests||{}).s?'рекорд '+Math.round(data.profile.bests.s)+' с · ':''}${fmt(EX[id].d)}</span></button>`).join('')}`;
   }
   return h+'</div>';
 }
@@ -653,13 +644,26 @@ function closeEx(){
   $('ex').hidden=true;$('tbar').hidden=true;document.body.style.overflow='';
   render();window.scrollTo(0,0);
 }
+function exhaleHist(s){
+  const pts=Object.keys(data.days).sort().filter(k=>data.days[k].exhale&&data.days[k].exhale[s]).slice(-10).map(k=>({k,v:data.days[k].exhale[s]}));
+  const head=`<div class="sec-h" style="border-top:1px solid var(--rule);padding-top:12px"><span style="font-weight:600">Ваши замеры на [${SOUNDS[s]}]</span><span class="note">лучший за день</span></div>`;
+  if(!pts.length)return head+`<p class="note" style="margin-top:6px">Здесь появится график по дням. Цель — 30–40 секунд.</p>`;
+  const W=320,H=150,L=4,Rr=4,T=18,B=22,max=Math.max(45,Math.ceil(Math.max(...pts.map(p=>p.v))/5)*5+5);
+  const y=v=>T+(H-T-B)*(1-v/max),slot=(W-L-Rr)/Math.max(pts.length,5),bw=Math.min(26,slot*.6);
+  const band=`<rect x="0" y="${y(40).toFixed(1)}" width="${W}" height="${(y(30)-y(40)).toFixed(1)}" fill="var(--lime)" opacity=".7"/><text x="${W-2}" y="${(y(40)-4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--muted)">цель 30–40 с</text>`;
+  const bars=pts.map((p,i)=>{const x=L+slot*i+(slot-bw)/2,last=i===pts.length-1,dd=parseKey(p.k);
+    return `<rect x="${x.toFixed(1)}" y="${y(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0)-y(p.v)).toFixed(1)}" rx="3" fill="${last?'var(--signal)':'var(--ink)'}"/>
+    <text x="${(x+bw/2).toFixed(1)}" y="${(y(p.v)-5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">${Math.round(p.v)}</text>
+    <text x="${(x+bw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--muted)">${dd.getDate()}.${pad(dd.getMonth()+1)}</text>`;}).join('');
+  return head+`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;margin-top:8px" role="img" aria-label="Замеры выдоха по дням">${band}<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--rule)"/>${bars}</svg>`;
+}
 const poemHTML=p=>esc(p.x)+`<span class="by">${esc(p.a)}${p.t?', «'+esc(p.t)+'»':''}</span>`;
 function widget(e){
   switch(e.type){
     case 'exhale':{const b=data.profile.bests||{};
       return `<div class="swatch" id="focusW"><div class="snds">${Object.keys(SOUNDS).map(s=>`<button class="snd" data-act="snd" data-v="${s}" aria-pressed="${ex.sw.sound===s}"><b>${SOUNDS[s]}</b><span class="num" id="best-${s}">${b[s]?'рекорд '+Math.round(b[s]):'нет замера'}</span></button>`).join('')}</div>
       <div class="sw-line"><div><div class="sw-num" id="swNum">0.0</div><span class="note" id="swLbl">секунд на [${SOUNDS[ex.sw.sound]}]</span></div><button class="sw-btn" data-act="sw" id="swBtn">Старт<br>выдоха</button></div>
-      <p class="rec" id="swRec" hidden></p></div>`;}
+      <p class="rec" id="swRec" hidden></p><div id="swHist">${exhaleHist(ex.sw.sound)}</div></div>`;}
     case 'breath':return `<div class="pacer" id="focusW"><div class="wrap"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(25,37,36,.4)" stroke-width="1.5" stroke-dasharray="3 6"/><circle id="pcC" cx="100" cy="100" r="40" fill="var(--ink)"/></svg><div class="lbl"><b id="pcLbl">Готовы?</b><span id="pcNum"></span></div></div><p>Вдох 4 · задержка 4 · выдох 8 · задержка 4</p></div>`;
     case 'intervals':return `<div class="phase" id="focusW"><div><b id="phLbl">Дышите</b><p class="note" style="color:var(--ink);margin-top:6px">30 работа · 15 отдых · 30 работа</p></div><span id="phNum">0:30</span></div>`;
     case 'twister':return `<div class="read" id="twText">${esc(TWISTERS[ex.tw])}</div><button class="ghost" data-act="tw">Другая скороговорка</button>`;
@@ -784,6 +788,7 @@ function swToggle(){
       if(v>prevBest){data.profile.bests=Object.assign({},data.profile.bests,{[sw.sound]:v});saveProfile();
         const r=$('swRec');r.hidden=false;r.textContent=prevBest?`Новый рекорд на [${SOUNDS[sw.sound]}]: ${v} сек`:`Первый замер на [${SOUNDS[sw.sound]}]: ${v} сек`;tone(880,0.4,0.15);
         const bl=$('best-'+sw.sound);if(bl)bl.textContent='рекорд '+Math.round(v);}
+      const hh=$('swHist');if(hh)hh.innerHTML=exhaleHist(sw.sound);
     }
   }
   tick();
@@ -820,6 +825,7 @@ document.addEventListener('click',ev=>{
   const a=b.dataset.act,v=b.dataset.v;
   switch(a){
     case 'tab':state.tab=v;state.choosing=false;render();window.scrollTo(0,0);break;
+    case 'streak':state.from=state.tab==='progress'?state.from:state.tab;state.tab='progress';state.choosing=false;render();window.scrollTo(0,0);break;
     case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k);d.dur=+v;d.focus=f.id;d.plan=buildPlan(+v,f);saveDay(k);state.choosing=false;render();window.scrollTo(0,0);break;}
     case 'choose':state.choosing=true;render();window.scrollTo(0,0);break;
     case 'cancelChoose':state.choosing=false;render();break;
@@ -834,7 +840,7 @@ document.addEventListener('click',ev=>{
     case 'next':nextEx();break;
     case 'sound':data.profile.sound=data.profile.sound===false;saveProfile();audioInit();render();break;
     case 'psnd':state.sound=v;render();break;
-    case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swLbl').textContent='секунд на ['+SOUNDS[v]+']';tick();}break;
+    case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swLbl').textContent='секунд на ['+SOUNDS[v]+']';$('swHist').innerHTML=exhaleHist(v);tick();}break;
     case 'sw':swToggle();break;
     case 'export':exportData();break;
     case 'import':$('bkFile').click();break;
