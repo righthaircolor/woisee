@@ -1,5 +1,5 @@
 // woisee offline cache. Bump VERSION after changing any file so phones pick up the update.
-const VERSION = 'woisee-v10-dark';
+const VERSION = 'woisee-v13';
 const FILES = [
   './',
   './index.html',
@@ -8,7 +8,8 @@ const FILES = [
   './icon-512.png',
   './apple-touch-icon.png',
   './voiceform.js',
-  './field.js'
+  './field.js',
+  './voice3.js'
 ];
 
 self.addEventListener('install', e => {
