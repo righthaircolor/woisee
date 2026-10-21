@@ -301,6 +301,12 @@ button.cal-d:active{transform:scale(.94)}
 .sheet h3{font-size:26px;line-height:1.05}
 .sheet-acts{display:flex;flex-direction:column;gap:10px;margin-top:4px}
 .sheet .primary{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:99px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px}
+.gif-box{display:flex;flex-direction:column;gap:8px}
+.gif-box:empty{display:none}
+.gif-row{display:flex;gap:8px;flex-wrap:wrap}
+.gif-row .ghost{align-self:auto}
+.gif-row .wait{opacity:.5}
+.gif-row .ready{background:var(--signal);border-color:var(--signal);color:#fff}
 .ghost.wide{align-self:stretch;text-align:center;padding:14px}
 .icon-btn.plain{background:var(--paper-2);flex:none}
 /* v3 overlays: exhale counter, together labels, «С кем-то» */
@@ -356,7 +362,7 @@ button.cal-d:active{transform:scale(.94)}
 <section class="ex" id="ex" hidden></section>
 <div class="tbar" id="tbar" hidden></div>
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
-<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script>
+<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script>
 <script>
 /* ---------- blocks and exercises (from the guide) ---------- */
 const BLOCKS=[
@@ -598,7 +604,7 @@ async function startListening(){
 }
 function stopListening(){
   if(vf.live&&vf.live.on){collectMulti();vf.live.stop();}
-  vf.listening=false;closeSeg();
+  vf.listening=false;closeSeg();momFlush();
 }
 /* without a live voice: a breathing cloud, or a demo of the exercise's main link */
 function sampleTarget(dt){
@@ -628,10 +634,11 @@ function formFrame(now){
     const r=L.update(dt);
     if(r.kick)vf.rec.att++;
     if(L.mixT>.5)vf.rec.voices=Math.max(vf.rec.voices,r.voices);
-    track(dt,r.info);
+    track(dt,r.info);momTick(L,r,dt,now);
     if(L.voice.f.calibrated&&!data.profile.ref){data.profile.ref=L.voice.ref;saveProfile();}
   }else{L.idle(dt);if(!REDUCED()||vf.t<.1)sampleTarget(dt);}
   L.step(dt);L.draw(ctx,w,h,.54);
+  if(vf.listening&&L.on)momCapture(L,w,h,.54,now);
   vf.raf=requestAnimationFrame(formFrame);
 }
 /* features for the picture of the day and the voice map: held notes (absolute midi), noise, exhale. No audio is kept. */
@@ -714,7 +721,10 @@ function drawDay(ctx,s,list,upto,seed,pal,opt){
       else if(e.b==='breath'&&!nt){st={u:19,amp:.5,stab:.2,e:1,hold:0,crisp,noise:1,cent:e.cent!=null?e.cent:.3,vo:0,bx:1};col=pal.breath;}
       else{st={u:noteU(nt,e.b),amp:.5,stab:nt.stab||.8,e:1,hold:Math.min(1,.4+(nt.sec||1)/5),crisp,noise:0,cent:.5,vo:1,bx:1};col=pal[e.b]||pal.phon;al=1;}
       ctx.fillStyle=col;
-      for(let i=0;i<n;i++){Voice3.targetOf(P,st,i,0,st.noise?1.3:null,o);ctx.globalAlpha=(.35+.65*((i*7919%100)/100))*al;const z=P.Z[i]*dot;ctx.fillRect(cx+o[0]*R-z/2,cy+o[1]*R-z/2,z,z);}
+      const ph=opt.ph,T2=Math.PI*2,amp=dot*2.2;
+      for(let i=0;i<n;i++){Voice3.targetOf(P,st,i,0,st.noise?(ph==null?1.3:1.3+.3*Math.sin(T2*ph)):null,o);ctx.globalAlpha=(.35+.65*((i*7919%100)/100))*al;const z=P.Z[i]*dot;
+        let x=cx+o[0]*R,y=cy+o[1]*R;if(ph!=null){const q=i*.618+k*.31;x+=Math.sin(T2*(ph+q))*amp;y+=Math.cos(T2*(2*ph+q*1.7))*amp*.8;}
+        ctx.fillRect(x-z/2,y-z/2,z,z);}
       ctx.globalAlpha=1;
     });
     a0+=span;
@@ -788,8 +798,8 @@ function openDay(k){
       ${feel?`<li><span>Голос после</span><span class="m">${feel}</span></li>`:''}
     </ul>
     <p class="note">Розовые точки — тело, жёлтые — дыхание, зелёные формы — ноты фонации, белые — артикуляция. По часовой стрелке от 12, в порядке занятий.</p>
-    ${HAS_FORM&&list.some(x=>x.done)?`<button class="ghost wide" data-act="shareplate" data-v="${k}">Сохранить картинку</button>`:''}`);
-  paintPlates($('sheet'));
+    ${HAS_FORM?`<div class="gif-box" data-gifrow="${k}" data-day="${list.some(x=>x.done)?1:0}"></div>`:''}`);
+  paintPlates($('sheet'));fillGifRows($('sheet'));
 }
 
 /* ---------- timeline of the day from dots: done is dense ink, now is red and alive, ahead is pale ---------- */
@@ -918,7 +928,8 @@ function viewMeasure(){
 function viewFree(){
   if(!HAS_FORM)return `<p class="note">Свободный режим работает в приложении woisee.</p>`;
   return `<div class="free-ctl"><button class="go big ${gm.on?'alt':''}" data-act="freemic">${gm.on?'Стоп':'Слушать'}</button>
-  <p class="note free-txt">${gm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':'Можно звучать одной, а можно позвать кого-то и увидеть силу и красоту нескольких голосов.'}</p></div>`;
+  <p class="note free-txt">${gm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':'Можно звучать одной, а можно позвать кого-то и увидеть силу и красоту нескольких голосов.'}</p></div>
+  <div class="gif-box" data-gifrow="${dkey()}" data-day="0"></div>`;
 }
 function viewExhale(){
   const b=data.profile.bests||{},s=ms.sound,today=(data.days[dkey()]||{}).exhale||{},e=EX.exhale;
@@ -968,6 +979,7 @@ function freeStart(){
   cancelAnimationFrame(gm.raf);gm.raf=0;
   if(!HAS_FORM)return;
   if(!$('gmCv'))return;
+  fillGifRows($('view'));
   ensureLive();
   gm.last=performance.now();gm.raf=requestAnimationFrame(gmFrame);
 }
@@ -976,7 +988,7 @@ function gmFrame(now){
   const dt=Math.min(.05,(now-gm.last)/1000);gm.last=now;gm.t+=dt;
   const L=vf.live,{ctx,w,h}=fitLive($('gmCv')),mode=state.mtab||'free';
   if(gm.on&&L.on){
-    const r=L.update(dt),info=r.info;
+    const r=L.update(dt),info=r.info;momTick(L,r,dt,now);
     if(L.voice.f.calibrated&&!data.profile.ref){data.profile.ref=L.voice.ref;saveProfile();}
     if(mode==='exhale'&&ms.running){
       if(ms.armed&&info.act&&!info.silent){ms.armed=false;ms.start=performance.now();}
@@ -989,6 +1001,7 @@ function gmFrame(now){
   }
   if(mode==='exhale'&&ms.running&&!ms.armed&&ms.start){const n=$('msNum');if(n)n.textContent=((performance.now()-ms.start)/1000).toFixed(1);}
   L.step(dt);L.draw(ctx,w,h,.56);
+  if(gm.on&&L.on)momCapture(L,w,h,.56,now);
   gm.raf=requestAnimationFrame(gmFrame);
 }
 async function gmMicOn(){
@@ -1003,8 +1016,175 @@ async function freeMic(){
   if(gm.on){freeMicOff();render();return;}
   await gmMicOn();render();
 }
-function freeMicOff(){if(gm.on){gm.on=false;if(vf.live&&vf.live.on)vf.live.stop();unlockScreen();}}
+function freeMicOff(){if(gm.on){gm.on=false;if(vf.live&&vf.live.on)vf.live.stop();unlockScreen();momFlush();}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&gm.on){msStop();freeMicOff();if(state.tab==='measure')render();}});
+
+/* ---------- GIF: the day card, and moments of the live voice (solo / together), 9:16, no sound ----------
+   While the microphone is on, every 1/12 s the form is drawn a second time into a light recorder (just dot positions,
+   no pixels, no audio). A stretch of sound of 2.5 s or longer becomes a moment; the best solo and the best together
+   moment of the day are kept and turned into a GIF once the microphone is off. GIFs live in IndexedDB on the phone. */
+const GIF_W=405,GIF_H=720,GIF_FPS=12,MOM_MAX=6,MOM_KEEP=14;
+const mom={buf:[],lastCap:0,seg:null,quiet:0,best:{solo:null,duo:null},cache:new Map(),busy:new Set()};
+
+/* a fake 2d context that only remembers squares: position relative to the form centre in units of its radius */
+function capCtx(w,h,scale){
+  const R=Math.min(w,h)*(scale||.5),cx=w/2,cy=h/2,P=[],C=[],cols=[],idx=new Map();
+  let fs='#ffffff',ci=0;
+  return {R,P,C,cols,globalAlpha:1,
+    set fillStyle(v){fs=v;let k=idx.get(v);if(k==null){k=cols.length;cols.push(v);idx.set(v,k);}ci=k;},
+    get fillStyle(){return fs;},
+    fillRect(x,y,ww){P.push((x+ww/2-cx)/R,(y+ww/2-cy)/R,ww/R,this.globalAlpha);C.push(ci);}};
+}
+function momCapture(L,w,h,scale,now){
+  if(now-mom.lastCap<1000/GIF_FPS-4)return;
+  mom.lastCap=now;
+  const c=capCtx(w,h,scale);L.draw(c,w,h,scale);
+  mom.buf.push({t:now,p:Float32Array.from(c.P),c:Uint8Array.from(c.C),cols:c.cols});
+  while(mom.buf.length&&now-mom.buf[0].t>(MOM_MAX+2)*1000)mom.buf.shift();
+}
+/* called every frame with the live result: finds stretches of sound and keeps the best one of each kind */
+function momTick(L,r,dt,now){
+  const info=r.info,on=info.act&&!info.silent,many=L.mixT>.5;
+  if(on){
+    if(!mom.seg)mom.seg={t0:now,dur:0,many:0,lvl:0};
+    const s=mom.seg;s.dur+=dt;s.many+=many?dt:0;s.lvl+=Math.min(1,info.level||.4)*dt;mom.quiet=0;
+  }else if(mom.seg){
+    mom.quiet+=dt;
+    if(mom.quiet>.6){momClose(now);}
+  }
+}
+function momClose(now){
+  const s=mom.seg;mom.seg=null;mom.quiet=0;
+  if(!s||s.dur<2.5)return;
+  const kind=s.many>s.dur*.5?'duo':'solo',score=Math.min(MOM_MAX,s.dur)*(.4+s.lvl/s.dur)*(kind==='duo'?1.2:1);
+  const from=Math.max(s.t0-300,now-MOM_MAX*1000),frames=mom.buf.filter(f=>f.t>=from);
+  if(frames.length<GIF_FPS*2)return;
+  const b=mom.best[kind];
+  if(!b||b.day!==dkey()||score>b.score){mom.best[kind]={score,frames,day:dkey(),saved:false};}
+}
+/* microphone off: finish the stretch and turn new moments into GIFs, one frame at a time so the screen stays smooth */
+async function momFlush(){
+  if(mom.seg)momClose(performance.now());
+  mom.buf=[];
+  for(const kind of ['solo','duo']){
+    const b=mom.best[kind];if(!b||b.saved)continue;
+    b.saved=true;
+    const key='m:'+b.day+':'+kind,old=await gifGet(key);
+    if(old&&old.score>=b.score)continue;
+    try{
+      const blob=await encodeGif(b.frames.length,(ctx,i)=>paintMoment(ctx,b.frames[i]),b.day,kind);
+      await gifPut(key,{blob,score:b.score,at:Date.now()});mom.cache.set(key,blob);
+      if(state.tab==='measure'&&!ex.open)fillGifRows();
+    }catch(e){}
+  }
+  gifPrune();
+}
+function paintMoment(ctx,f){
+  const R=GIF_W*.5,cx=GIF_W/2,cy=GIF_H*.44,p=f.p,n=f.c.length;
+  for(let i=0;i<n;i++){const j=i*4,z=Math.max(1,p[j+2]*R);ctx.fillStyle=f.cols[f.c[i]];ctx.globalAlpha=p[j+3];ctx.fillRect(cx+p[j]*R-z/2,cy+p[j+1]*R-z/2,z,z);}
+  ctx.globalAlpha=1;
+}
+/* the day card, alive: every dot sways around its place in a loop */
+function paintDayFrame(ctx,k,ph){
+  const S=GIF_W,e=dayEntries(k),tmp=paintDayFrame.cv||(paintDayFrame.cv=document.createElement('canvas'));
+  tmp.width=S;tmp.height=S;const t=tmp.getContext('2d');
+  drawDay(t,S,e,e.length,seedOf(k),PAL.dark,{dot:1.25,ph});
+  ctx.drawImage(tmp,0,GIF_H*.44-S/2);
+}
+function gifFrameBase(ctx,day){
+  ctx.globalAlpha=1;ctx.fillStyle=FC.ground;ctx.fillRect(0,0,GIF_W,GIF_H);
+}
+function gifFrameText(ctx,day){
+  ctx.globalAlpha=1;ctx.fillStyle=FC.dot;ctx.textBaseline='alphabetic';
+  ctx.textAlign='left';ctx.font='800 22px "Inter Tight", sans-serif';ctx.fillText('woisee',24,GIF_H-34);
+  ctx.textAlign='right';ctx.font='400 15px "Inter Tight", sans-serif';ctx.fillStyle='#9AA7A3';ctx.fillText(dateLong(parseKey(day)),GIF_W-24,GIF_H-36);
+}
+/* one global palette from a few frames, then frames are encoded in small slices of work */
+async function encodeGif(n,paint,day,kind){
+  const {GIFEncoder,quantize,applyPalette}=window.GIFEnc;
+  const cv=document.createElement('canvas');cv.width=GIF_W;cv.height=GIF_H;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});
+  try{await document.fonts.load('800 22px "Inter Tight"');}catch(e){}
+  const frame=i=>{gifFrameBase(ctx,day);paint(ctx,i);gifFrameText(ctx,day,kind);return ctx.getImageData(0,0,GIF_W,GIF_H).data;};
+  const picks=[0,Math.floor(n/3),Math.floor(2*n/3),n-1],sample=new Uint8ClampedArray(GIF_W*GIF_H*4*picks.length);
+  picks.forEach((i,q)=>sample.set(frame(i),q*GIF_W*GIF_H*4));
+  const pal=quantize(sample,256,{format:'rgb444'}),gif=GIFEncoder(),delay=Math.round(1000/GIF_FPS);
+  for(let i=0;i<n;i++){
+    const px=frame(i);gif.writeFrame(applyPalette(px,pal,'rgb444'),GIF_W,GIF_H,i===0?{palette:pal,delay,repeat:0}:{delay});
+    if(i%2)await new Promise(r=>setTimeout(r,0));
+  }
+  gif.finish();
+  return new Blob([gif.bytes()],{type:'image/gif'});
+}
+async function dayGif(k){
+  const key='d:'+k+':'+((data.days[k]||{}).seconds||0);
+  if(mom.cache.has(key))return mom.cache.get(key);
+  const N=48,blob=await encodeGif(N,(ctx,i)=>paintDayFrame(ctx,k,i/N),k,'day');
+  mom.cache.set(key,blob);return blob;
+}
+async function momentGif(k,kind){
+  const key='m:'+k+':'+kind;
+  if(mom.cache.has(key))return mom.cache.get(key);
+  const r=await gifGet(key);if(r&&r.blob){mom.cache.set(key,r.blob);return r.blob;}
+  return null;
+}
+async function momentsOf(k){
+  const out=[];for(const kind of ['solo','duo'])if(await momentGif(k,kind))out.push(kind);return out;
+}
+
+/* ---------- buttons: prepared in advance so the tap can open the share sheet at once (iOS needs the tap) ---------- */
+const GIF_LBL={day:'День',solo:'Соло',duo:'Вместе'};
+function gifBtns(k,kinds,cls){
+  return `<div class="gif-row">${kinds.map(kind=>`<button class="${cls||'ghost'}" data-act="gif" data-v="${kind}|${k}" data-gif="${kind}|${k}">${GIF_LBL[kind]}</button>`).join('')}</div>`;
+}
+function gifPrepare(root){
+  (root||document).querySelectorAll('[data-gif]').forEach(async b=>{
+    const [kind,k]=b.dataset.gif.split('|');
+    if(kind==='day'&&!mom.busy.has(k)){mom.busy.add(k);b.classList.add('wait');try{await dayGif(k);}catch(e){}mom.busy.delete(k);b.classList.remove('wait');}
+    else if(kind!=='day')momentGif(k,kind);
+  });
+}
+/* placeholders <div data-gifrow="day" data-day="1"> become «Сохранить гифку: День · Соло · Вместе» */
+async function fillGifRows(root){
+  if(!HAS_FORM||!window.GIFEnc)return;
+  for(const el of (root||document).querySelectorAll('[data-gifrow]')){
+    const k=el.dataset.gifrow,kinds=el.dataset.day==='1'?['day']:[];
+    kinds.push(...await momentsOf(k));
+    el.innerHTML=kinds.length?`<span class="note">Сохранить гифку</span>`+gifBtns(k,kinds,el.dataset.cls):'';
+    gifPrepare(el);
+  }
+}
+async function gifShare(v,btn){
+  const [kind,k]=v.split('|');
+  const key=kind==='day'?'d:'+k+':'+((data.days[k]||{}).seconds||0):'m:'+k+':'+kind;
+  let blob=mom.cache.get(key);
+  if(!blob){
+    if(btn){btn.classList.add('wait');btn.dataset.lbl=btn.dataset.lbl||btn.textContent;btn.textContent='Готовлю…';}
+    blob=kind==='day'?await dayGif(k):await momentGif(k,kind);
+    if(btn){btn.classList.remove('wait');btn.textContent=btn.dataset.lbl;}
+    if(!blob)return;
+    /* the tap that started this has expired by now: one more tap opens the sheet */
+    if(btn){btn.textContent='Сохранить';btn.classList.add('ready');return;}
+  }
+  const file=new File([blob],'woisee-'+k+'-'+kind+'.gif',{type:'image/gif'});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});if(btn&&btn.dataset.lbl){btn.textContent=btn.dataset.lbl;btn.classList.remove('ready');}return;}}catch(err){if(err&&err.name==='AbortError')return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
+
+/* ---------- IndexedDB: gifs by key ---------- */
+let gifDbP=null;
+function gifDb(){
+  if(!gifDbP)gifDbP=new Promise((res,rej)=>{try{const r=indexedDB.open('woisee-gif',1);r.onupgradeneeded=()=>r.result.createObjectStore('g');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});
+  return gifDbP;
+}
+async function gifGet(key){try{const db=await gifDb();return await new Promise(res=>{const q=db.transaction('g').objectStore('g').get(key);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);});}catch(e){return null;}}
+async function gifPut(key,val){try{const db=await gifDb();await new Promise(res=>{const t=db.transaction('g','readwrite');t.objectStore('g').put(val,key);t.oncomplete=res;t.onerror=res;});}catch(e){}}
+async function gifPrune(){
+  try{const db=await gifDb(),lim=dkey(new Date(Date.now()-MOM_KEEP*864e5));
+    const t=db.transaction('g','readwrite'),st=t.objectStore('g');
+    st.openCursor().onsuccess=ev=>{const c=ev.target.result;if(!c)return;const day=String(c.key).split(':')[1];if(day&&day<lim)c.delete();c.continue();};
+  }catch(e){}
+}
 
 
 /* ---------- helpers ---------- */
@@ -1349,11 +1529,11 @@ function showDayDone(){
     <h1 class="huge">Готово.</h1>
     <div class="mins"><b class="num">${mins}</b><span>${plural(mins,'минута','минуты','минут')}<br>голоса сегодня</span></div>
     ${st?`<p style="font-size:18px">${st} ${plural(st,'день','дня','дней')} подряд. Все четыре блока пройдены.</p>`:''}
-    ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня. Её рисуют только ваши занятия: каждый сектор — упражнение, по часовой стрелке от 12.</p><button class="blackbtn" data-act="shareplate" data-v="${k}">Сохранить или поделиться ${ICON_ARROW}</button>`:''}
+    ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня. Её рисуют только ваши занятия: каждый сектор — упражнение, по часовой стрелке от 12.</p><div class="gif-box" data-gifrow="${k}" data-day="1"></div>`:''}
     ${feelBlock(d.feel)}
     <button class="blackbtn" data-act="close">На главную ${ICON_ARROW}</button></div>`;
   $('ex').scrollTop=0;
-  if(HAS_FORM)revealPlate($('winPlate'),k,PAL.lime);
+  if(HAS_FORM){revealPlate($('winPlate'),k,PAL.lime);fillGifRows($('ex'));}
 }
 function swToggle(){
   const sw=ex.sw,btn=$('swBtn');audioInit();
@@ -1430,6 +1610,7 @@ document.addEventListener('click',ev=>{
     case 'export':exportData();break;
     case 'import':$('bkFile').click();break;
     case 'shareplate':sharePlate(v);break;
+    case 'gif':gifShare(v,b);break;
     case 'day':openDay(v);break;
     case 'closesheet':closeSheet();break;
     case 'micyes':data.profile.mic='asked';saveProfile();closeSheet();go();break;
