@@ -294,7 +294,7 @@ button.cal-d:active{transform:scale(.94)}
 .m-rec b{display:block;font-weight:300;font-size:56px;line-height:.85;letter-spacing:-.05em}
 .m-rec span{font-size:12px;color:var(--muted)}
 .m-chart{width:100%;height:56px;display:block}
-.ex-chart{width:100%;height:180px;display:block;margin-top:8px}
+.ex-chart{width:100%;height:170px;display:block;margin-top:8px}
 .b-measure{--c:var(--signal)}
 .scrim{position:fixed;inset:0;z-index:40;background:rgba(25,37,36,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--paper);border-radius:30px 30px 0 0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
@@ -827,12 +827,12 @@ function tlStart(){
   tl.raf=requestAnimationFrame(frame);
 }
 
-/* ---------- long exhale by day: thin columns of drifting dust, like the timeline on «Сегодня»; the latest day is red ---------- */
+/* ---------- long exhale by day (fixed height: 40 s fills it, longer records squeeze the scale): thin columns of drifting dust, like the timeline on «Сегодня»; the latest day is red ---------- */
 function exPoints(s){return Object.keys(data.days).sort().filter(k=>data.days[k].exhale&&data.days[k].exhale[s]).slice(-10).map(k=>({k,v:data.days[k].exhale[s]}));}
 const exA={raf:0,list:[]};
 function drawExDots(cv,s,mini){
   const W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
-  const pts=exPoints(s),B=mini?3:18,T=mini?3:18,maxV=Math.max(16,...pts.map(p=>p.v))*1.08,y=v=>T+(H-T-B)*(1-v/maxV);
+  const pts=exPoints(s),B=mini?3:18,T=mini?3:18,maxV=Math.max(40,...pts.map(p=>p.v))*1.06,y=v=>T+(H-T-B)*(1-v/maxV);
   const cols=Math.max(pts.length,mini?8:7),slot=W/cols,band=mini?2.5:5;
   const rng=(window.Field?Field.rng:(q=>{let x=q;return()=>(x=(x*16807)%2147483647)/2147483647;}))(12345+pts.length*97+Object.keys(SOUNDS).indexOf(s)*7919);
   const P=[],L=[];
