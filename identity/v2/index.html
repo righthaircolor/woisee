@@ -67,7 +67,7 @@ input[type=range]:disabled{opacity:.55}
 .logos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}@media (max-width:800px){.logos{grid-template-columns:1fr}}
 .lg{background:var(--paper-2);border-radius:28px;padding:16px}.lg canvas{width:100%;aspect-ratio:1/1}
 .lg b{display:block;margin-top:10px}.lg p{font-size:14px;color:var(--muted);margin-top:4px}
-.sizes{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin-top:16px}.sizes figure{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+@media (max-width:800px){.spl-grid{grid-template-columns:1fr!important}}
 footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-size:14px;color:var(--muted)}
 </style>
 </head>
@@ -154,9 +154,16 @@ footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-
     <div class="lg"><canvas data-logo="b"></canvas><b>B · Точка из частиц</b><p>Пластина остаётся сплошной, точка — облако зерна. Для крупных размеров и заставки.</p></div>
     <div class="lg"><canvas data-logo="c"></canvas><b>C · Всё из частиц</b><p>Очертание круга и точка — зерно. Самый «материальный» вариант, только для крупных размеров.</p></div>
   </div>
-  <div class="lg" style="margin-top:16px"><b style="margin-top:0">Заставка: голос собирает точку</b><p>Частицы рассыпаны → собираются в точку на пластине. В малых размерах — вариант A.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px"><canvas id="splash" style="width:100%;aspect-ratio:1/1;border-radius:20px;background:var(--paper)"></canvas>
-      <div class="sizes"><figure><canvas data-size="b" data-px="128"></canvas>B · 128</figure><figure><canvas data-size="a" data-px="64"></canvas>A · 64</figure><figure><canvas data-size="a" data-px="32"></canvas>A · 32</figure><figure><canvas data-size="a" data-px="16"></canvas>A · 16</figure></div></div>
+  <div class="lg splash-box" style="margin-top:16px">
+    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center" class="spl-grid">
+      <canvas id="splash" style="width:100%;aspect-ratio:1/1;border-radius:20px;background:var(--paper)"></canvas>
+      <div>
+        <b style="margin-top:0;font-size:22px;letter-spacing:-.02em">Заставка: знак собирается из облака</b>
+        <p style="font-size:15px;margin-top:10px">Все частицы, чёрные и красные, сначала лежат одним общим облаком — как форма в тишине. Потом чёрные собираются в очертание круга, красные — в облако-точку. Тот же жест, что голос делает с формой.</p>
+        <p style="font-size:15px;margin-top:10px">Если включить микрофон в первом разделе, знак собирается от вашего голоса и рассыпается в паузе.</p>
+        <p class="note" style="margin-top:14px">1,2 с облако · 2,2 с сборка · 2,2 с знак · 1,4 с рассыпание</p>
+      </div>
+    </div>
   </div>
 </section>
 </main>
@@ -360,9 +367,37 @@ function logo(ctx, s, kind, prog){
   ctx.globalAlpha = 1;
 }
 $$('canvas[data-logo]').forEach(cv => addStatic(() => { const s = cv.clientWidth; const { ctx } = fit(cv, s, s); logo(ctx, s, cv.dataset.logo); }));
-$$('canvas[data-size]').forEach(cv => { const px = +cv.dataset.px; cv.style.width = cv.style.height = px + 'px'; addStatic(() => { const { ctx } = fit(cv, px, px); logo(ctx, px, cv.dataset.size); }); });
-let spl = 0;
-addView($('#splash'), dt => { spl += dt; const c = spl % 5, p = c < 0.6 ? 0 : Math.min(1, (c - 0.6)/1.6); const e = 1 - Math.pow(1 - p, 3); const cv = $('#splash'), s = cv.clientWidth; const { ctx } = fit(cv, s, s); logo(ctx, s, 'b', e); });
+// Заставка: чёрные и красные частицы из одного облака собираются в знак (вариант C)
+let SPL = null, splT = 0, splP = 0;
+function buildSplash(s){
+  const R = s*0.36, cx = s*0.5, cy = s*0.5, dx = cx - 0.4*R, dy = cy + 0.39*R, dr = 0.34*R, r = F.rng(123), pts = [];
+  const nr = Math.round(Math.min(5000, 260 + s*7)), nd = Math.round(Math.min(3500, 300 + s*s*0.035)), sz = Math.max(0.7, s/320);
+  const add = (tx, ty, col) => pts.push({ tx, ty, col, sx: cx + F.gs(r)*R*0.5, sy: cy + F.gs(r)*R*0.44, d: r(), z: (0.6 + r()*r()*1.4)*sz, al: 0.45 + r()*0.55, ph: r()*6.28 });
+  for (let i = 0; i < nr; i++){ const a = r()*Math.PI*2, rad = R + F.gs(r)*R*0.018; add(cx + Math.cos(a)*rad, cy + Math.sin(a)*rad, C.ink); }
+  for (let i = 0; i < nd; i++){ const a = r()*Math.PI*2, rad = Math.abs(F.gs(r))*dr*0.62; add(dx + Math.cos(a)*rad, dy + Math.sin(a)*rad, C.signal); }
+  pts.sort((p, q) => p.col < q.col ? -1 : 1);
+  return { s, R, pts };
+}
+const eio = x => x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;
+addView($('#splash'), dt => {
+  splT += dt;
+  const cv = $('#splash'), s = cv.clientWidth; const { ctx } = fit(cv, s, s);
+  if (!SPL || SPL.s !== s) SPL = buildSplash(s);
+  let target;
+  if (voice.on && mode === 'voice') target = voice.f.silent ? 0 : 1;
+  else { const c = splT % 7; target = c < 1.2 ? 0 : c < 3.4 ? (c - 1.2)/2.2 : c < 5.6 ? 1 : 1 - (c - 5.6)/1.4; }
+  splP += (target - splP) * (voice.on && mode === 'voice' ? (target > splP ? 0.08 : 0.02) : 1);
+  ctx.clearRect(0,0,s,s);
+  let col = null;
+  for (const p of SPL.pts){
+    const pi = eio(Math.max(0, Math.min(1, (splP - 0.35*p.d)/0.65)));
+    const wob = (1 - pi)*SPL.R*0.012;
+    const x = p.sx + (p.tx - p.sx)*pi + Math.sin(splT*1.6 + p.ph)*wob, y = p.sy + (p.ty - p.sy)*pi + Math.cos(splT*1.3 + p.ph)*wob;
+    if (p.col !== col){ col = p.col; ctx.fillStyle = col; }
+    ctx.globalAlpha = p.al; ctx.fillRect(x - p.z/2, y - p.z/2, p.z, p.z);
+  }
+  ctx.globalAlpha = 1;
+});
 
 /* ---------- запуск ---------- */
 let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => statics.forEach(fn => fn()), 200); });
