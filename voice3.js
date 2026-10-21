@@ -29,7 +29,7 @@
   /* noise: many frequencies, no standing wave — running plane waves */
   const NZ_DIR = [0.3, 1.5, 2.6, 3.9, 5.1], NZ_K = [1, 1.13, 0.87, 1.27, 0.93], NZ_PH = [0, 1.7, 3.1, 4.4, 5.6], NZ_SP = [1, -0.8, 1.2, -1.1, 0.9];
   function zNoise(cent, amp, x, y, t){
-    const k = Math.PI*(1.6 + 7*cent), w = (0.6 + 4.5*cent)*(0.6 + 0.8*amp), tt = t || 0; let z = 0;
+    const k = Math.PI*(1.6 + 5.5*cent), w = (0.35 + 1.8*cent)*(0.6 + 0.5*amp), tt = t || 0; let z = 0;
     for (let q = 0; q < 5; q++){ const a = NZ_DIR[q]; z += Math.cos(k*NZ_K[q]*(x*Math.cos(a) + y*Math.sin(a)) - w*NZ_SP[q]*tt + NZ_PH[q]); }
     return z/2.2;
   }
@@ -111,7 +111,7 @@
   Solo.prototype.step = function (dt){
     const S = this.S, P = this.P, still = reduced(); this.t += dt;
     this.rot += still ? 0 : (this.opt.orbit ? dt*0.32*S.hold*S.e*S.vo : 0) + dt*S.noise*0.12;
-    const mv = 1 - Math.pow(1 - (S.e > .5 ? .12 : .03), dt*60), tmp = this._tmp, t = still ? null : this.t;
+    const mv = 1 - Math.pow(1 - (S.e > .5 ? (S.noise > .5 ? .055 : .12) : .03), dt*60), tmp = this._tmp, t = still ? null : this.t;
     for (let i = 0; i < P.N; i++){
       targetOf(P, S, i, this.rot, t, tmp);
       let tx = tmp[0], ty = tmp[1];
@@ -136,12 +136,12 @@
     const nm = Math.min(1, S.noise*(1 - 0.6*S.vo)), nc = noteColor(S.u);
     return nm > 0.02 ? mix(toHex(nc), this.opt.mono, nm) : nc;
   };
-  Solo.prototype.draw = function (ctx, w, h, scale){
-    const R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, P = this.P;
-    this.ghosts.forEach(gh => { ctx.fillStyle = this.opt.rain ? noteColor(gh.u) : this.opt.mono; ctx.globalAlpha = Math.max(0, gh.a)*0.7; const c = Math.cos(gh.rot), s = Math.sin(gh.rot);
+  Solo.prototype.draw = function (ctx, w, h, scale, alpha){
+    const R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, P = this.P, A = alpha == null ? 1 : alpha;
+    this.ghosts.forEach(gh => { ctx.fillStyle = this.opt.rain ? noteColor(gh.u) : this.opt.mono; ctx.globalAlpha = Math.max(0, gh.a)*0.7*A; const c = Math.cos(gh.rot), s = Math.sin(gh.rot);
       for (let j = 0; j < gh.X.length; j++){ const x = gh.X[j]*c - gh.Y[j]*s, y = gh.X[j]*s + gh.Y[j]*c; ctx.fillRect(cx + x*R - .6, cy + y*R - .6, 1.2, 1.2); } });
     ctx.fillStyle = this.color();
-    for (let i = 0; i < P.N; i++){ ctx.globalAlpha = 0.35 + 0.65*((i*7919 % 100)/100); const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
+    for (let i = 0; i < P.N; i++){ ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*A; const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
     ctx.globalAlpha = 1;
   };
   Solo.prototype.label = function (){
@@ -162,6 +162,13 @@
     const Q = makeP(N, seed), st = { u:12, amp:.5, stab:.2, e:1, hold:0, crisp:true, noise:1, cent, vo:0, bx:1 }, o = [0, 0];
     ctx.fillStyle = color;
     for (let i = 0; i < N; i++){ targetOf(Q, st, i, 0, 1.3, o); ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*alpha; const z = Q.Z[i]*dot; ctx.fillRect(cx + o[0]*R - z/2, cy + o[1]*R - z/2, z, z); }
+    ctx.globalAlpha = 1;
+  }
+
+  function renderState(ctx, cx, cy, R, st, N, seed, color, alpha, dot, t){
+    const Q = makeP(N, seed), S = Object.assign({ u:19, amp:.4, stab:.9, e:1, hold:1, crisp:true, noise:0, cent:.5, vo:1, bx:1 }, st), o = [0, 0];
+    ctx.fillStyle = color;
+    for (let i = 0; i < N; i++){ targetOf(Q, S, i, 0, t == null ? 1.3 : t, o); ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*alpha; const z = Q.Z[i]*dot; ctx.fillRect(cx + o[0]*R - z/2, cy + o[1]*R - z/2, z, z); }
     ctx.globalAlpha = 1;
   }
 
@@ -297,7 +304,7 @@
     const allLocked = act.every(j => lockedAll[j]);
     if (!still) act.forEach((j, q) => { const sp = allLocked ? 0.3 : 0.18 + 0.16*q; V[j].rot += dt*sp*V[j].hold*V[j].e; });
     if (allLocked && Ka > 1){ const m = act.reduce((s, j) => s + V[j].rot, 0)/Ka; act.forEach(j => V[j].rot += (m - V[j].rot)*(1 - Math.pow(0.97, dt*60))); }
-    const mv0 = 1 - Math.pow(1 - .12, dt*60), mv1 = 1 - Math.pow(1 - .03, dt*60), e = 0.004, noise = this.noise, cent = this.cent;
+    const mv0 = 1 - Math.pow(1 - .12, dt*60), mv1 = 1 - Math.pow(1 - .03, dt*60), mvN = 1 - Math.pow(1 - .055, dt*60), e = 0.004, noise = this.noise, cent = this.cent;
     for (let i = 0; i < this.N; i++){
       const k = act[i % Ka], v = V[k];
       const nm = noise*(v.e > .5 ? 0.45 : 1), c = Math.cos(v.rot), s = Math.sin(v.rot), env = 0.85 + 0.3*v.lev;
@@ -310,7 +317,7 @@
       const jit = 0.0035 + (1 - v.stab)*0.03 + blur*0.025 + tension[k]*0.006*(0.6 + 0.4*Math.sin(t*23 + i)) + pulse[k]*0.012;
       const w = Math.sin(t*6 + i)*0.5 + 0.5;
       const tx = x + dx*order + this.JX[i]*jit*(0.4 + w), ty = y + dy*order + this.JY[i]*jit*(0.4 + w);
-      const mv = v.e > .5 || nm > .5 ? mv0 : mv1;
+      const mv = nm > .5 ? mvN : v.e > .5 ? mv0 : mv1;
       this.X[i] += (tx - this.X[i])*mv; this.Y[i] += (ty - this.Y[i])*mv;
     }
     this.info = { act, pulse, allLocked };
@@ -325,12 +332,12 @@
     if (!this.rain) return this.mono;
     const v = this.V[j], a = Math.floor(clamp(v.u, 0, 47)), gg = snap(v.u - a); return mix(HUE[a % 12], HUE[(a + 1) % 12], gg);
   };
-  Multi.prototype.draw = function (ctx, w, h, scale){
-    const R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, act = (this.info || { act:[0] }).act, Ka = act.length;
+  Multi.prototype.draw = function (ctx, w, h, scale, alpha){
+    const A = alpha == null ? 1 : alpha, R = Math.min(w, h)*(scale || 0.5), cx = w/2, cy = h/2, act = (this.info || { act:[0] }).act, Ka = act.length;
     act.forEach((j, q) => {
       const base = this.colorOf(j);
       ctx.fillStyle = this.noise > .3 ? mix(toHex(base), this.mono, this.noise) : base;
-      const a = 0.25 + 0.75*clamp(Math.max(this.V[j].e, this.noise), 0, 1);
+      const a = (0.25 + 0.75*clamp(Math.max(this.V[j].e, this.noise), 0, 1))*A;
       for (let i = q; i < this.N; i += Ka){ ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*a; const z = this.ZS[i]*1.05; ctx.fillRect(cx + this.X[i]*R - z/2, cy + this.Y[i]*R - z/2, z, z); }
     });
     ctx.globalAlpha = 1;
@@ -355,5 +362,51 @@
     return { title, sub, voices };
   };
 
-  g.Voice3 = { HUE, NAMES, SYM, SHARP, OCT, IV, VCOL, params, noteColor, makeP, targetOf, renderForm, renderNoise, Solo, Multi, noteLabel, mix, toHex, clamp };
+  /* ---------- live: one voice or several, decided by the sound itself ---------- */
+  function Live(n){
+    this.solo = new Solo(n, 5); this.multi = new Multi(Math.round(n*1.04)); this.voice = new VF.Voice();
+    this.on = false; this.mixT = 0; this.many = 0; this.count = 1;
+  }
+  Live.prototype.start = async function (){
+    if (this.on) return;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } });
+    const AC = new (g.AudioContext || g.webkitAudioContext)(); if (AC.state === 'suspended') await AC.resume();
+    const src = AC.createMediaStreamSource(stream);
+    const v = this.voice; v.ctx = AC; v.src = src; v.an = AC.createAnalyser(); v.an.fftSize = 2048; src.connect(v.an);
+    v.buf = new Float32Array(v.an.fftSize); v.dec = new Float32Array(v.an.fftSize/2); v.on = true; v.stream = null;
+    const m = this.multi; m.AC = AC; m.an = AC.createAnalyser(); m.an.fftSize = 8192; m.an.smoothingTimeConstant = 0.2; src.connect(m.an);
+    const nb = m.an.frequencyBinCount; m.spec = new Float32Array(nb); m.mag = new Float32Array(nb); m.res = new Float32Array(nb); m.td = new Float32Array(2048); m.on = true;
+    this.stream = stream; this.AC = AC; this.on = true;
+  };
+  Live.prototype.stop = function (){
+    if (this.stream) this.stream.getTracks().forEach(tr => tr.stop());
+    if (this.AC) try { this.AC.close(); } catch (e) {}
+    this.stream = this.AC = null; this.on = false; this.voice.on = false; this.voice.ctx = null;
+    const m = this.multi; m.on = false; m.an = m.AC = null; m.tracks.fill(null); m.VT.forEach(x => x.on = false);
+  };
+  /* returns {kick, info}; call every frame while on */
+  Live.prototype.update = function (dt){
+    const v = this.voice; v.update(dt); const kick = !!v.T.kick;
+    const info = this.solo.fromVoice(v, dt);
+    const m = this.multi; m.update(dt); m.ease(dt);
+    const n = m.V.filter(x => x.on && x.e > .5).length;
+    this.many = n >= 2 ? Math.min(1.2, this.many + dt) : Math.max(0, this.many - dt*1.5);
+    this.count = this.mixT > .5 ? Math.max(2, n) : 1;
+    return { kick, info, voices: n };
+  };
+  Live.prototype.idle = function (dt){ const m = this.multi; m.ease(dt); this.many = Math.max(0, this.many - dt*1.5); };
+  Live.prototype.step = function (dt){
+    const target = this.many > .5 ? 1 : this.many <= 0 ? 0 : this.mixT > .5 ? 1 : 0;
+    this.mixT += clamp(target - this.mixT, -dt/0.6, dt/0.6);
+    this.solo.ease(dt);
+    if (this.mixT < 1) this.solo.step(dt);
+    if (this.mixT > 0) this.multi.step(dt);
+  };
+  Live.prototype.draw = function (ctx, w, h, scale){
+    if (this.mixT < 1) this.solo.draw(ctx, w, h, scale, 1 - this.mixT);
+    if (this.mixT > 0) this.multi.draw(ctx, w, h, scale, this.mixT);
+  };
+  Live.prototype.setOpts = function (o){ Object.assign(this.solo.opt, o); this.multi.rain = o.rain; this.multi.mono = o.mono; };
+
+  g.Voice3 = { Live, renderState, HUE, NAMES, SYM, SHARP, OCT, IV, VCOL, params, noteColor, makeP, targetOf, renderForm, renderNoise, Solo, Multi, noteLabel, mix, toHex, clamp };
 })(window);

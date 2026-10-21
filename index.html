@@ -318,6 +318,11 @@ button.cal-d:active{transform:scale(.94)}
 .vf-with[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .free-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
 .seg2.small button{padding:7px 0;font-size:13px}
+.snd-viz{width:40px;height:40px;display:block;margin:-2px 0 2px}
+.msr .snd{border-color:var(--rule)}
+.msr .snd[aria-pressed="true"]{background:transparent;color:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.msr .snd[aria-pressed="true"] span{color:var(--muted)}
+.free-txt{font-size:15px;line-height:1.45}
 .vmap{width:100%;max-width:420px;aspect-ratio:1;display:block;margin:0 auto}
 /* tab Голос */
 .seg2{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:99px;padding:4px;gap:4px}
@@ -482,15 +487,15 @@ const EX={
   feel:'текст звучит без усилия, окончания слов ясные.'},
  duo_unison:{b:'duo',t:'Одна нота',d:90,
   why:'Двое поют одну ноту. Когда голоса чуть расходятся, звук пульсирует — это биения: их частота равна разнице частот. Подстроиться, пока пульс не замрёт, — лучшая тренировка слуха и точности.',
-  steps:['Сядьте рядом с телефоном. Режим «С кем-то» уже включён: пластина слышит до трёх голосов.','Первый тянет удобную ноту на «у» или «м».','Второй вступает на ту же ноту.','Слушайте пульсацию и смотрите на форму: внизу видно, сколько биений в секунду. Подстраивайтесь, пока пульс не замрёт.','Когда строй найден, форма течёт по кругу единым целым. Поменяйтесь: теперь начинает второй.'],
+  steps:['Сядьте рядом с телефоном и нажмите «Начать». Пластина сама слышит, сколько голосов звучит.','Первый тянет удобную ноту на «у» или «м».','Второй вступает на ту же ноту.','Пока голоса чуть расходятся, звук и форма пульсируют. Подстраивайтесь, пока пульс не замрёт.','Когда строй найден, форма течёт по кругу единым целым. Поменяйтесь: теперь начинает второй.'],
   feel:'биения замедляются и исчезают — строй найден.'},
  duo_intervals:{b:'duo',t:'Интервалы',d:120,
   why:'Второй голос строит интервал от первого. Устойчивые интервалы — октава, квинта, терция — вплетают два узора в общий рисунок. Секунда и тритон дрожат: это напряжение, а не ошибка.',
-  steps:['Первый тянет ровную удобную ноту.','Второй ищет октаву выше: та же симметрия, больше колец.','Затем квинту: два узора переплетаются.','Затем большую терцию.','На экране — название интервала и «строй найден». Держите, пока рисунок не станет устойчивым, потом поменяйтесь ролями.'],
+  steps:['Первый тянет ровную удобную ноту.','Второй ищет октаву выше: та же симметрия, больше колец.','Затем квинту: два узора переплетаются.','Затем большую терцию.','Когда интервал точный, узоры сплетаются в устойчивый общий рисунок. Держите его, потом поменяйтесь ролями.'],
   feel:'устойчивый общий рисунок на консонансе.'},
  duo_chord:{b:'duo',t:'Аккорд',d:120,
   why:'Трое собирают трезвучие: нижний голос, терция и квинта. Когда все в строю, три формы сливаются и вращаются вместе.',
-  steps:['Нижний голос тянет удобную ноту.','Второй строит большую терцию сверху.','Третий — квинту.','Подстраивайтесь, пока на экране не появится «мажорное трезвучие · строй найден».','Попробуйте минорное: средний голос опускается на полтона.'],
+  steps:['Нижний голос тянет удобную ноту.','Второй строит большую терцию сверху.','Третий — квинту.','Подстраивайтесь, пока три формы не сольются и не начнут вращаться вместе.','Попробуйте минорное: средний голос опускается на полтона.'],
   feel:'три узора сливаются в один и вращаются вместе.'},
  ground:{b:'stage',t:'Заземление',d:90,
   why:'Перед выступлением тело переходит в режим «бей или беги»: сердце стучит, дыхание поверхностное, голос дрожит. Устойчивость в ногах и длинный выдох возвращают контроль.',
@@ -558,65 +563,48 @@ const COMFORT_DEFAULT=55;
 function uOfMidi(midi){const ref=data.profile.ref||COMFORT_DEFAULT,refOct=Math.floor(ref/12)-1;return Math.max(0,Math.min(47,midi-12*refOct));}
 function formOpts(o){o.rain=data.profile.rain!==false;o.crisp=data.profile.lace!==true;o.mono=FC.dot;return o;}
 
-const vf={solo:null,multi:null,voice:null,listening:false,together:false,raf:0,t:0,last:0,rec:null,err:false,lblT:0,exhEnd:0};
+const vf={live:null,listening:false,raf:0,t:0,last:0,rec:null,err:false};
 function micAllowed(){return HAS_FORM&&data.profile.micOff!==true&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);}
 function needMicAsk(){return usesMic(ex.id)&&micAllowed()&&!data.profile.mic;}
+function ensureLive(){if(!vf.live)vf.live=new Voice3.Live(innerWidth<700?5000:8000);vf.live.setOpts(formOpts({}));return vf.live;}
 
 function formPanel(e){
   if(!HAS_FORM||ex.id==='exhale')return '';
-  const mic=usesMic(ex.id)&&micAllowed();
   return `<div class="vf-stage"><canvas id="vfCv" aria-hidden="true"></canvas>
     ${e.type==='breath'?'<div class="vf-over"><b id="pcLbl">Готовы?</b><span id="pcNum" class="num"></span></div>':''}
-    <div class="vf-exh num" id="vfExh" hidden></div>
-    <div class="vf-duo" id="vfDuo" hidden><b id="vfIv"></b><span id="vfIvSub"></span><div class="vf-voices" id="vfVoices"></div></div>
-    ${mic&&vlink(ex.id)!=='noise'?`<button class="vf-with" data-act="together" aria-pressed="${isDuo(ex.id)}">С кем-то</button>`:''}
   </div>`;
 }
 function formOpen(){
   if(!HAS_FORM||!$('vfCv'))return;
-  if(!vf.solo)vf.solo=new Voice3.Solo(innerWidth<700?5000:8000,5);
-  formOpts(vf.solo.opt);vf.solo.ghosts.length=0;vf.solo.exh=0;vf.solo.exhLast=0;
-  vf.together=isDuo(ex.id);vf.t=0;vf.err=false;vf.exhEnd=0;
-  vf.rec={notes:[],att:0,noise:0,pause:0,cur:null,mic:false,exhMax:0,cent:0,centN:0};
+  const L=ensureLive();L.solo.ghosts.length=0;L.solo.exh=0;L.solo.exhLast=0;L.mixT=0;L.many=0;
+  vf.t=0;vf.err=false;
+  vf.rec={notes:[],att:0,noise:0,pause:0,cur:null,mic:false,exhMax:0,cent:0,centN:0,voices:1};
   cancelAnimationFrame(vf.raf);vf.last=performance.now();vf.raf=requestAnimationFrame(formFrame);
 }
 function formClose(){cancelAnimationFrame(vf.raf);vf.raf=0;stopListening();}
 /* the one-time question about the microphone lives in a sheet, not in the exercise */
 function askMic(){
   openSheet(`<h3>Голос соберёт форму</h3>
-    <p>В голосовых и дыхательных упражнениях woisee слушает микрофон: нота собирает точки в форму, выдох раздувает облако, пауза рассыпает.</p>
+    <p>В голосовых и дыхательных упражнениях woisee слушает микрофон: нота собирает точки в форму, выдох раздувает облако, пауза рассыпает. Если звучат несколько голосов, их формы сплетаются в общий узор.</p>
     <p class="note">Звук не записывается и не покидает телефон. Сохраняются только признаки голоса для картинки дня и карты голоса. Выключить можно в настройках на странице прогресса.</p>
     <div class="sheet-acts"><button class="primary" data-act="micyes">Включить микрофон</button><button class="ghost wide" data-act="micno">Без микрофона</button></div>`);
 }
 async function startListening(){
   if(!usesMic(ex.id)||!micAllowed()||vf.listening)return;
   try{
-    if(vf.together){vf.multi=new Voice3.Multi(innerWidth<700?5200:8400);vf.multi.rain=data.profile.rain!==false;vf.multi.mono=FC.dot;await vf.multi.start();}
-    else{
-      if(!vf.voice)vf.voice=new VoiceForm.Voice();
-      await vf.voice.start();
-      if(data.profile.ref&&vf.voice.ref==null)vf.voice.ref=data.profile.ref;
-    }
+    const L=ensureLive();await L.start();
+    if(data.profile.ref&&L.voice.ref==null)L.voice.ref=data.profile.ref;
     vf.listening=true;vf.rec.mic=true;
     if(data.profile.mic!=='granted'){data.profile.mic='granted';saveProfile();}
   }catch(e){vf.err=true;vf.listening=false;if(data.profile.mic!=='denied'){data.profile.mic='denied';saveProfile();}}
 }
 function stopListening(){
-  if(vf.voice&&vf.voice.on){try{vf.voice.stop();}catch(e){}}
-  if(vf.multi&&vf.multi.on){collectMulti();try{vf.multi.stop();}catch(e){}}
+  if(vf.live&&vf.live.on){collectMulti();vf.live.stop();}
   vf.listening=false;closeSeg();
-}
-async function toggleTogether(){
-  const was=vf.listening;
-  if(was)stopListening();
-  vf.together=!vf.together;
-  const b=document.querySelector('.vf-with');if(b)b.setAttribute('aria-pressed',vf.together);
-  const duo=$('vfDuo');if(duo)duo.hidden=true;
-  if(was||ex.status==='run')await startListening();
 }
 /* without a live voice: a breathing cloud, or a demo of the exercise's main link */
 function sampleTarget(dt){
-  const so=vf.solo,e=EX[ex.id],k=vlink(ex.id),el=elapsed(),base={u:19,stab:.9,amp:.4,e:1,hold:.9,noise:0,cent:.5,vo:1};
+  const so=vf.live.solo,e=EX[ex.id],k=vlink(ex.id),el=elapsed(),base={u:19,stab:.9,amp:.4,e:1,hold:.9,noise:0,cent:.5,vo:1};
   if(e.type==='breath'){
     const c=(ex.status==='ready'?vf.t:el)%20,amp=c<4?c/4:c<8?1:c<16?1-(c-8)/8:0,exh=c>=8&&c<16;
     so.target(Object.assign(base,{amp,e:exh?1:.35,hold:exh?0:.6,noise:exh?1:0,cent:.12,vo:exh?0:1}));so.exh=exh?(c-8):0;return;
@@ -633,41 +621,20 @@ function fitLive(cv){const d=Math.min(devicePixelRatio||1,2),w=cv.clientWidth,h=
 function formFrame(now){
   if(!ex.open||!$('vfCv')){vf.raf=0;return;}
   const dt=Math.min(.05,(now-vf.last)/1000);vf.last=now;vf.t+=dt;
-  const {ctx,w,h}=fitLive($('vfCv'));
-  if(vf.together&&vf.multi&&vf.multi.on){
-    const m=vf.multi;m.update(dt);m.ease(dt);m.step(dt);m.draw(ctx,w,h,.54);
-    vf.lblT-=dt;if(vf.lblT<=0){vf.lblT=.15;showDuoLabels(m.labels());}
-  }else{
-    const so=vf.solo;
-    if(vf.listening&&vf.voice&&vf.voice.on){
-      vf.voice.update(dt);const kick=!!vf.voice.T.kick;const info=so.fromVoice(vf.voice,dt);
-      if(kick)vf.rec.att++;
-      track(dt,info);
-      if(vf.voice.f.calibrated&&!data.profile.ref){data.profile.ref=vf.voice.ref;saveProfile();}
-    }else if(!REDUCED()||vf.t<.1)sampleTarget(dt);
-    so.ease(dt);so.step(dt);so.draw(ctx,w,h,.54);
-    showExhale(so);
-    const duo=$('vfDuo');if(duo&&!duo.hidden)duo.hidden=true;
-  }
+  const L=vf.live,{ctx,w,h}=fitLive($('vfCv'));
+  if(vf.listening&&L.on){
+    const r=L.update(dt);
+    if(r.kick)vf.rec.att++;
+    if(L.mixT>.5)vf.rec.voices=Math.max(vf.rec.voices,r.voices);
+    track(dt,r.info);
+    if(L.voice.f.calibrated&&!data.profile.ref){data.profile.ref=L.voice.ref;saveProfile();}
+  }else{L.idle(dt);if(!REDUCED()||vf.t<.1)sampleTarget(dt);}
+  L.step(dt);L.draw(ctx,w,h,.54);
   vf.raf=requestAnimationFrame(formFrame);
-}
-/* exhale counter: appears while a pure exhale or sibilant lasts, stays 2 s after */
-function showExhale(so){
-  const el=$('vfExh');if(!el)return;
-  const live=so.exh>.3,now=performance.now();
-  if(live)vf.exhEnd=now+2000;
-  const v=live?so.exh:so.exhLast;
-  if(live||now<vf.exhEnd&&v>.3){el.hidden=false;el.textContent=v.toFixed(1).replace('.',',')+' с';}else el.hidden=true;
-}
-function showDuoLabels(L){
-  const box=$('vfDuo');if(!box)return;
-  box.hidden=!L.title;
-  $('vfIv').textContent=L.title;$('vfIvSub').textContent=L.sub;
-  $('vfVoices').innerHTML=L.voices.map(v=>`<span><i style="background:${v.color}"></i>${esc(v.note)}</span>`).join('');
 }
 /* features for the picture of the day and the voice map: held notes (absolute midi), noise, exhale. No audio is kept. */
 function track(dt,info){
-  const r=vf.rec,so=vf.solo;
+  const r=vf.rec,so=vf.live.solo;
   if(info.noise>.5&&!info.voiced){r.noise+=dt;r.cent+=info.cent*dt;r.centN+=dt;}
   if(info.silent)r.pause+=dt;
   r.exhMax=Math.max(r.exhMax,so.exhLast||0);
@@ -683,16 +650,17 @@ function closeSeg(){
   r.cur=null;
 }
 function collectMulti(){
-  const m=vf.multi,r=vf.rec;if(!m||!r)return;
-  r.voices=Math.max(r.voices||1,m.stats.voicesMax);
+  const L=vf.live,r=vf.rec;if(!L||!r||(r.voices||1)<2)return;
+  const m=L.multi;
   m.stats.notes.forEach((nl,j)=>nl.filter(n=>n.sec>=.5).forEach(n=>r.notes.push({midi:+(n.u+36).toFixed(1),voice:j,stab:.8,sec:+n.sec.toFixed(1)})));
   r.notes.sort((a,b)=>b.sec-a.sec);r.notes.length=Math.min(12,r.notes.length);
   r.intervals=Object.keys(m.stats.intervals).map(n=>({semitones:+n,lockedSec:+m.stats.intervals[n].toFixed(1)}));
+  m.stats={voicesMax:0,lockedSec:0,intervals:{},notes:[[],[],[]]};
 }
 function logExercise(){
   if(ex.logged||!ex.id)return;
   const sec=Math.round(elapsed());if(sec<5)return;
-  closeSeg();if(vf.multi&&vf.multi.on)collectMulti();
+  closeSeg();if(vf.live&&vf.live.on)collectMulti();
   const k=dkey(),d=getDay(k),r=vf.rec||{notes:[],att:0,noise:0,pause:0,mic:false},t=new Date();
   d.log=d.log||[];
   if(data.profile.ref)d.comfortMidi=data.profile.ref;
@@ -907,9 +875,11 @@ function mapSummary(){
   return 'Диапазон за 4 недели: от «'+nm(lo)+'» ('+oc(lo)+') до «'+nm(hi)+'» ('+oc(hi)+'). Ниже нота — ближе к центру. Яркие — эта неделя.';
 }
 
-/* ---------- tab «Голос»: long exhale results + free mode with the microphone ---------- */
-const ms={sound:'s',running:false,start:0,last:null,raf:0,rec:''};
-const fm={solo:null,multi:null,together:false,raf:0,t:0,last:0,on:false,err:false,lblT:0};
+/* ---------- tab «Голос»: one shared live form on top; «Свободно» to play, «Выдох» to measure ---------- */
+const ms={sound:'s',running:false,armed:false,start:0,last:null,rec:'',cent:0,centN:0};
+const gm={raf:0,t:0,last:0,on:false,err:false};
+/* what each exhale sound looks like: С and Ш are pure noise (fine fast cells / larger ones), З and Ж are a note with running noise */
+const SND_STATE={s:{noise:1,cent:.9,vo:0,stab:.2,hold:0},sh:{noise:1,cent:.5,vo:0,stab:.2,hold:0},z:{noise:.6,cent:.8,vo:1,stab:.85,hold:.8},zh:{noise:.6,cent:.5,vo:1,stab:.85,hold:.8}};
 
 function viewMeasure(){
   const m=state.mtab||'free';
@@ -919,95 +889,100 @@ function viewMeasure(){
     <button role="tab" data-act="mtab" data-v="free" aria-selected="${m==='free'}">Свободно</button>
     <button role="tab" data-act="mtab" data-v="exhale" aria-selected="${m==='exhale'}">Выдох</button>
   </div></div>
+  ${HAS_FORM?`<div class="vf-stage free"><canvas id="gmCv" aria-label="Точки, которые собирает голос"></canvas></div>`:''}
   ${m==='exhale'?viewExhale():viewFree()}`;
+}
+function viewFree(){
+  if(!HAS_FORM)return `<p class="note">Свободный режим работает в приложении woisee.</p>`;
+  return `<div class="free-ctl"><button class="go big ${gm.on?'alt':''}" data-act="freemic">${gm.on?'Стоп':'Слушать'}</button>
+  <p class="note free-txt">${gm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':'Можно звучать одной: нота соберёт точки в форму вашего голоса. А можно позвать кого-то рядом — несколько голосов сплетаются в общий узор, и видно, какая сила и красота у звучания вместе.'}</p></div>`;
 }
 function viewExhale(){
   const b=data.profile.bests||{},s=ms.sound,today=(data.days[dkey()]||{}).exhale||{},e=EX.exhale;
+  const btn=ms.running?'Стоп':ms.last!=null?'Ещё<br>попытка':'Старт<br>выдоха';
   return `<section class="msr">
-    <div class="snds">${Object.keys(SOUNDS).map(x=>`<button class="snd" data-act="msnd" data-v="${x}" aria-pressed="${x===s}"><b>${SOUNDS[x]}</b><span class="num">${b[x]?'рекорд '+Math.round(b[x]):'пока нет'}</span></button>`).join('')}</div>
+    <div class="snds">${Object.keys(SOUNDS).map(x=>`<button class="snd" data-act="msnd" data-v="${x}" aria-pressed="${x===s}"><canvas class="snd-viz" data-sndviz="${x}" aria-hidden="true"></canvas><b>${SOUNDS[x]}</b><span class="num">${b[x]?'рекорд '+Math.round(b[x]):'пока нет'}</span></button>`).join('')}</div>
     <div class="sw-line"><div><div class="sw-num" id="msNum">${(ms.last||0).toFixed(1)}</div><span class="note">секунд на [${SOUNDS[s]}]${today[s]?' · сегодня лучший '+Math.round(today[s]):''}</span></div>
-      <button class="sw-btn ${ms.running?'run':''}" data-act="msw" id="msBtn">${ms.running?'Стоп':ms.last!=null?'Ещё<br>попытка':'Старт<br>выдоха'}</button></div>
+      <button class="sw-btn ${ms.running?'run':''}" data-act="msw" id="msBtn">${btn}</button></div>
     <p class="rec" id="msRec" ${ms.rec?'':'hidden'}>${esc(ms.rec)}</p>
     <div id="msHist">${exhaleHist(s)}</div>
   </section>
-  <section class="sec"><h4>Как делать</h4><ol class="steps">${e.steps.map((x,i)=>`<li><span class="n num">${i+1}</span><span>${esc(x.replace('ниже ',''))}</span></li>`).join('')}</ol></section>
+  <section class="sec"><h4>Как делать</h4><ol class="steps">${MS_STEPS.map((x,i)=>`<li><span class="n num">${i+1}</span><span>${esc(x)}</span></li>`).join('')}</ol></section>
   <div class="feelbox"><b>Цель</b>${esc(e.feel)}</div>`;
 }
+const MS_STEPS=['Встаньте прямо, ноги на ширине плеч. Сделайте спокойный вдох животом.','Выберите звук и нажмите «Старт выдоха». Отсчёт начнётся сам, как только вы начнёте выдыхать.','Выдыхайте долго и ровно, как проколотая шина. Мышцы живота мягко поддерживают поток. Точки сверху покажут, насколько ровный выдох.','Когда воздух закончится, отсчёт остановится сам. Можно нажать «Стоп» и раньше.','Повторите на [ш], затем на звонких [з] и [ж]. Звонким нужно больше контроля.'];
 function recordExhale(sound,v){
   const k=dkey(),d=getDay(k),prev=(data.profile.bests||{})[sound]||0;
   if(!d.exhale[sound]||v>d.exhale[sound])d.exhale[sound]=v;
-  d.seconds=(d.seconds||0)+Math.round(v);saveDay(k);
+  d.seconds=(d.seconds||0)+Math.round(v);
+  if(gm.on){const t=new Date();d.log=d.log||[];d.log.push({id:'exhale',b:'breath',at:pad(t.getHours())+':'+pad(t.getMinutes()),sec:Math.max(5,Math.round(v)),mic:true,voices:1,notes:[],noiseSec:Math.round(v),exhaleMaxSec:v,noiseCentroid:ms.centN?+(ms.cent/ms.centN).toFixed(2):SND_STATE[sound].cent,sound});}
+  saveDay(k);
   if(v>prev){data.profile.bests=Object.assign({},data.profile.bests,{[sound]:v});saveProfile();}
   return prev;
 }
-function msToggle(){
+async function msToggle(){
   audioInit();
-  if(!ms.running){ms.running=true;ms.start=performance.now();ms.rec='';lockScreen();render();
-    const fr=()=>{if(!ms.running)return;const n=$('msNum');if(n)n.textContent=((performance.now()-ms.start)/1000).toFixed(1);ms.raf=requestAnimationFrame(fr);};ms.raf=requestAnimationFrame(fr);return;}
-  ms.running=false;cancelAnimationFrame(ms.raf);unlockScreen();
+  if(ms.running){msFinish();return;}
+  ms.running=true;ms.rec='';ms.cent=0;ms.centN=0;lockScreen();
+  if(micAllowed()){
+    if(!gm.on)await gmMicOn();
+    ms.armed=gm.on;ms.start=gm.on?0:performance.now();
+  }else{ms.armed=false;ms.start=performance.now();}
+  render();
+}
+function msFinish(){
+  if(!ms.running)return;
+  ms.running=false;unlockScreen();
+  if(ms.armed||!ms.start){ms.armed=false;render();return;}
   const v=Math.round((performance.now()-ms.start)/100)/10;ms.last=v;
   if(v>=2){const prev=recordExhale(ms.sound,v);if(v>prev){ms.rec=prev?`Новый рекорд на [${SOUNDS[ms.sound]}]: ${v} сек`:`Первый результат на [${SOUNDS[ms.sound]}]: ${v} сек`;tone(880,.4,.15);}}
   render();
 }
-function msStop(){if(ms.running){ms.running=false;cancelAnimationFrame(ms.raf);unlockScreen();}}
+function msStop(){if(ms.running){ms.running=false;ms.armed=false;unlockScreen();}}
 
-function viewFree(){
-  if(!HAS_FORM)return `<p class="note">Свободный режим работает в приложении woisee.</p>`;
-  return `<div class="vf-stage free"><canvas id="freeCv" aria-label="Точки, которые собирает ваш голос"></canvas>
-    <div class="vf-note" id="fmNote"><b id="fmName"></b><span id="fmSub"></span></div>
-    <div class="vf-exh num" id="fmExh" hidden></div>
-    <div class="vf-duo" id="fmDuo" hidden><b id="fmIv"></b><span id="fmIvSub"></span><div class="vf-voices" id="fmVoices"></div></div></div>
-  <div class="free-ctl"><button class="go big ${fm.on?'alt':''}" data-act="freemic">${fm.on?'Стоп':'Слушать'}</button>
-    <div class="free-side"><div class="seg2 small" role="tablist"><button role="tab" data-act="fmmode" data-v="solo" aria-selected="${!fm.together}">Один</button><button role="tab" data-act="fmmode" data-v="duo" aria-selected="${fm.together}">Вместе</button></div>
-    <p class="note">${fm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':fm.together?'До трёх голосов на одной пластине. Унисон, интервалы и аккорды складываются в общий узор.':'Нота собирает лучи, октава — кольца. «С-с-с» и выдох бегут волнами, тишина рассыпает.'}</p></div></div>`;
-}
+/* ---------- the shared live form of the tab ---------- */
 function freeStart(){
-  cancelAnimationFrame(fm.raf);fm.raf=0;
-  if(!HAS_FORM||!$('freeCv'))return;
-  if(!fm.solo)fm.solo=new Voice3.Solo(innerWidth<700?5000:8000,21);
-  formOpts(fm.solo.opt);
-  fm.last=performance.now();fm.raf=requestAnimationFrame(freeFrame);
+  cancelAnimationFrame(gm.raf);gm.raf=0;
+  if(!HAS_FORM)return;
+  document.querySelectorAll('canvas[data-sndviz]').forEach(cv=>{const s=cv.clientWidth;if(!s)return;const ctx=fitCv(cv,s);ctx.clearRect(0,0,s,s);Voice3.renderState(ctx,s/2,s/2,s*.62,SND_STATE[cv.dataset.sndviz],260,40+Object.keys(SND_STATE).indexOf(cv.dataset.sndviz),FC.dot,1,.9);});
+  if(!$('gmCv'))return;
+  ensureLive();
+  gm.last=performance.now();gm.raf=requestAnimationFrame(gmFrame);
 }
-function freeFrame(now){
-  if(state.tab!=='measure'||(state.mtab||'free')!=='free'||!$('freeCv')||ex.open){fm.raf=0;return;}
-  const dt=Math.min(.05,(now-fm.last)/1000);fm.last=now;fm.t+=dt;
-  const {ctx,w,h}=fitLive($('freeCv'));
-  if(fm.together&&fm.multi&&fm.multi.on){
-    const m=fm.multi;m.update(dt);m.ease(dt);m.step(dt);m.draw(ctx,w,h,.56);
-    fm.lblT=(fm.lblT||0)-dt;if(fm.lblT<=0){fm.lblT=.15;const L=m.labels(),box=$('fmDuo');box.hidden=!L.title;$('fmIv').textContent=L.title;$('fmIvSub').textContent=L.sub;$('fmVoices').innerHTML=L.voices.map(v=>`<span><i style="background:${v.color}"></i>${esc(v.note)}</span>`).join('');$('fmNote').hidden=true;}
+function gmFrame(now){
+  if(state.tab!=='measure'||!$('gmCv')||ex.open){gm.raf=0;return;}
+  const dt=Math.min(.05,(now-gm.last)/1000);gm.last=now;gm.t+=dt;
+  const L=vf.live,{ctx,w,h}=fitLive($('gmCv')),mode=state.mtab||'free';
+  if(gm.on&&L.on){
+    const r=L.update(dt),info=r.info;
+    if(L.voice.f.calibrated&&!data.profile.ref){data.profile.ref=L.voice.ref;saveProfile();}
+    if(mode==='exhale'&&ms.running){
+      if(ms.armed&&info.act&&!info.silent){ms.armed=false;ms.start=performance.now();}
+      if(!ms.armed){if(info.noise>.4){ms.cent+=info.cent*dt;ms.centN+=dt;}if(info.silent)msFinish();}
+    }
   }else{
-    const so=fm.solo;
-    if(fm.on&&vf.voice&&vf.voice.on){
-      vf.voice.update(dt);so.fromVoice(vf.voice,dt);
-      if(vf.voice.f.calibrated&&!data.profile.ref){data.profile.ref=vf.voice.ref;saveProfile();}
-    }else{const c=fm.t%10,amp=c<4?c/4:1-(c-4)/6;so.target({u:19,stab:.8,amp,e:.12,hold:0,noise:0,vo:1});}
-    so.ease(dt);so.step(dt);so.draw(ctx,w,h,.56);
-    fm.lblT=(fm.lblT||0)-dt;if(fm.lblT<=0){fm.lblT=.2;const L=so.label(),nb=$('fmNote');nb.hidden=!fm.on||!L.name;$('fmName').textContent=L.name;$('fmSub').textContent=L.sub;$('fmDuo').hidden=true;
-      const ee=$('fmExh');const v=so.exh>.3?so.exh:0;ee.hidden=!v;if(v)ee.textContent=v.toFixed(1).replace('.',',')+' с';}
+    L.idle(dt);
+    if(mode==='exhale'){const c=gm.t%7,st=SND_STATE[ms.sound],on=c<5.5;L.solo.target({u:19,amp:.45,e:on?1:.08,stab:st.stab,hold:on?st.hold:0,noise:on?st.noise:0,cent:st.cent,vo:st.vo});L.solo.exh=on&&!st.vo?c:0;}
+    else{const c=gm.t%10,amp=c<4?c/4:1-(c-4)/6;L.solo.target({u:19,stab:.8,amp,e:.12,hold:0,noise:0,vo:1});}
   }
-  fm.raf=requestAnimationFrame(freeFrame);
+  if(mode==='exhale'&&ms.running&&!ms.armed&&ms.start){const n=$('msNum');if(n)n.textContent=((performance.now()-ms.start)/1000).toFixed(1);}
+  L.step(dt);L.draw(ctx,w,h,.56);
+  gm.raf=requestAnimationFrame(gmFrame);
+}
+async function gmMicOn(){
+  try{
+    const L=ensureLive();await L.start();
+    if(data.profile.ref&&L.voice.ref==null)L.voice.ref=data.profile.ref;
+    gm.on=true;gm.err=false;lockScreen();
+    if(!data.profile.mic||data.profile.mic==='denied'){data.profile.mic='granted';saveProfile();}
+  }catch(e){gm.on=false;gm.err=true;}
 }
 async function freeMic(){
-  if(fm.on){freeMicOff();render();return;}
-  try{
-    if(fm.together){fm.multi=new Voice3.Multi(innerWidth<700?5200:8400);fm.multi.rain=data.profile.rain!==false;fm.multi.mono=FC.dot;await fm.multi.start();}
-    else{
-      if(!vf.voice)vf.voice=new VoiceForm.Voice();
-      if(!vf.voice.on)await vf.voice.start();
-      if(data.profile.ref&&vf.voice.ref==null)vf.voice.ref=data.profile.ref;
-    }
-    fm.on=true;fm.err=false;lockScreen();
-    if(!data.profile.mic||data.profile.mic==='denied'){data.profile.mic='granted';saveProfile();}
-  }catch(e){fm.on=false;fm.err=true;}
-  render();
+  if(gm.on){freeMicOff();render();return;}
+  await gmMicOn();render();
 }
-function freeMicOff(){if(fm.on){fm.on=false;if(vf.voice&&vf.voice.on){try{vf.voice.stop();}catch(e){}}if(fm.multi&&fm.multi.on){try{fm.multi.stop();}catch(e){}}unlockScreen();}}
-async function freeMode(v){
-  const want=v==='duo';if(want===fm.together)return;
-  const was=fm.on;freeMicOff();fm.together=want;
-  if(was)await freeMic();else render();
-}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&fm.on){freeMicOff();if(state.tab==='measure')render();}});
+function freeMicOff(){if(gm.on){gm.on=false;if(vf.live&&vf.live.on)vf.live.stop();unlockScreen();}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&gm.on){msStop();freeMicOff();if(state.tab==='measure')render();}});
 
 
 /* ---------- helpers ---------- */
@@ -1096,7 +1071,7 @@ function render(){
   $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():state.tab==='measure'?viewMeasure():viewLibrary();
   paintPlates($('view'));
   if(HAS_FORM&&state.tab==='path')tlStart();
-  if(HAS_FORM&&state.tab==='measure'&&(state.mtab||'free')==='free')freeStart();
+  if(HAS_FORM&&state.tab==='measure')freeStart();
 }
 function topbar(){
   const st=streak();
@@ -1412,8 +1387,6 @@ document.addEventListener('click',ev=>{
     case 'msnd':if(!ms.running){ms.sound=v;ms.last=null;ms.rec='';render();}break;
     case 'msw':msToggle();break;
     case 'freemic':freeMic();break;
-    case 'fmmode':freeMode(v);break;
-    case 'together':toggleTogether();break;
     case 'rain':data.profile.rain=data.profile.rain===false;saveProfile();if(vf.solo)formOpts(vf.solo.opt);if(fm.solo)formOpts(fm.solo.opt);render();break;
     case 'lace':data.profile.lace=data.profile.lace!==true;saveProfile();if(vf.solo)formOpts(vf.solo.opt);if(fm.solo)formOpts(fm.solo.opt);render();break;
     case 'streak':state.from=state.tab==='progress'?state.from:state.tab;state.tab='progress';state.choosing=false;render();window.scrollTo(0,0);break;
