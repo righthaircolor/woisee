@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#E2DFD9">
+<meta name="theme-color" content="#F6F2E8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="woisee">
@@ -35,9 +35,9 @@ button,.item,.row{touch-action:manipulation;-webkit-user-select:none;user-select
 /* Layout: Swiss-style single column on warm grey paper. Huge numerals as heroes, hairline rules, a stack of colored block cards, a floating black capsule for nav and for the timer.
    Deliberately one light visual world, like the references. */
 :root{
-  --paper:#E2DFD9; --paper-2:#ECEAE5; --ink:#111111; --muted:#6F6A63; --rule:rgba(17,17,17,.16); --soft:#CBC6BE;
-  --signal:#F0472C; --lime:#DDF98C;
-  --c-body:#A8C4B4; --c-breath:#D2B48C; --c-phon:#EBE57C; --c-artic:#EF5A3C; --c-stage:#BEBAB3;
+  /* palette: Cheviot, Grape Mist, Midnight Dreams, Neptune's Wrath, Isotonic Water, Pacific Panorama + signal red */
+  --paper:#F6F2E8; --paper-2:#FDFBF6; --ink:#002233; --muted:#56687A; --rule:rgba(0,34,51,.16); --soft:#C5C0C9;
+  --signal:#F0472C; --lime:#DDFF55; --deep:#11425D; --sky:#C0D6EA;
   --f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
   color-scheme:light;
 }
@@ -49,7 +49,9 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-r
 h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:800;letter-spacing:-.03em}
 p{margin:0}
 .num{font-variant-numeric:tabular-nums}
-.b-body{--c:var(--c-body)} .b-breath{--c:var(--c-breath)} .b-phon{--c:var(--c-phon)} .b-artic{--c:var(--c-artic)} .b-stage{--c:var(--c-stage)}
+.b-body,.b-breath,.b-phon,.b-stage{--cf:var(--ink);--cl:rgba(0,34,51,.2);--cbox:rgba(253,251,246,.6);--ca:var(--ink)}
+.b-body{--c:var(--sky);--cai:var(--sky)} .b-breath{--c:var(--soft);--cai:var(--soft)} .b-phon{--c:var(--lime);--cai:var(--lime)} .b-stage{--c:#DDD7CB;--cai:#DDD7CB}
+.b-artic{--c:var(--deep);--cf:var(--paper);--cl:rgba(246,242,232,.22);--cbox:rgba(246,242,232,.14);--ca:var(--lime);--cai:var(--deep)}
 
 .app{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:18px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -60,7 +62,7 @@ p{margin:0}
 .rule{border:0;border-top:1px solid var(--rule);margin:0}
 .lnk{font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 .note{font-size:14px;color:var(--muted)}
-.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ink);border-radius:99px;padding:3px 11px;font-size:13px;font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid currentColor;border-radius:99px;padding:3px 11px;font-size:13px;font-weight:500}
 .redpill{display:inline-block;background:var(--signal);color:var(--paper-2);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
 
 /* choose */
@@ -92,7 +94,7 @@ p{margin:0}
 
 /* stack of block cards */
 .stack{display:flex;flex-direction:column}
-.blk{background:var(--c);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;box-shadow:0 -1px 0 rgba(17,17,17,.06)}
+.blk{background:var(--c);color:var(--cf);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;box-shadow:0 -1px 0 rgba(0,34,51,.08)}
 .blk:first-child{margin-top:0}
 .blk:last-child{padding-bottom:20px}
 .blk header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:12px}
@@ -101,16 +103,16 @@ p{margin:0}
 .blk .sub{font-size:14px;opacity:.75;margin-top:6px}
 .blk .cnt{font-weight:300;font-size:44px;line-height:.9;letter-spacing:-.05em}
 .blk .cnt small{font-size:18px}
-.blk ul{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid rgba(17,17,17,.25)}
-.blk .row{display:grid;grid-template-columns:1fr auto 30px;gap:12px;align-items:center;width:100%;padding:13px 0;border-bottom:1px solid rgba(17,17,17,.25)}
+.blk ul{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--cl)}
+.blk .row{display:grid;grid-template-columns:1fr auto 30px;gap:12px;align-items:center;width:100%;padding:13px 0;border-bottom:1px solid var(--cl)}
 .blk li:last-child .row{border-bottom:0}
 .blk .row .t{font-size:17px;font-weight:500;line-height:1.25;min-width:0}
 .blk .row .d{font-size:14px;opacity:.7}
-.box{width:28px;height:28px;border-radius:9px;background:rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center}
+.box{width:28px;height:28px;border-radius:9px;background:var(--cbox);display:flex;align-items:center;justify-content:center}
 .box svg{width:18px;height:18px}
-.row.dn .box{background:var(--ink);color:var(--c)}
+.row.dn .box{background:var(--ca);color:var(--cai)}
 .row.dn .t{text-decoration:line-through;text-decoration-thickness:1px;opacity:.6}
-.row.cur .box{background:var(--ink);color:var(--paper-2);border-radius:50%}
+.row.cur .box{background:var(--ca);color:var(--cai);border-radius:50%}
 .row.cur .t{font-weight:700}
 .donecard{background:var(--lime);border-radius:30px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
 .donecard h3{font-size:32px;line-height:1}
@@ -174,15 +176,15 @@ p{margin:0}
 
 /* exercise screen */
 .ex{position:fixed;inset:0;z-index:20;background:var(--paper);overflow-y:auto;-webkit-overflow-scrolling:touch}
-.ex-head{background:var(--c);border-radius:0 0 34px 34px}
+.ex-head{background:var(--c);color:var(--cf);border-radius:0 0 34px 34px}
 .ex-head .in,.ex-body{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
 .ex-head .in{padding-block:calc(env(safe-area-inset-top,0px) + 12px) 24px;display:flex;flex-direction:column;gap:16px}
 .ex-top{display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center}
-.icon-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center}
+.icon-btn{width:40px;height:40px;border-radius:50%;background:var(--cbox);display:flex;align-items:center;justify-content:center}
 .icon-btn svg{width:20px;height:20px}
 .segs{display:flex;gap:2px;height:6px}
-.segs i{flex:1;background:rgba(17,17,17,.18);border-radius:1px}
-.segs i.dn{background:var(--ink)}
+.segs i{flex:1;background:var(--cl);border-radius:1px}
+.segs i.dn{background:var(--ca)}
 .segs i.cur{background:var(--paper-2)}
 .skip{font-size:14px;font-weight:600}
 .ex-title{font-size:clamp(34px,10vw,44px);line-height:.98}
@@ -234,7 +236,7 @@ p{margin:0}
 /* timer capsule */
 .tbar{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:21;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
 .cap{position:relative;overflow:hidden;max-width:484px;margin:0 auto;background:var(--ink);color:var(--paper-2);border-radius:99px;padding:8px 8px 8px 26px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-.cap .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:#2C2C2C;transition:width .2s linear}
+.cap .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--deep);transition:width .2s linear}
 .cap .time,.cap .acts{position:relative}
 .cap .time{display:flex;flex-direction:column}
 .cap .time b{font-weight:300;font-size:34px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
@@ -242,7 +244,7 @@ p{margin:0}
 .cap .acts{display:flex;align-items:center;gap:8px}
 .go{width:68px;height:68px;border-radius:50%;background:var(--signal);color:var(--ink);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05}
 .go.alt{background:var(--paper-2)}
-.chip{border:1px solid rgba(236,234,229,.4);border-radius:99px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--paper-2)}
+.chip{border:1px solid rgba(246,242,232,.35);border-radius:99px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--paper-2)}
 .cap.fin{background:var(--lime);color:var(--ink)}
 .cap.fin .fill{display:none}
 .cap.fin .time span{opacity:.7}
@@ -657,7 +659,7 @@ function widget(e){
       return `<div class="swatch" id="focusW"><div class="snds">${Object.keys(SOUNDS).map(s=>`<button class="snd" data-act="snd" data-v="${s}" aria-pressed="${ex.sw.sound===s}"><b>${SOUNDS[s]}</b><span class="num" id="best-${s}">${b[s]?'рекорд '+Math.round(b[s]):'нет замера'}</span></button>`).join('')}</div>
       <div class="sw-line"><div><div class="sw-num" id="swNum">0.0</div><span class="note" id="swLbl">секунд на [${SOUNDS[ex.sw.sound]}]</span></div><button class="sw-btn" data-act="sw" id="swBtn">Старт<br>выдоха</button></div>
       <p class="rec" id="swRec" hidden></p></div>`;}
-    case 'breath':return `<div class="pacer" id="focusW"><div class="wrap"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(17,17,17,.35)" stroke-width="1.5" stroke-dasharray="3 6"/><circle id="pcC" cx="100" cy="100" r="40" fill="var(--ink)"/></svg><div class="lbl"><b id="pcLbl">Готовы?</b><span id="pcNum"></span></div></div><p>Вдох 4 · задержка 4 · выдох 8 · задержка 4</p></div>`;
+    case 'breath':return `<div class="pacer" id="focusW"><div class="wrap"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(0,34,51,.4)" stroke-width="1.5" stroke-dasharray="3 6"/><circle id="pcC" cx="100" cy="100" r="40" fill="var(--ink)"/></svg><div class="lbl"><b id="pcLbl">Готовы?</b><span id="pcNum"></span></div></div><p>Вдох 4 · задержка 4 · выдох 8 · задержка 4</p></div>`;
     case 'intervals':return `<div class="phase" id="focusW"><div><b id="phLbl">Дышите</b><p class="note" style="color:var(--ink);margin-top:6px">30 работа · 15 отдых · 30 работа</p></div><span id="phNum">0:30</span></div>`;
     case 'twister':return `<div class="read" id="twText">${esc(TWISTERS[ex.tw])}</div><button class="ghost" data-act="tw">Другая скороговорка</button>`;
     case 'phrase':return `<div class="read" id="phText" style="text-align:center">${esc(PHRASES[ex.ph])}</div><ul class="listrows">${MOODS.map(m=>`<li><span>${m[0]}</span><span class="a">${m[1]}</span></li>`).join('')}</ul><button class="ghost" data-act="ph">Другая фраза</button>`;
