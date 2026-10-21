@@ -650,25 +650,24 @@ function drawDay(ctx,s,list,upto,seed,pal,opt){
   });
 }
 function fitCv(cv,w,h){h=h||w;const d=Math.min(devicePixelRatio||1,2),W=Math.round(w*d),H=Math.round(h*d);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);return c;}
-/* calendar day: a circle like the logo, with red dots inside — more practice, more dots */
+/* calendar day: a dark circle with white dots inside — more practice, more dots */
 function drawDayCircle(cv,k){
   const s=cv.clientWidth;if(!s)return;
   const ctx=fitCv(cv,s),r=s/2-1.5,c=s/2,today=dkey(),d=data.days[k],has=ok(k)||(d&&(d.log||[]).length);
   ctx.clearRect(0,0,s,s);
   ctx.beginPath();ctx.arc(c,c,r,0,Math.PI*2);
   if(k>today){ctx.strokeStyle=FC.soft;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);return;}
-  if(!has){ctx.fillStyle='#E4E8E3';ctx.fill();if(k===today){ctx.strokeStyle=FC.signal;ctx.lineWidth=2;ctx.stroke();}return;}
+  if(!has){ctx.fillStyle='#E4E8E3';ctx.fill();return;}
   ctx.fillStyle=FC.ebony;ctx.fill();
   const rng=Field.rng(seedOf(k)),mins=(d.seconds||0)/60,voiced=(d.log||[]).reduce((a,x)=>a+(x.notes||[]).length,0);
   const n=Math.round(Math.min(220,40+mins*7+voiced*6)),ox=c-r*.22,oy=c+r*.2,sig=r*(.26+Math.min(.18,voiced*.01));
-  ctx.fillStyle=FC.signal;
+  ctx.fillStyle=FC.vanilla;
   for(let i=0;i<n;i++){
     const x=ox+Field.gs(rng)*sig,y=oy+Field.gs(rng)*sig;
     if(Math.hypot(x-c,y-c)>r-2)continue;
     const z=(.8+rng()*1.1)*Math.max(.8,s/48);ctx.globalAlpha=.55+rng()*.45;ctx.fillRect(x-z/2,y-z/2,z,z);
   }
   ctx.globalAlpha=1;
-  if(k===today){ctx.beginPath();ctx.arc(c,c,r,0,Math.PI*2);ctx.strokeStyle=FC.signal;ctx.lineWidth=2;ctx.stroke();}
 }
 function paintPlates(root){
   if(!HAS_FORM)return;
@@ -1013,7 +1012,7 @@ function viewProgress(){
   return `<header class="top"><button class="back" data-act="tab" data-v="${state.from||'path'}">${ICON_BACK}Назад</button><span class="logo">woisee</span></header>
   <div class="p-hero"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<small>подряд</small></span></div>
   <div class="${HAS_FORM?'cal':'dots'}">${dots}</div>
-  ${HAS_FORM?'<p class="note">Красные точки — сколько голоса было в этот день. Нажмите на день, чтобы увидеть его след.</p>':''}
+  ${HAS_FORM?'<p class="note">Точки в круге — сколько голоса было в этот день. Нажмите на день, чтобы увидеть его след.</p>':''}
   <div class="trio">
     <div><b class="num">${keys.length}</b><span>${plural(keys.length,'день','дня','дней')} практики</span></div>
     <div><b class="num">${totalMin}</b><span>минут всего</span></div>
