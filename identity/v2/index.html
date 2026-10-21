@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#192524">
+<title>woisee · облако и узор</title>
+<link rel="stylesheet" href="../fonts.css">
+<style>
+:root{--paper:#FFFFFF;--paper-2:#F3F5F2;--soft:#E1E6E0;--ink:#192524;--muted:#5D6A67;--rule:rgba(25,37,36,.14);--signal:#F0472C;--lime:#ECF176;--rasp:#E780C0;--kale:#5EA879;--ebony:#192524;--vanilla:#FFFEFC;--f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;text-wrap:balance}p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+canvas{display:block}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.wm{font-weight:800;letter-spacing:-.05em;line-height:1}
+.top{border-bottom:1px solid var(--rule)}.top .wrap{display:flex;align-items:center;gap:16px;height:56px}
+.top .wm{font-size:22px}.top a{margin-left:auto;font-size:14px;color:var(--muted)}
+section.s{padding-top:72px;padding-bottom:16px}
+.sh{display:grid;grid-template-columns:120px 1fr;gap:20px;border-top:1px solid var(--ink);padding-top:18px;margin-bottom:30px}
+.sh .no{font-size:14px;font-weight:600}.sh h2{font-size:clamp(32px,4.6vw,56px);line-height:.95}
+.sh p{grid-column:2;max-width:62ch;font-size:18px;color:var(--muted);margin-top:12px}
+@media (max-width:700px){.sh{grid-template-columns:1fr;gap:10px}.sh p{grid-column:1}}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:99px;padding:8px 14px;font-size:14px;font-weight:500;background:var(--paper)}
+.btn.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.cap{display:inline-flex;align-items:center;gap:10px;border-radius:99px;padding:10px 16px;font-weight:600;font-size:14px;background:var(--vanilla);color:var(--ink)}
+.lab{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}@media (max-width:900px){.lab{grid-template-columns:1fr}}
+.stage{background:var(--ebony);border-radius:28px;position:relative;overflow:hidden;min-height:460px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage .over{position:absolute;left:18px;right:18px;top:16px;display:flex;justify-content:space-between;color:var(--vanilla);font-size:13px;pointer-events:none}
+.stage .state{position:absolute;left:18px;bottom:16px;color:var(--vanilla);font-size:15px;font-weight:500}
+.panel{display:flex;flex-direction:column;gap:14px}.row{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl{display:grid;grid-template-columns:110px 1fr 40px;align-items:center;gap:10px;font-size:14px}.ctrl span:last-child{text-align:right;font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--ink);margin-top:-8px}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:var(--ink)}
+input[type=range]:disabled{opacity:.55}
+.reads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.read{background:var(--paper-2);border-radius:16px;padding:10px 12px}.read small{display:block;font-size:12px;color:var(--muted)}.read b{font-size:17px}
+.err{color:var(--signal);font-size:13px}.note{font-size:13px;color:var(--muted)}
+.states{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.states{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.st{background:var(--paper-2);border-radius:20px;padding:10px}.st canvas{width:100%;aspect-ratio:1/1}
+.st b{display:block;font-size:13px;margin-top:8px}.st small{font-size:12px;color:var(--muted)}
+.day{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}@media (max-width:900px){.day{grid-template-columns:1fr}}
+.plate{background:var(--ebony);border-radius:28px;padding:22px;color:var(--vanilla)}.plate canvas{width:100%;aspect-ratio:1/1}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:16px}
+.week figure{margin:0;text-align:center;font-size:12px;color:var(--muted)}.week canvas{width:100%;aspect-ratio:1/1;border-radius:16px;background:var(--ebony)}
+.legend{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.legend div{display:grid;grid-template-columns:16px 110px 1fr;gap:10px;align-items:baseline;font-size:14px}
+.legend i{width:12px;height:12px;border-radius:50%;display:block}
+.phones{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+.phone{width:300px;height:620px;border-radius:44px;background:var(--ink);padding:10px}
+.scr{width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--paper);position:relative;display:flex;flex-direction:column}
+.scr .head{border-radius:0 0 30px 30px;padding:46px 18px 22px}.scr .head small{font-size:12px;font-weight:600;opacity:.7}.scr .head h3{font-size:32px;line-height:.98;margin-top:8px}
+.scr .body{flex:1;position:relative}.scr .body canvas{position:absolute;inset:0;width:100%;height:100%}
+.scr .capb{position:absolute;left:12px;right:12px;bottom:14px;display:flex;justify-content:space-between;align-items:center;border-radius:99px;background:var(--ink);color:var(--paper-2);padding:8px 8px 8px 20px}
+.scr .capb .t{font-size:22px;font-weight:700}.scr .capb .pl{width:44px;height:44px;border-radius:50%;background:var(--lime);display:grid;place-items:center;color:var(--ink);font-size:14px}
+.scr .hint{position:absolute;left:18px;right:18px;top:14px;font-size:13px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--signal);display:inline-block}
+.list{padding:14px 18px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.list div{display:flex;justify-content:space-between;align-items:center;border-radius:16px;padding:10px 12px;font-weight:600}
+.logos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}@media (max-width:800px){.logos{grid-template-columns:1fr}}
+.lg{background:var(--paper-2);border-radius:28px;padding:16px}.lg canvas{width:100%;aspect-ratio:1/1}
+.lg b{display:block;margin-top:10px}.lg p{font-size:14px;color:var(--muted);margin-top:4px}
+.sizes{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin-top:16px}.sizes figure{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="wm">woisee</span><span class="note">v2 · облако и узор</span><a href="../index.html">v1 с контуром →</a></div></header>
+<main>
+
+<section class="s wrap" id="live">
+  <div class="sh"><span class="no">01</span><h2>Голос собирает узор</h2>
+    <p>Края у формы нет никогда. В тишине частицы рассыпаны мягким облаком, голос выстраивает внутри узор стоячей волны. Включите микрофон: тяните «а», сирену вверх, шёпот, «па-па-па», паузу.</p></div>
+  <div class="lab">
+    <div class="stage"><canvas id="liveCv"></canvas>
+      <div class="over"><span id="mode">Модель</span><span id="pat"></span></div>
+      <div class="state" id="state"></div></div>
+    <div class="panel">
+      <div class="row"><button class="btn sel" id="mModel">Модель</button><button class="btn" id="mVoice">Мой голос</button><button class="btn" id="mCal" hidden>Заново найти ноту</button></div>
+      <div class="err" id="err" hidden></div>
+      <div class="ctrl"><label for="sP">Высота</label><input id="sP" type="range" min="0" max="100" step="1" value="25"><span id="oP">3</span></div>
+      <div class="ctrl"><label for="sL">Громкость</label><input id="sL" type="range" min="0" max="100" step="1" value="45"><span id="oL">45</span></div>
+      <div class="ctrl"><label for="sS">Устойчивость</label><input id="sS" type="range" min="0" max="100" step="1" value="90"><span id="oS">90</span></div>
+      <div class="row" id="mBtns"><button class="btn" id="bK">Атака</button><button class="btn" id="bN">Шёпот</button><button class="btn" id="bS">Пауза</button></div>
+      <div class="reads">
+        <div class="read"><small>Нота</small><b id="rNote">—</b></div>
+        <div class="read"><small>Комфортная</small><b id="rRef">—</b></div>
+        <div class="read"><small>Удержание</small><b id="rHold">—</b></div>
+      </div>
+      <p class="note">Узор 3 из 9 — комфортная нота. Каждые 3 полутона выше или ниже — соседний узор. Шкала считается от вашей ноты, а не от герц.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s wrap" id="states">
+  <div class="sh"><span class="no">02</span><h2>Состояния</h2><p>Девять узоров от низкого к высокому и три состояния без узора. Из этих кадров собираются карточки упражнений и обложки.</p></div>
+  <div class="states" id="statesGrid"></div>
+</section>
+
+<section class="s wrap" id="app">
+  <div class="sh"><span class="no">03</span><h2>В приложении</h2><p>Упражнение показывает живую реакцию, «Сегодня» — пластину дня, которая заполняется по мере занятий. Если включить микрофон выше, экран упражнения оживёт.</p></div>
+  <div class="phones">
+    <div class="phone"><div class="scr">
+      <div class="head" style="background:var(--kale)"><small>Фонация · 1,5 мин</small><h3>Гудение</h3></div>
+      <div class="body"><div class="hint"><span class="dot"></span>&nbsp; Микрофон слушает · держите «м-м-м»</div><canvas id="phEx"></canvas></div>
+      <div class="capb"><span class="t" id="phT">1:12</span><span class="pl">II</span></div>
+    </div></div>
+    <div class="phone"><div class="scr">
+      <div style="padding:46px 18px 6px;display:flex;justify-content:space-between;align-items:center"><span class="wm" style="font-size:24px">woisee</span><span class="note">5 дней подряд</span></div>
+      <div style="padding:0 18px"><div style="background:var(--ebony);border-radius:24px;padding:10px"><canvas id="phToday" style="width:100%;aspect-ratio:1/1"></canvas>
+        <div style="color:var(--vanilla);display:flex;justify-content:space-between;font-size:13px;padding:2px 6px 4px"><b>Сегодня</b><span id="phTodayMeta" style="opacity:.7"></span></div></div></div>
+      <div class="list">
+        <div style="background:var(--rasp)">Тело<span>✓</span></div>
+        <div style="background:var(--lime)">Дыхание<span>✓</span></div>
+        <div style="background:var(--kale)">Фонация<span>2 из 5</span></div>
+        <div style="background:var(--ebony);color:var(--vanilla)">Артикуляция<span>—</span></div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<section class="s wrap" id="day">
+  <div class="sh"><span class="no">04</span><h2>Картинка дня</h2><p>Одна пластина на календарный день. Каждое упражнение добавляет свой слой, даже если занятий за день было несколько. Пластина читается как часы: от 12 по часовой стрелке идут упражнения в порядке выполнения, размер сектора — длительность. Непройденная часть дня — рассыпанная бледная материя.</p></div>
+  <div class="day">
+    <div class="plate"><canvas id="dayCv"></canvas>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:14px">
+        <div><div class="wm" style="font-size:26px">21 октября</div><div class="note" style="color:rgba(255,254,252,.65);margin-top:4px" id="dayMeta"></div></div>
+        <button class="cap" id="dayNext">Другой день</button></div></div>
+    <div>
+      <div class="ctrl" style="grid-template-columns:150px 1fr 60px"><label for="sK">Пройдено за день</label><input id="sK" type="range" min="0" max="14" step="1" value="14"><span id="oK"></span></div>
+      <div class="legend">
+        <div><i style="background:var(--rasp)"></i><b>Тело</b><span class="note">Пыль без узора. Без голоса — только длительность.</span></div>
+        <div><i style="background:var(--lime)"></i><b>Дыхание</b><span class="note">Дымка выдохов: шум без высоты, узора нет.</span></div>
+        <div><i style="background:var(--kale)"></i><b>Фонация</b><span class="note">Узоры удержанных нот: высота — какой узор, устойчивость — резкость, длительность — плотность.</span></div>
+        <div><i style="background:var(--vanilla);border:1px solid var(--rule)"></i><b>Артикуляция</b><span class="note">Мелкое плотное кружево ближе к центру: слоги, скороговорки, чтение.</span></div>
+      </div>
+      <div class="week" id="week"></div>
+      <p class="note" style="margin-top:10px">Неделя. Пропущенный день — пустая тёмная пластина, без упрёков.</p>
+    </div>
+  </div>
+</section>
+
+<section class="s wrap" id="logo">
+  <div class="sh"><span class="no">05</span><h2>Логотип</h2><p>Текущий знак остаётся. Вариант на обсуждение: красная точка из частиц — та же материя, что в облаке. В малых размерах точка всегда сплошная.</p></div>
+  <div class="logos">
+    <div class="lg"><canvas data-logo="a"></canvas><b>A · Текущий</b><p>Пластина и сплошная точка. Работает во всех размерах.</p></div>
+    <div class="lg"><canvas data-logo="b"></canvas><b>B · Точка из частиц</b><p>Пластина остаётся сплошной, точка — облако зерна. Для крупных размеров и заставки.</p></div>
+    <div class="lg"><canvas data-logo="c"></canvas><b>C · Контур и частицы</b><p>Очертание круга и облако вместо точки. Легче, но теряет вес в иконке.</p></div>
+  </div>
+  <div class="lg" style="margin-top:16px"><b style="margin-top:0">Заставка: голос собирает точку</b><p>Частицы рассыпаны → собираются в точку на пластине. В малых размерах — вариант A.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px"><canvas id="splash" style="width:100%;aspect-ratio:1/1;border-radius:20px;background:var(--paper)"></canvas>
+      <div class="sizes"><figure><canvas data-size="b" data-px="128"></canvas>B · 128</figure><figure><canvas data-size="a" data-px="64"></canvas>A · 64</figure><figure><canvas data-size="a" data-px="32"></canvas>A · 32</figure><figure><canvas data-size="a" data-px="16"></canvas>A · 16</figure></div></div>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">woisee · v2 · прототип для дизайна и разработки</div></footer>
+
+<script src="../voiceform.js"></script>
+<script src="field.js"></script>
+<script>
+(function(){
+'use strict';
+const F = window.Field, VF = window.VoiceForm;
+const C = { ink:'#192524', vanilla:'#FFFEFC', rasp:'#E780C0', lime:'#ECF176', kale:'#5EA879', ebony:'#192524', signal:'#F0472C' };
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+function fit(cv, w, h){ const d = DPR(); w = w || cv.clientWidth; h = h || cv.clientHeight; const W = Math.max(1,Math.round(w*d)), H = Math.max(1,Math.round(h*d)); if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } const ctx = cv.getContext('2d'); ctx.setTransform(d,0,0,d,0,0); return { ctx, w, h }; }
+
+/* ---------- живое состояние ---------- */
+const voice = new VF.Voice();
+const S = F.state({ e:0.08, hold:0 }), T = F.state();
+let mode = 'model', sil = false, noise = false, holdM = 0, t = 0;
+function modelTarget(dt){
+  const p = +$('#sP').value/100, l = +$('#sL').value/100, s = +$('#sS').value/100;
+  const drift = (1-s)*(0.9*Math.sin(t*1.7)+0.5*Math.sin(t*4.3));
+  T.n = Math.max(0, Math.min(8, p*8 + drift)); T.amp = 0.15 + 0.85*Math.pow(l,0.6);
+  T.stab = noise ? 0.15 : s; T.e = sil ? 0.08 : noise ? 0.6 : 1; T.noise = noise ? 1 : 0;
+  holdM = (!sil && !noise && s > .6) ? Math.min(1, holdM + dt/2.5) : Math.max(0, holdM - dt*.8); T.hold = holdM;
+  $('#oP').textContent = Math.round(p*8)+1; $('#oL').textContent = Math.round(l*100); $('#oS').textContent = Math.round(s*100);
+}
+const views = [];
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.target._v) e.target._v.vis = e.isIntersecting; }), { rootMargin:'100px' });
+function addView(el, fn){ const v = { fn, vis:false }; el._v = v; io.observe(el); views.push(v); }
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now; t += dt;
+  if (mode === 'voice' && voice.on){ voice.update(dt); F.fromVoice(voice, T); sil = voice.f.silent; }
+  else modelTarget(dt);
+  F.ease(S, T, dt);
+  views.forEach(v => v.vis && v.fn(dt));
+  requestAnimationFrame(frame);
+}
+
+/* ---------- живая форма ---------- */
+const liveF = F.make(innerWidth < 700 ? 6000 : 9000, 3);
+const liveCv = $('#liveCv');
+addView($('.stage'), dt => {
+  const { ctx, w, h } = fit(liveCv); ctx.fillStyle = C.ebony; ctx.fillRect(0,0,w,h);
+  F.step(liveF, S, dt, t);
+  F.draw(ctx, liveF, w/2, h/2, Math.min(w,h)*0.46, C.vanilla, 1.1);
+  const i0 = Math.round(Math.max(0, Math.min(8, S.n))), g = S.n - Math.floor(S.n), blur = 4*g*(1-g);
+  $('#pat').textContent = S.e < 0.3 ? '' : S.noise > 0.5 ? 'дымка' : 'узор ' + (i0+1) + ' из 9';
+  $('#state').textContent = sil ? 'Пауза: узор расплывается в облако' : S.noise > .5 ? 'Шум без высоты: облако дрожит, узора нет' : S.kick > .4 ? 'Атака: волна от центра' : (blur > .5 || S.stab < .45) ? 'Нота плавает: узор между состояниями' : S.hold > .85 ? 'Звук держится: узор проявился' : 'Голос собирает узор';
+  $('#rHold').textContent = Math.round(S.hold*100) + '%';
+  if (mode === 'voice' && voice.on){
+    const f = voice.f;
+    $('#rNote').textContent = f.voiced ? VF.noteName(f.midi).split(' ')[0] + ' · ' + Math.round(f.hz) : (f.noise ? 'шум' : '—');
+    $('#rRef').textContent = f.calibrated ? VF.noteName(f.ref).split(' ')[0] + ' · ' + Math.round(440*Math.pow(2,(f.ref-69)/12)) : 'слушаю…';
+    $('#sP').value = Math.round(S.n/8*100); $('#oP').textContent = Math.round(S.n)+1;
+    $('#sL').value = Math.round(Math.pow(Math.max(0,(S.amp-.15)/.85), 1/0.6)*100); $('#oL').textContent = $('#sL').value;
+    $('#sS').value = Math.round(S.stab*100); $('#oS').textContent = $('#sS').value;
+  } else { $('#rNote').textContent = '—'; $('#rRef').textContent = '—'; }
+});
+function ub(){ $('#bN').classList.toggle('sel', noise); $('#bS').classList.toggle('sel', sil); }
+['#sP','#sL','#sS'].forEach(id => $(id).addEventListener('input', () => { sil = false; noise = false; ub(); }));
+$('#bK').addEventListener('click', () => { T.kick = 1; sil = false; noise = false; ub(); });
+$('#bN').addEventListener('click', () => { noise = !noise; sil = false; ub(); });
+$('#bS').addEventListener('click', () => { sil = !sil; noise = false; ub(); });
+function setMode(m){
+  mode = m; $('#mModel').classList.toggle('sel', m === 'model'); $('#mVoice').classList.toggle('sel', m === 'voice');
+  $('#mCal').hidden = m !== 'voice'; $('#mBtns').hidden = m === 'voice';
+  ['#sP','#sL','#sS'].forEach(id => $(id).disabled = m === 'voice');
+  $('#mode').textContent = m === 'voice' ? '● Микрофон слушает' : 'Модель';
+  if (m === 'model'){ sil = false; noise = false; ub(); }
+}
+$('#mVoice').addEventListener('click', async () => {
+  if (voice.on) return setMode('voice');
+  $('#err').hidden = true;
+  try { await voice.start(); setMode('voice'); }
+  catch(e){ $('#err').textContent = location.protocol !== 'https:' ? 'Микрофон работает только по https.' : 'Нет доступа к микрофону. Разрешите его в настройках браузера.'; $('#err').hidden = false; }
+});
+$('#mModel').addEventListener('click', () => { if (voice.on) voice.stop(); setMode('model'); });
+$('#mCal').addEventListener('click', () => voice.recalibrate());
+
+/* ---------- статичные кадры ---------- */
+const statics = [];
+function addStatic(fn){ statics.push(fn); fn(); }
+const STATES = [];
+for (let i = 0; i < 9; i++) STATES.push(['Узор ' + (i+1), i === 2 ? 'комфортная нота' : (i < 2 ? (2-i)*3 + ' полутона ниже' : '+' + (i-2)*3 + ' полутонов'), F.state({ n:i })]);
+STATES.push(['Нота плавает', 'между 3 и 4', F.state({ n:2.5, stab:.3, hold:.3 })]);
+STATES.push(['Пауза', 'узор расплылся', F.state({ e:.08, hold:0 })]);
+STATES.push(['Шёпот, «с-с-с»', 'облако без узора', F.state({ noise:1, e:.6, stab:.15, hold:0, amp:.1 })]);
+STATES.forEach(([title, sub, st], k) => {
+  const el = document.createElement('div'); el.className = 'st';
+  el.innerHTML = `<canvas></canvas><b>${title}</b><small>${sub}</small>`; $('#statesGrid').appendChild(el);
+  const cv = el.querySelector('canvas');
+  addStatic(() => { const { ctx, w, h } = fit(cv); ctx.clearRect(0,0,w,h); const f = F.make(Math.round(1500 + w*w*0.06), 40+k); F.settle(f, st); F.draw(ctx, f, w/2, h/2, w*0.5, C.ink, 0.9); });
+});
+
+/* ---------- день ---------- */
+const PLAN = {
+  body:['Полулежачее положение','Плечи','Наклоны головы','Внутренняя улыбка','Свободная челюсть'],
+  breath:['Дыхание животом','«Собачка»','Долгий выдох','Дыхание 4-4-8-4'],
+  phon:['Мягкая атака','Гудение','Соломинка','Три резонатора','Посылка звука','Сирена','От шёпота до крика','Качели'],
+  artic:['Губы','Язык','Ряды согласных','Скороговорки','Протяжные гласные','Пробка','Чтение вслух'],
+};
+function pick(r, a, k){ a = a.slice(); const o = []; while (o.length < k && a.length) o.push(a.splice((r()*a.length)|0,1)[0]); return o; }
+function makeDay(seed){
+  const r = F.rng(seed), ex = [];
+  pick(r, PLAN.body, 2 + (r()*2|0)).forEach(n => ex.push({ block:'body', name:n, dur: 45 + r()*120 }));
+  pick(r, PLAN.breath, 2 + (r()*2|0)).forEach(n => ex.push({ block:'breath', name:n, dur: 60 + r()*40 }));
+  pick(r, PLAN.phon, 3 + (r()*3|0)).forEach(n => {
+    const notes = []; const k = n === 'Сирена' ? 5 : 1 + (r()*3|0);
+    for (let q = 0; q < k; q++) notes.push({ n: n === 'Сирена' ? q*1.8 : Math.max(0, Math.min(8, 2 + Math.round(gauss(r)*2))), stab: .5 + r()*.5, amp: .2 + r()*.7, hold: .4 + r()*.6 });
+    ex.push({ block:'phon', name:n, dur: 60 + r()*60, notes });
+  });
+  pick(r, PLAN.artic, 2 + (r()*3|0)).forEach(n => ex.push({ block:'artic', name:n, dur: 45 + r()*120, notes:[{ n: 5 + (r()*4|0), stab:.7 + r()*.3, amp:.4, hold:.8 }] }));
+  return ex;
+}
+function gauss(r){ return (r()+r()+r()-1.5)/1.5; }
+function drawDay(ctx, s, ex, upto, seed){
+  // Пластина = день. От 12 часов по часовой стрелке: каждое упражнение — свой сектор, размер = длительность.
+  // Внутри сектора — материя этого упражнения: пыль (тело), дымка (дыхание), узоры нот (фонация, артикуляция).
+  // Ещё не пройденная часть дня — рассыпанная бледная материя.
+  ctx.fillStyle = C.ebony; ctx.fillRect(0,0,s,s);
+  const R = s*0.34, cx = s/2, cy = s/2, dot = Math.max(0.6, s/520), dens = (s/600)*(s/600);
+  const total = ex.reduce((a, e) => a + e.dur, 0);
+  let a0 = -Math.PI/2;
+  ex.forEach((e, k) => {
+    const span = Math.PI*2*e.dur/total, done = k < upto, r = F.rng(seed*31 + k*7 + 1);
+    const parts = done && e.notes ? e.notes : [null];
+    parts.forEach((nt, q) => {
+      const sub = span/parts.length, start = a0 + sub*q;
+      const n = Math.round((done ? (e.block === 'body' || e.block === 'breath' ? 15 : 22) : 3) * e.dur/parts.length * dens + 20);
+      const f = F.make(n, seed*31 + k*7 + q);
+      for (let i = 0; i < n; i++){
+        const th = start + r()*sub + F.gs(r)*0.06, rad = Math.sqrt(-2*Math.log(1 - r()*0.995)) * (e.block === 'artic' ? 0.3 : e.block === 'phon' ? 0.4 : 0.46);
+        f.X0[i] = Math.cos(th)*rad; f.Y0[i] = Math.sin(th)*rad*0.9;
+      }
+      let st, col, al = 0.85;
+      if (!done){ st = F.state({ e:0, hold:0, stab:.6, amp:.5 }); col = C.vanilla; al = 0.22; }
+      else if (e.block === 'body'){ st = F.state({ e:0, hold:0, stab:.7, amp:.5 }); col = C.rasp; al = 0.75; }
+      else if (e.block === 'breath'){ st = F.state({ noise:1, e:.6, stab:.15, hold:0, amp:.5 }); col = C.lime; al = 0.6; }
+      else { st = F.state({ n:nt.n, stab:nt.stab, amp:.5, hold:nt.hold }); col = e.block === 'artic' ? C.vanilla : C.kale; al = 0.95; }
+      F.settle(f, st); F.draw(ctx, f, cx, cy, R, col, dot, al);
+    });
+    a0 += span;
+  });
+}
+let daySeed = 2110, dayEx = makeDay(daySeed);
+const sK = $('#sK');
+function renderDay(){
+  sK.max = dayEx.length; if (+sK.value > dayEx.length) sK.value = dayEx.length;
+  const k = +sK.value; $('#oK').textContent = k + ' из ' + dayEx.length;
+  const cv = $('#dayCv'), s = cv.clientWidth; const { ctx } = fit(cv, s, s); drawDay(ctx, s, dayEx, k, daySeed);
+  const done = dayEx.slice(0, k); $('#dayMeta').textContent = Math.round(done.reduce((a, e) => a + e.dur, 0)/60) + ' мин · ' + k + ' упражнений';
+}
+addStatic(renderDay);
+sK.addEventListener('input', renderDay);
+$('#dayNext').addEventListener('click', () => { daySeed = (daySeed*48271 + 7) % 2147483647; dayEx = makeDay(daySeed); sK.value = dayEx.length; renderDay(); });
+['пн','вт','ср','чт','пт','сб','вс'].forEach((d, i) => {
+  const fg = document.createElement('figure'); fg.innerHTML = `<canvas></canvas>${d}`; $('#week').appendChild(fg);
+  const cv = fg.querySelector('canvas');
+  addStatic(() => { const s = cv.clientWidth; const { ctx } = fit(cv, s, s); if (i === 3){ ctx.fillStyle = C.ebony; ctx.fillRect(0,0,s,s); return; } const ex = makeDay(500 + i*31); drawDay(ctx, s, ex, i === 6 ? 5 : ex.length, 500 + i*31); });
+});
+
+/* ---------- экраны ---------- */
+const exF = F.make(4000, 9), exS = F.state({ e:.08, hold:0 }), exT = F.state();
+let exClock = 0;
+addView($('#phEx').closest('.phone'), dt => {
+  exClock += dt; const { ctx, w, h } = fit($('#phEx')); ctx.clearRect(0,0,w,h);
+  let st = exS;
+  if (voice.on && mode === 'voice') st = S;
+  else { const c = exClock % 9; Object.assign(exT, F.state({ n:2, stab:.95, amp:.35, hold: Math.min(1, c/2.5), e: c > 7.5 ? .08 : 1 })); F.ease(exS, exT, dt); }
+  F.step(exF, st, dt, t); F.draw(ctx, exF, w/2, h*0.48, Math.min(w,h)*0.5, C.ink, 0.9);
+  $('#phT').textContent = '1:' + String(Math.max(0, 29 - Math.floor(exClock % 30))).padStart(2,'0');
+});
+addStatic(() => { const cv = $('#phToday'), s = cv.clientWidth; const { ctx } = fit(cv, s, s); const ex = makeDay(4242); const k = ex.filter(e => e.block === 'body' || e.block === 'breath').length + 2; drawDay(ctx, s, ex, k, 4242); $('#phTodayMeta').textContent = k + ' из ' + ex.length; });
+
+/* ---------- логотип ---------- */
+function logo(ctx, s, kind, prog){
+  ctx.clearRect(0,0,s,s);
+  const R = s*0.36, cx = s*0.52, cy = s*0.5, dx = cx - 0.4*R, dy = cy + 0.39*R, dr = 0.34*R;
+  if (kind === 'c'){ ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.lineWidth = Math.max(1.2, s*0.012); ctx.strokeStyle = C.ink; ctx.stroke(); }
+  else { ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fillStyle = C.ebony; ctx.fill(); }
+  if (kind === 'a'){ ctx.beginPath(); ctx.arc(dx, dy, dr, 0, Math.PI*2); ctx.fillStyle = C.signal; ctx.fill(); return; }
+  const r = F.rng(77), n = Math.round(Math.min(3500, 300 + s*s*0.035)), p = prog == null ? 1 : prog;
+  ctx.fillStyle = C.signal;
+  for (let i = 0; i < n; i++){
+    const a = r()*Math.PI*2, rad = Math.abs(F.gs(r))*dr*0.62, tx = dx + Math.cos(a)*rad, ty = dy + Math.sin(a)*rad;
+    const sx = cx + F.gs(r)*R*0.9, sy = cy + F.gs(r)*R*0.75;
+    const x = sx + (tx - sx)*p, y = sy + (ty - sy)*p, z = (0.6 + r()*r()*1.4)*Math.max(0.7, s/320);
+    ctx.globalAlpha = 0.45 + r()*0.55; ctx.fillRect(x - z/2, y - z/2, z, z);
+  }
+  ctx.globalAlpha = 1;
+}
+$$('canvas[data-logo]').forEach(cv => addStatic(() => { const s = cv.clientWidth; const { ctx } = fit(cv, s, s); logo(ctx, s, cv.dataset.logo); }));
+$$('canvas[data-size]').forEach(cv => { const px = +cv.dataset.px; cv.style.width = cv.style.height = px + 'px'; addStatic(() => { const { ctx } = fit(cv, px, px); logo(ctx, px, cv.dataset.size); }); });
+let spl = 0;
+addView($('#splash'), dt => { spl += dt; const c = spl % 5, p = c < 0.6 ? 0 : Math.min(1, (c - 0.6)/1.6); const e = 1 - Math.pow(1 - p, 3); const cv = $('#splash'), s = cv.clientWidth; const { ctx } = fit(cv, s, s); logo(ctx, s, 'b', e); });
+
+/* ---------- запуск ---------- */
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => statics.forEach(fn => fn()), 200); });
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => statics.forEach(fn => fn()));
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
