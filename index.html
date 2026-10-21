@@ -571,7 +571,6 @@ function ensureLive(){if(!vf.live)vf.live=new Voice3.Live(innerWidth<700?5000:80
 function formPanel(e){
   if(!HAS_FORM||ex.id==='exhale')return '';
   return `<div class="vf-stage"><canvas id="vfCv" aria-hidden="true"></canvas>
-    ${e.type==='breath'?'<div class="vf-over"><b id="pcLbl">Готовы?</b><span id="pcNum" class="num"></span></div>':''}
   </div>`;
 }
 function formOpen(){
@@ -608,6 +607,10 @@ function sampleTarget(dt){
   if(e.type==='breath'){
     const c=(ex.status==='ready'?vf.t:el)%20,amp=c<4?c/4:c<8?1:c<16?1-(c-8)/8:0,exh=c>=8&&c<16;
     so.target(Object.assign(base,{amp,e:exh?1:.35,hold:exh?0:.6,noise:exh?1:0,cent:.12,vo:exh?0:1}));so.exh=exh?(c-8):0;return;
+  }
+  if(e.type==='intervals'&&ex.status!=='ready'){
+    let acc=0,rest=false;for(const ph of e.ph){if(el<acc+ph[1]){rest=ph[0]==='Отдых';break;}acc+=ph[1];}
+    so.target(Object.assign(base,rest?{stab:.8,amp:.15,e:.1,hold:.5,noise:0,vo:1}:{stab:.2,amp:.55,e:1,hold:0,noise:1,cent:.35,vo:0}));so.exh=0;return;
   }
   if(!k){const c=vf.t%10,amp=c<4?c/4:1-(c-4)/6;so.target(Object.assign(base,{amp,e:.3,hold:.4}));return;}
   const c=vf.t%9;
@@ -1242,7 +1245,7 @@ function renderCard(){
     <section class="sec"><h4>Зачем</h4><p class="lead">${esc(e.why)}</p></section>
     <section class="sec"><h4>Как делать</h4><ol class="steps">${e.steps.map((s,i)=>`<li><span class="n num">${i+1}</span><span>${esc(s)}</span></li>`).join('')}</ol></section>
     ${e.feel?`<div class="feelbox"><b>Что почувствовать</b>${esc(e.feel)}</div>`:''}
-    ${e.type&&!(HAS_FORM&&e.type==='breath')?`<div class="widget">${widget(e)}</div>`:''}
+    ${e.type&&!(HAS_FORM&&(e.type==='breath'||e.type==='intervals'))?`<div class="widget">${widget(e)}</div>`:''}
   </div>`;
 }
 function renderBar(){
@@ -1264,7 +1267,7 @@ function tick(){
     const cl=$('clockLbl');if(cl)cl.textContent=ex.status==='run'?'осталось':ex.status==='pause'?'пауза':'таймер';
   }
   if(ex.status==='run'){const tt=$('tTime');if(tt)tt.textContent=fmt(rem);const tf=$('tFill');if(tf)tf.style.width=Math.min(100,el/dur*100)+'%';}
-  if(e.type==='breath'&&$('pcLbl')){
+  if(e.type==='breath'){
     let r=40,lbl='Готовы?',num='';
     if(ex.status==='run'||ex.status==='pause'){
       const c=el%20,phases=[['Вдох',0,4],['Задержка',4,8],['Выдох',8,16],['Задержка',16,20]];
@@ -1272,12 +1275,13 @@ function tick(){
       r=pi===0?40+48*(c/4):pi===1?88:pi===2?88-48*((c-8)/8):40;lbl=p[0];num=String(Math.floor(c-p[1])+1);
       if(ex.status==='run'&&ex.phase!==-1&&ex.phase!==pi)chimePhase();ex.phase=pi;
     }else if(ex.status==='done')lbl='Готово';
-    if($('pcC'))$('pcC').setAttribute('r',r.toFixed(1));$('pcLbl').textContent=lbl;$('pcNum').textContent=num;
+    if($('pcC'))$('pcC').setAttribute('r',r.toFixed(1));if($('pcLbl')){$('pcLbl').textContent=lbl;$('pcNum').textContent=num;}
   }
-  if(e.type==='intervals'&&$('phLbl')){
+  if(e.type==='intervals'){
     let acc=0,pi=e.ph.length-1;for(let j=0;j<e.ph.length;j++){if(el<acc+e.ph[j][1]){pi=j;break;}acc+=e.ph[j][1];}
-    if(ex.status==='done'){$('phLbl').textContent='Готово';$('phNum').textContent='';}
-    else{$('phLbl').textContent=e.ph[pi][0];$('phNum').textContent=fmt(acc+e.ph[pi][1]-el);if(ex.status==='run'&&ex.phase!==-1&&ex.phase!==pi)chimePhase();if(ex.status==='run')ex.phase=pi;}
+    const L=$('phLbl'),N=$('phNum');
+    if(ex.status==='done'){if(L){L.textContent='Готово';N.textContent='';}}
+    else{if(L){L.textContent=e.ph[pi][0];N.textContent=fmt(acc+e.ph[pi][1]-el);}if(ex.status==='run'&&ex.phase!==-1&&ex.phase!==pi)chimePhase();if(ex.status==='run')ex.phase=pi;}
   }
   if(e.type==='exhale'&&$('swNum')){const sw=ex.sw,v=sw.running?(now()-sw.start)/1000:(sw.last||0);$('swNum').textContent=v.toFixed(1);}
   if(ex.status==='run'&&rem<=0)complete(true);
