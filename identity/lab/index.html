@@ -62,7 +62,7 @@ footer{border-top:1px solid var(--ink);margin-top:80px;padding:22px 0 60px;font-
 
 <section class="s wrap" id="live">
   <div class="sh"><span class="no">01</span><h2>Нота рисует, октава строит</h2>
-    <p>Октава задаёт число колец формы. Нота внутри октавы — симметрию: до — 2 луча, ре — 3, ми — 4… си — 8. Диезы — та же симметрия, закрученная в спираль. Цвет — нота на радужном круге. Собранная форма течёт по кругу, прежняя нота остаётся гаснущим следом и переплетается с новой.</p><p>Звуки без ноты — «с», «ш», выдох — второй канал: узор растворяется, облако течёт вихрем и становится белым. «С» — мелкая быстрая рябь, «ш» — крупнее, выдох — широкое течение; длинный выдох раздувает облако, пауза собирает обратно. Звонкие «з», «ж» — узор и шум вместе.</p></div>
+    <p>Октава задаёт число колец формы. Нота внутри октавы — симметрию: до — 2 луча, ре — 3, ми — 4… си — 8. Диезы — та же симметрия, закрученная в спираль. Цвет — нота на радужном круге. Собранная форма течёт по кругу, прежняя нота остаётся гаснущим следом и переплетается с новой.</p><p>Звуки без ноты — «с», «ш», выдох — работают по тому же принципу: точки собираются на узловых линиях, но у шума нет одной частоты, поэтому стоячей волны нет и узор всё время бежит. «С» — мелкие быстрые ячейки, «ш» — крупнее, выдох — большие медленные волны, цвет белый; длинный выдох раздувает облако, пауза собирает обратно. Звонкие «з», «ж» — узор и шум вместе.</p></div>
   <div class="lab">
     <div class="stage"><canvas id="cv"></canvas>
       <div class="over"><span id="mode">Модель</span><span id="state"></span></div>
@@ -138,6 +138,14 @@ function zc(P, x, y){
   const r = Math.hypot(x, y), th = Math.atan2(y, x) + Math.PI/2;
   return Math.cos(P.m*(th + P.tw*r*1.7)) * Math.cos(P.k*Math.PI*r*1.15) + 0.18*Math.cos(P.k*Math.PI*r*1.15);
 }
+// Шум: много частот сразу — стоячей волны нет. Поле из бегущих волн, узловые линии постоянно движутся.
+// «с» — мелкие быстрые ячейки, «ш» — крупнее, выдох — большие медленные.
+const NZ_DIR = [0.3, 1.5, 2.6, 3.9, 5.1], NZ_K = [1, 1.13, 0.87, 1.27, 0.93], NZ_PH = [0, 1.7, 3.1, 4.4, 5.6], NZ_SP = [1, -0.8, 1.2, -1.1, 0.9];
+function zNoise(S, x, y, t){
+  const k = Math.PI*(1.6 + 7*S.cent), w = (0.6 + 4.5*S.cent)*(0.6 + 0.8*S.amp), tt = t || 0; let z = 0;
+  for (let q = 0; q < 5; q++){ const a = NZ_DIR[q]; z += Math.cos(k*NZ_K[q]*(x*Math.cos(a) + y*Math.sin(a)) - w*NZ_SP[q]*tt + NZ_PH[q]); }
+  return z/2.2;
+}
 function zAt(S, x, y){
   const u0 = Math.floor(S.u), g = snap(S.u - u0);
   if (!S.crisp){ const n = clamp(2 + (S.u - 12)/3, 0, 8), i0 = Math.floor(n), i1 = Math.min(8, i0 + 1), h = snap(n - i0); return (1-h)*FL.zf(FL.MODES[i0], x, y) + h*FL.zf(FL.MODES[i1], x, y); }
@@ -156,21 +164,17 @@ function targetOf(P, S, i, rot, t, out){
   const x = (P.X0[i]*c - P.Y0[i]*s)*env, y = (P.X0[i]*s + P.Y0[i]*c)*env, e = 0.004;
   const g = S.u - Math.floor(S.u), blur = 4*snap(g)*(1 - snap(g));
   const crisp = S.crisp ? 1 : 0;
-  const order = S.e*(0.4 + 0.6*S.stab)*(0.55 + 0.45*S.hold)*(1 - blur*0.6)*S.vo*(1 - 0.45*S.noise);
-  const z = zAt(S, x, y), zx = (zAt(S, x + e, y) - z)/e, zy = (zAt(S, x, y + e) - z)/e, g2 = zx*zx + zy*zy + 1e-4;
+  // один принцип для ноты и шума: точки идут к узловым линиям поля; у ноты поле стоит, у шума — бежит
+  const nm = S.noise*(1 - 0.55*S.vo);
+  const noteOrder = (0.4 + 0.6*S.stab)*(0.55 + 0.45*S.hold)*(1 - blur*0.6);
+  const order = S.e*((1 - nm)*noteOrder + nm*0.78);
+  const Fz = (px, py) => (1 - nm)*zAt(S, px, py) + nm*zNoise(S, px, py, t);
+  const z = Fz(x, y), zx = (Fz(x + e, y) - z)/e, zy = (Fz(x, y + e) - z)/e, g2 = zx*zx + zy*zy + 1e-4;
   let dx = -z*zx/g2, dy = -z*zy/g2; const dl = Math.hypot(dx, dy), mx = crisp ? 0.16 : 0.22; if (dl > mx){ dx *= mx/dl; dy *= mx/dl; }
   const o = order*(crisp ? P.C[i] : Math.pow(P.C[i], 2));
-  const jit = (crisp ? 0.0035 : 0.006) + (1 - S.stab)*0.03*S.vo + (1 - S.hold)*0.008 + blur*0.03 + S.noise*0.012*(0.5 + S.cent);
+  const jit = (crisp ? 0.0035 : 0.006) + (1 - S.stab)*0.03*(1 - nm) + (1 - S.hold)*0.008*(1 - nm) + blur*0.03*(1 - nm) + nm*0.003;
   const w = t == null ? 0.7 : Math.sin(t*6 + i)*0.5 + 0.5;
-  let nx = 0, ny = 0;
-  if (t != null && S.noise > 0.01){
-    // рябь: «с» — мелкая и быстрая, «ш» — крупнее, выдох — широкое медленное течение
-    // единое (не случайное) поле течения: частицы сбиваются в видимые завихрения
-    const A = S.noise*(0.03 + 0.07*S.amp)*(1.45 - 0.95*S.cent), kq = 2.5 + 15*S.cent, sp = 0.8 + 6*S.cent;
-    nx = A*(Math.sin(kq*y + t*sp) + 0.5*Math.sin(1.7*kq*x - t*sp*1.3));
-    ny = A*(Math.cos(kq*x - t*sp*0.9) + 0.5*Math.cos(1.9*kq*y + t*sp*1.1));
-  }
-  out[0] = x + dx*o + nx + P.J[2*i]*jit*(0.4 + w); out[1] = y + dy*o + ny + P.J[2*i+1]*jit*(0.4 + w);
+  out[0] = x + dx*o + P.J[2*i]*jit*(0.4 + w); out[1] = y + dy*o + P.J[2*i+1]*jit*(0.4 + w);
 }
 
 /* ---------- состояние ---------- */
@@ -240,7 +244,7 @@ function noteColor(u){ const a = Math.floor(clamp(u,0,47)), g = snap(u - a); ret
 function colorFor(u){ if (!opt.rain) return VAN; return S.noise*(1 - 0.6*S.vo) > 0.02 ? mix(rgbHex(noteColor(u)), VAN, Math.min(1, S.noise*(1 - 0.6*S.vo))) : noteColor(u); }
 function rgbHex(c){ const m = c.match(/\d+/g); return '#' + m.map(v => (+v).toString(16).padStart(2, '0')).join(''); }
 function step(dt){
-  rot += (opt.orbit ? dt*0.32*S.hold*S.e*S.vo : 0) + dt*S.noise*(0.3 + 1.2*S.amp)*(0.6 + 0.8*S.cent);
+  rot += (opt.orbit ? dt*0.32*S.hold*S.e*S.vo : 0) + dt*S.noise*0.12;
   const mv = 1 - Math.pow(1 - (S.e > .5 ? .12 : .03), dt*60);
   for (let i = 0; i < P.N; i++){
     targetOf(P, S, i, rot, t, tmp);
@@ -266,25 +270,17 @@ function drawLive(){
   const R = Math.min(w,h)*0.5, cx = w/2, cy = h/2;
   ghosts.forEach(g => { ctx.fillStyle = g.col; ctx.globalAlpha = Math.max(0, g.a)*0.7; const c = Math.cos(g.rot), s = Math.sin(g.rot);
     for (let j = 0; j < g.X.length; j++){ const x = g.X[j]*c - g.Y[j]*s, y = g.X[j]*s + g.Y[j]*c; ctx.fillRect(cx + x*R - .6, cy + y*R - .6, 1.2, 1.2); } });
-  const col = colorFor(S.u), nzA = clamp((S.noise - 0.1)/0.6, 0, 1)*(1 - 0.7*S.vo);
-  ctx.fillStyle = col;
-  for (let i = 0; i < P.N; i++){ ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*(1 - 0.75*nzA); const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
-  if (nzA > 0.02){
-    // шум рисуется штрихами вдоль течения: «с» — короткие и частые, выдох — длинные и мягкие
-    const L = (1.8 + 7*(1 - S.cent))*(0.6 + S.amp)*nzA;
-    ctx.strokeStyle = col; ctx.lineWidth = S.cent > .6 ? 0.8 : 1.2; ctx.globalAlpha = 0.55*nzA; ctx.beginPath();
-    for (let i = 0; i < P.N; i++){ const x = P.X[i], y = P.Y[i], r = Math.hypot(x, y) || 1e-6, px = cx + x*R, py = cy + y*R; ctx.moveTo(px, py); ctx.lineTo(px - y/r*L, py + x/r*L); }
-    ctx.stroke();
-  }
+  ctx.fillStyle = colorFor(S.u);
+  for (let i = 0; i < P.N; i++){ ctx.globalAlpha = 0.35 + 0.65*((i*7919 % 100)/100); const z = P.Z[i]*1.05; ctx.fillRect(cx + P.X[i]*R - z/2, cy + P.Y[i]*R - z/2, z, z); }
   ctx.globalAlpha = 1;
   const pr = params(Math.round(S.u)), exs = exhLast > 0.3 ? ' · выдох ' + exhLast.toFixed(1).replace('.', ',') + ' с' : '';
   const g = S.u - Math.floor(S.u), blur = 4*snap(g)*(1 - snap(g));
   const pureNoise = S.noise > .5 && S.vo < .5;
   const nzName = S.cent > .68 ? 'с-с-с' : S.cent > .38 ? 'ш-ш-ш' : 'выдох';
   if (S.e < .3){ $('#noteName').textContent = '·'; $('#noteSub').textContent = 'пауза' + exs; }
-  else if (pureNoise){ $('#noteName').textContent = nzName; $('#noteSub').textContent = 'шум без ноты · ' + (S.cent > .68 ? 'мелкая быстрая рябь' : S.cent > .38 ? 'крупная рябь' : 'широкое течение') + exs; }
+  else if (pureNoise){ $('#noteName').textContent = nzName; $('#noteSub').textContent = 'шум без ноты · ' + (S.cent > .68 ? 'мелкий бегущий узор' : S.cent > .38 ? 'крупный бегущий узор' : 'широкие медленные волны') + exs; }
   else { $('#noteName').textContent = NAMES[pr.pc] + (S.noise > .3 ? ' + шум' : ''); $('#noteSub').textContent = (S.noise > .3 ? 'звонкий шипящий · ' : '') + (opt.crisp ? pr.m + ' лучей' + (pr.tw ? ', спираль' : '') + ' · колец: ' + pr.k : 'кружево') + ' · октава ' + OCT[pr.o + 1]; }
-  $('#state').textContent = S.e < .3 ? 'материя рассыпается · вдох собирает облако' : pureNoise ? 'шум: узора нет, облако течёт вихрем' : (blur > .5 || S.stab < .45) ? 'между нотами' : S.hold > .85 ? (opt.orbit ? 'форма собрана · течёт по кругу' : 'форма собрана') : 'собирается';
+  $('#state').textContent = S.e < .3 ? 'материя рассыпается · вдох собирает облако' : pureNoise ? 'шум: стоячей волны нет, узор всё время бежит' : (blur > .5 || S.stab < .45) ? 'между нотами' : S.hold > .85 ? (opt.orbit ? 'форма собрана · течёт по кругу' : 'форма собрана') : 'собирается';
 }
 
 /* ---------- RAF ---------- */

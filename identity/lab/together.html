@@ -134,6 +134,11 @@ function noteLabel(u){ const n = Math.round(u), c = Math.round((u - n)*100), o =
 function zNote(n, r, th){ n = clamp(n, 0, 47); const pc = n % 12, k = Math.floor(n/12) + 1, m = SYM[pc], tw = SHARP[pc], rr = k*Math.PI*r*1.15; return Math.cos(m*(th + Math.PI/2 + tw*r*1.7))*Math.cos(rr) + 0.18*Math.cos(rr); }
 function zVoice(u, r, th){ const a = Math.floor(u), g = snap(u - a); return g < 0.01 ? zNote(a, r, th) : g > 0.99 ? zNote(a + 1, r, th) : (1 - g)*zNote(a, r, th) + g*zNote(a + 1, r, th); }
 
+// Шум — тот же принцип, что у ноты: точки на узловых линиях, но поле из бегущих волн
+const NZ_DIR = [0.3, 1.5, 2.6, 3.9, 5.1], NZ_K = [1, 1.13, 0.87, 1.27, 0.93], NZ_PH = [0, 1.7, 3.1, 4.4, 5.6], NZ_SP = [1, -0.8, 1.2, -1.1, 0.9];
+function zNoise(x, y){ const k = Math.PI*(1.6 + 7*cent), w = 0.6 + 4.5*cent; let z = 0; for (let q = 0; q < 5; q++){ const a = NZ_DIR[q]; z += Math.cos(k*NZ_K[q]*(x*Math.cos(a) + y*Math.sin(a)) - w*NZ_SP[q]*t + NZ_PH[q]); } return z/2.2; }
+let cent = 0.5, centT = 0.5;
+
 /* ---------- голоса ---------- */
 const MAXV = 3;
 const V = [0,1,2].map(j => ({ u:12, lev:0, e:0, stab:.9, hold:0, rot:j*2.1, on:false }));
@@ -174,18 +179,18 @@ function step(dt){
   const mv0 = 1 - Math.pow(1 - .12, dt*60), mv1 = 1 - Math.pow(1 - .03, dt*60), e = 0.004;
   for (let i = 0; i < N; i++){
     const k = act[i % Ka], v = V[k];
-    const c = Math.cos(v.rot), s = Math.sin(v.rot), env = 0.85 + 0.3*v.lev;
+    const nm = noise*(v.e > .5 ? 0.45 : 1), c = Math.cos(v.rot), s = Math.sin(v.rot), env = 0.85 + 0.3*v.lev;
     const x = (X0[i]*c - Y0[i]*s)*env, y = (X0[i]*s + Y0[i]*c)*env;
     // поле: свой голос + вклад остальных (суперпозиция), вклад пульсирует при биениях
-    const F = (px, py) => { const r = Math.hypot(px, py), th = Math.atan2(py, px); let z = zVoice(v.u, r, th); for (let q = 0; q < Ka; q++){ const j = act[q]; if (j === k) continue; z += 0.55*ws[j]*(1 - 0.6*pulse[k])*zVoice(V[j].u, r, th); } return z; };
+    const F = (px, py) => { const r = Math.hypot(px, py), th = Math.atan2(py, px); let z = zVoice(v.u, r, th); for (let q = 0; q < Ka; q++){ const j = act[q]; if (j === k) continue; z += 0.55*ws[j]*(1 - 0.6*pulse[k])*zVoice(V[j].u, r, th); } return nm > 0.01 ? (1 - nm)*z + nm*zNoise(px, py) : z; };
     const z = F(x, y), zx = (F(x + e, y) - z)/e, zy = (F(x, y + e) - z)/e, g2 = zx*zx + zy*zy + 1e-4;
     let dx = -z*zx/g2, dy = -z*zy/g2; const dl = Math.hypot(dx, dy); if (dl > .16){ dx *= .16/dl; dy *= .16/dl; }
     const g = v.u - Math.floor(v.u), blur = 4*snap(g)*(1 - snap(g));
-    const order = v.e*(0.4 + 0.6*v.stab)*(0.55 + 0.45*v.hold)*(1 - blur*0.5)*(1 - 0.5*pulse[k])*(1 - 0.5*noise)*CAP[i];
-    const jit = 0.0035 + (1 - v.stab)*0.03 + blur*0.025 + tension[k]*0.006*(0.6 + 0.4*Math.sin(t*23 + i)) + pulse[k]*0.012 + noise*0.03;
+    const order = ((1 - nm)*v.e*(0.4 + 0.6*v.stab)*(0.55 + 0.45*v.hold)*(1 - blur*0.5)*(1 - 0.5*pulse[k]) + nm*0.78)*CAP[i];
+    const jit = 0.0035 + (1 - v.stab)*0.03 + blur*0.025 + tension[k]*0.006*(0.6 + 0.4*Math.sin(t*23 + i)) + pulse[k]*0.012;
     const w = Math.sin(t*6 + i)*0.5 + 0.5;
     const tx = x + dx*order + JX[i]*jit*(0.4 + w), ty = y + dy*order + JY[i]*jit*(0.4 + w);
-    const mv = v.e > .5 ? mv0 : mv1;
+    const mv = v.e > .5 || nm > .5 ? mv0 : mv1;
     X[i] += (tx - X[i])*mv; Y[i] += (ty - Y[i])*mv;
   }
   return { act, pulse, allLocked };
@@ -198,7 +203,7 @@ function draw(info){
   const R = Math.min(w, h)*0.5, cx = w/2, cy = h/2, act = info.act, Ka = act.length;
   act.forEach((j, q) => {
     ctx.fillStyle = noise > .3 ? mixc(colorMode === 'voice' ? VCOL[j] : HUE[Math.round(V[j].u) % 12], VAN, noise) : colorOf(j);
-    const a = 0.25 + 0.75*clamp(V[j].e, 0, 1);
+    const a = 0.25 + 0.75*clamp(Math.max(V[j].e, noise), 0, 1);
     for (let i = q; i < N; i += Ka){ ctx.globalAlpha = (0.35 + 0.65*((i*7919 % 100)/100))*a; const z = ZS[i]*1.05; ctx.fillRect(cx + X[i]*R - z/2, cy + Y[i]*R - z/2, z, z); }
   });
   ctx.globalAlpha = 1;
@@ -206,7 +211,7 @@ function draw(info){
   const live = act.filter(j => V[j].on && V[j].e > .5);
   $('#vlist').innerHTML = live.map(j => `<div class="vchip" style="color:${colorOf(j)}"><i style="background:${colorOf(j)}"></i><span style="color:var(--vanilla)">Голос ${j + 1} · ${noteLabel(V[j].u)}</span><s style="width:${Math.round(14 + 40*V[j].lev)}px"></s></div>`).join('');
   let title = 'тишина', sub = 'материя рассыпана';
-  if (noise > .5 && !live.length){ title = 'шум'; sub = 'дыхание или шипящие — без нот'; }
+  if (noise > .5 && !live.length){ title = cent > .68 ? 'с-с-с' : cent > .38 ? 'ш-ш-ш' : 'выдох'; sub = 'шум без ноты · стоячей волны нет, узор всё время бежит'; }
   else if (live.length === 1){ title = 'один голос'; sub = noteLabel(V[live[0]].u); }
   else if (live.length === 2){
     const p = pairInfo(V[live[0]], V[live[1]]); title = !p.locked && Math.abs(p.dev) < .5 && p.n === 0 ? 'почти унисон' : !p.locked && Math.abs(p.dev) < .5 ? 'почти ' + p.name : p.name;
@@ -233,7 +238,7 @@ function ease(dt){
     v.hold += ((T.on && T.stab > .6 ? 1 : 0) - v.hold)*k(T.on ? .02 : .06);
     v.on = T.on;
   }
-  noise += (noiseT - noise)*k(noiseT > noise ? .12 : .04);
+  noise += (noiseT - noise)*k(noiseT > noise ? .12 : .04); cent += (centT - cent)*k(.08);
 }
 
 /* ---------- модель ---------- */
@@ -272,6 +277,8 @@ function multiPitch(){
   // спектральная плоскость — шум или нота
   let lg = 0, am = 0, cnt = 0; for (let i = Math.floor(150/bin); i < Math.floor(8000/bin); i++){ const p = mag[i]*mag[i] + 1e-20; lg += Math.log(p); am += p; cnt++; }
   const flat = Math.exp(lg/cnt)/(am/cnt);
+  let cn = 0, cd = 0; for (let i = Math.floor(150/bin); i < Math.min(n, Math.floor(11000/bin)); i++){ const p = mag[i]*mag[i]; cn += p*i*bin; cd += p; }
+  centT = clamp((Math.log2(Math.max(200, cn/(cd + 1e-20))) - Math.log2(800))/(Math.log2(9000) - Math.log2(800)), 0, 1);
   const out = []; let first = 0;
   for (let it = 0; it < 3; it++){
     let best = 0, bf = 0;
