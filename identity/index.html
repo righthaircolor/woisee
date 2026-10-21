@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#192524">
+<meta name="description" content="Айдентика woisee: голос собирает форму">
+<title>woisee · айдентика</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --paper:#FFFFFF; --paper-2:#F3F5F2; --soft:#E1E6E0; --ink:#192524; --muted:#5D6A67; --rule:rgba(25,37,36,.14);
+  --signal:#F0472C; --lime:#ECF176; --rasp:#E780C0; --kale:#5EA879; --ebony:#192524; --vanilla:#FFFEFC; --deep:#2D4540;
+  --f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45;letter-spacing:-.005em;-webkit-tap-highlight-color:transparent}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+canvas{display:block}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.wm{font-weight:800;letter-spacing:-.05em;line-height:1}
+
+/* top */
+.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.top .wrap{display:flex;align-items:center;gap:18px;height:56px}
+.top .wm{font-size:22px}
+.top nav{display:flex;gap:16px;overflow-x:auto;scrollbar-width:none;font-size:14px;font-weight:500;color:var(--muted);margin-left:auto}
+.top nav::-webkit-scrollbar{display:none}
+.top nav a{color:inherit;text-decoration:none;white-space:nowrap}
+.top nav a:hover{color:var(--ink)}
+
+/* hero */
+.hero{position:relative;background:var(--ebony);color:var(--vanilla);min-height:min(92vh,860px);overflow:hidden}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero .wrap{position:relative;min-height:min(92vh,860px);display:flex;flex-direction:column;justify-content:space-between;padding-top:28px;padding-bottom:32px;pointer-events:none}
+.hero .wrap>*{pointer-events:auto}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.hero-top .wm{font-size:clamp(40px,7vw,72px)}
+.tag{font-size:13px;font-weight:500;border:1px solid rgba(255,254,252,.25);border-radius:99px;padding:6px 12px;white-space:nowrap}
+.hero h1{font-size:clamp(44px,8.4vw,112px);line-height:.92;max-width:9ch}
+.hero-bot{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.hero-bot p{max-width:34ch;font-size:17px;color:rgba(255,254,252,.72);margin-top:16px}
+.hero-read{font-size:13px;color:rgba(255,254,252,.6);min-height:18px;margin-top:10px}
+
+/* capsule buttons (как таймер в приложении) */
+.cap{display:inline-flex;align-items:center;gap:10px;border-radius:99px;padding:12px 20px 12px 16px;font-weight:600;font-size:15px;background:var(--ink);color:var(--paper-2);transition:transform .15s}
+.cap:active{transform:scale(.98)}
+.cap i{width:10px;height:10px;border-radius:50%;background:var(--signal);display:block}
+.cap.light{background:var(--vanilla);color:var(--ink)}
+.cap.on i{animation:pulse 1.1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:99px;padding:8px 14px;font-size:14px;font-weight:500;background:var(--paper)}
+.btn:hover{border-color:rgba(25,37,36,.4)}
+.btn.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* sections */
+section.s{padding-top:84px;padding-bottom:24px}
+.sh{display:grid;grid-template-columns:120px 1fr;gap:20px;border-top:1px solid var(--ink);padding-top:18px;margin-bottom:36px}
+.sh .no{font-size:14px;font-weight:600}
+.sh h2{font-size:clamp(34px,5vw,60px);line-height:.95}
+.sh p{grid-column:2;max-width:62ch;font-size:18px;color:var(--muted);margin-top:14px}
+@media (max-width:700px){.sh{grid-template-columns:1fr;gap:10px}.sh p{grid-column:1}}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--paper-2);border-radius:28px;padding:20px;position:relative;overflow:hidden}
+.card.dark{background:var(--ebony);color:var(--vanilla)}
+.cap-t{font-size:13px;font-weight:600;margin-top:12px}
+.cap-d{font-size:13px;color:var(--muted);margin-top:2px}
+.dark .cap-d{color:rgba(255,254,252,.6)}
+.sq{aspect-ratio:1/1;width:100%}
+.lead{font-size:20px;line-height:1.35;max-width:46ch}
+
+/* principle */
+.trio .card canvas{aspect-ratio:1/1;width:100%}
+.arrow{font-size:28px;font-weight:300}
+
+/* mark */
+.mark-big{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+@media (max-width:900px){.mark-big{grid-template-columns:1fr}}
+.sizes{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;margin-top:8px}
+.sizes figure{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+.icons{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.icon{border-radius:22%;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.dl{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+
+/* wordmark */
+.wm-hero{font-size:clamp(84px,19vw,240px);padding:10px 0 0}
+.lockups .card{display:flex;align-items:center;justify-content:center;min-height:220px}
+.lock-h{display:flex;align-items:center;gap:.28em;font-size:56px}
+.lock-v{display:flex;flex-direction:column;align-items:center;gap:.2em;font-size:44px}
+.lock-h canvas{width:1.05em;height:1.05em}
+.lock-v canvas{width:1.7em;height:1.7em}
+.dont{position:relative}
+.dont::after{content:"";position:absolute;left:12px;right:12px;top:50%;border-top:2px solid var(--signal);transform:rotate(-8deg)}
+
+/* lab */
+.lab{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+@media (max-width:900px){.lab{grid-template-columns:1fr}}
+.lab-stage{background:var(--ebony);border-radius:28px;position:relative;overflow:hidden;min-height:440px}
+.lab-stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.lab-stage .over{position:absolute;left:18px;right:18px;top:16px;display:flex;justify-content:space-between;gap:10px;color:var(--vanilla);font-size:13px;pointer-events:none}
+.lab-stage .over b{font-weight:600}
+.lab-stage .state{position:absolute;left:18px;bottom:16px;right:18px;color:var(--vanilla);font-size:15px;font-weight:500}
+.panel{display:flex;flex-direction:column;gap:14px}
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl{display:grid;grid-template-columns:110px 1fr 46px;align-items:center;gap:10px;font-size:14px}
+.ctrl span:last-child{text-align:right;font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--soft)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--ink);margin-top:-8px}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:var(--ink)}
+input[type=range]:disabled{opacity:.55}
+.reads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.read{background:var(--paper-2);border-radius:16px;padding:10px 12px}
+.read small{display:block;font-size:12px;color:var(--muted)}
+.read b{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.plate-box{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center}
+.plate-box canvas{width:150px;height:150px;border-radius:50%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:6px 10px;font-size:13px;font-weight:600;border:1px solid var(--rule)}
+.chip i{width:12px;height:12px;border-radius:50%;display:block;border:1px solid rgba(0,0,0,.12)}
+.chip.sel{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.note{font-size:13px;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:12px 10px 12px 0;border-top:1px solid var(--rule);vertical-align:top}
+th{font-size:13px;font-weight:600;color:var(--muted);border-top:1px solid var(--ink)}
+td:first-child{font-weight:700;white-space:nowrap}
+.tbl{overflow-x:auto}
+
+/* states */
+.states{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.states{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.states{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.st{background:var(--paper-2);border-radius:22px;padding:12px}
+.st canvas{width:100%;aspect-ratio:1/1}
+.st.live{background:var(--ebony);color:var(--vanilla)}
+.st.live .cap-d{color:rgba(255,254,252,.6)}
+
+/* palette */
+.pal{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.pal{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.pal{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sw{border-radius:24px;padding:14px;min-height:210px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--rule)}
+.sw b{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.sw small{display:block;font-size:12px;opacity:.75;line-height:1.35}
+.sw p{font-size:13px;line-height:1.3}
+
+/* trail + day */
+.trails canvas{width:100%;aspect-ratio:4/3;border-radius:22px}
+.day{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.day{grid-template-columns:1fr}}
+.day-plate{background:var(--ebony);border-radius:28px;padding:22px;color:var(--vanilla)}
+.day-plate canvas{width:100%;aspect-ratio:1/1}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:16px}
+.week figure{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+.week canvas{width:100%;aspect-ratio:1/1;border-radius:50%;background:var(--ebony)}
+.legend{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.legend div{display:grid;grid-template-columns:16px 120px 1fr;gap:10px;align-items:baseline;font-size:14px}
+.legend i{width:12px;height:12px;border-radius:50%;display:block;transform:translateY(1px)}
+
+/* media */
+.phones{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+.phone{width:300px;height:620px;border-radius:44px;background:var(--ink);padding:10px;flex:0 0 auto}
+.scr{width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--paper);position:relative;display:flex;flex-direction:column}
+.scr .head{border-radius:0 0 30px 30px;padding:46px 18px 22px}
+.scr .head small{font-size:12px;font-weight:600;opacity:.7}
+.scr .head h3{font-size:34px;line-height:.98;margin-top:8px}
+.scr .body{flex:1;position:relative}
+.scr .body canvas{position:absolute;inset:0;width:100%;height:100%}
+.scr .cap{position:absolute;left:12px;right:12px;bottom:14px;justify-content:space-between;padding:8px 8px 8px 20px;font-size:14px}
+.scr .cap .t{font-size:22px;font-weight:700}
+.scr .cap .pl{width:44px;height:44px;border-radius:50%;background:var(--lime);display:grid;place-items:center;color:var(--ink);font-size:14px}
+.scr .hint{position:absolute;left:18px;right:18px;top:14px;font-size:13px;color:var(--muted)}
+.posters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:32px}
+@media (max-width:900px){.posters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.posters{grid-template-columns:1fr}}
+.posters canvas{width:100%;aspect-ratio:3/4;border-radius:10px}
+.socials{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}
+@media (max-width:600px){.socials{grid-template-columns:1fr}}
+.socials canvas{width:100%;aspect-ratio:1/1;border-radius:10px}
+
+/* rules */
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
+@media (max-width:700px){.rules{grid-template-columns:1fr}}
+.rule-i{border-top:1px solid var(--rule);padding:16px 0;display:grid;grid-template-columns:34px 1fr;gap:8px}
+.rule-i b{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em}
+.rule-i p{font-size:15px;color:var(--muted);margin-top:4px}
+.rule-i .k{font-weight:800;font-size:17px}
+.rule-i .k.y{color:var(--kale)} .rule-i .k.n{color:var(--signal)}
+
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:var(--paper-2);padding:1px 6px;border-radius:6px}
+footer{border-top:1px solid var(--ink);margin-top:90px;padding:22px 0 60px;font-size:14px;color:var(--muted)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.err{color:var(--signal);font-size:13px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="wm">woisee</span>
+    <nav>
+      <a href="#principle">Принцип</a><a href="#mark">Знак</a><a href="#word">Надпись</a><a href="#lab">Голос → форма</a>
+      <a href="#states">Состояния</a><a href="#color">Цвет</a><a href="#trail">След</a><a href="#day">Картинка дня</a>
+      <a href="#media">Носители</a><a href="#rules">Правила</a><a href="#dev">Разработка</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <canvas id="heroCv" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="hero-top">
+      <span class="wm">woisee</span>
+      <span class="tag">айдентика · черновик 1</span>
+    </div>
+    <div class="hero-bot">
+      <div>
+        <h1>Голос собирает форму</h1>
+        <p>В тишине материя рассыпана. Звук собирает её в фигуру, ровный звук делает фигуру чёткой. Сила голоса — это порядок, а не громкость.</p>
+      </div>
+      <div>
+        <button class="cap light micBtn" type="button"><i></i><span>Включить микрофон</span></button>
+        <div class="hero-read" id="heroRead">Скажите «а-а-а» на удобной ноте</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main>
+<!-- 01 PRINCIPLE -->
+<section class="s wrap" id="principle">
+  <div class="sh"><span class="no">01</span><h2>Принцип</h2>
+    <p>Знак работает как песок на звучащей пластине (фигуры Хладни). Стоячая волна квантуется: держатся только фигуры с целым числом волн. Поэтому форма перескакивает между узнаваемыми состояниями, а не дрожит как эквалайзер.</p></div>
+  <div class="grid g3 trio">
+    <div class="card"><canvas data-static="silence"></canvas><div class="cap-t">Тишина</div><div class="cap-d">Материя рассыпана неровной лужицей. Круга в системе нет.</div></div>
+    <div class="card"><canvas data-static="unstable"></canvas><div class="cap-t">Голос</div><div class="cap-d">Звук начинает собирать материю. Пока нота плавает, фигура размыта.</div></div>
+    <div class="card dark"><canvas data-static="mark" data-color="vanilla"></canvas><div class="cap-t">Устойчивый звук</div><div class="cap-d">Фигура защёлкивается. Комфортная нота даёт три лепестка — это и есть знак.</div></div>
+  </div>
+</section>
+
+<!-- 02 MARK -->
+<section class="s wrap" id="mark">
+  <div class="sh"><span class="no">02</span><h2>Знак</h2>
+    <p>Знак — один зафиксированный кадр системы: комфортная нота, три лепестка, лепесток смотрит вверх. В крупном размере он всегда из частиц, в мелком — сплошной контур той же геометрии.</p></div>
+  <div class="mark-big">
+    <div class="card dark" style="padding:0"><canvas id="markBig" class="sq" aria-label="Знак woisee из частиц"></canvas></div>
+    <div class="grid" style="gap:16px">
+      <div class="card">
+        <div class="cap-t" style="margin-top:0">Контур для малых размеров</div>
+        <div class="cap-d">Тот же контур, что держит частицы. Используется от 48 px и меньше.</div>
+        <div class="sizes">
+          <figure><canvas data-solid="96" width="96" height="96"></canvas>96</figure>
+          <figure><canvas data-solid="48"></canvas>48</figure>
+          <figure><canvas data-solid="32"></canvas>32</figure>
+          <figure><canvas data-solid="16"></canvas>16</figure>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cap-t" style="margin-top:0">Иконка приложения</div>
+        <div class="cap-d">Ebony и частицы Vanilla. Вариант на Lime — для промо.</div>
+        <div class="icons" style="margin-top:14px">
+          <canvas class="icon" data-icon="stipple" style="width:112px;height:112px"></canvas>
+          <canvas class="icon" data-icon="lime" style="width:84px;height:84px"></canvas>
+          <canvas class="icon" data-icon="solid" style="width:60px;height:60px"></canvas>
+          <canvas class="icon" data-icon="solid" style="width:40px;height:40px"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cap-t" style="margin-top:0">Файлы</div>
+        <div class="dl">
+          <button class="btn" data-dl="mark-solid-svg">Контур, SVG</button>
+          <button class="btn" data-dl="mark-dots-svg">Частицы, SVG</button>
+          <button class="btn" data-dl="mark-png">Частицы, PNG 2048</button>
+          <button class="btn" data-dl="icon-png">Иконка, PNG 1024</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 WORDMARK -->
+<section class="s wrap" id="word">
+  <div class="sh"><span class="no">03</span><h2>Надпись и сборка</h2>
+    <p>Надпись — Inter Tight Extra Bold, строчными, трекинг −5%, как в приложении. Буквы не меняются никогда: ни «o», ни «ee». Вся динамика живёт в знаке.</p></div>
+  <div class="wm wm-hero">woisee</div>
+  <div class="grid g3 lockups" style="margin-top:28px">
+    <div class="card"><div class="lock-h wm"><canvas data-lock="ink"></canvas>woisee</div></div>
+    <div class="card dark"><div class="lock-v wm"><canvas data-lock="vanilla"></canvas>woisee</div></div>
+    <div class="card" style="background:var(--lime)"><div class="lock-h wm"><canvas data-lock="ink"></canvas>woisee</div></div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><div class="wm dont" style="font-size:52px;text-align:center;padding:30px 0">w<span style="display:inline-block;width:.55em;height:.55em;border:.12em solid var(--ink);border-radius:50%;vertical-align:-.02em"></span>isee</div><div class="cap-t">Нельзя</div><div class="cap-d">Подменять букву фигурой или кругом.</div></div>
+    <div class="card"><div class="wm dont" style="font-size:52px;text-align:center;padding:30px 0;letter-spacing:.02em;font-weight:400">woisee</div><div class="cap-t">Нельзя</div><div class="cap-d">Менять начертание и трекинг.</div></div>
+    <div class="card"><div class="wm" style="font-size:52px;text-align:center;padding:30px 0">woisee</div><div class="cap-t">Можно</div><div class="cap-d">Только так. Отступ от знака — ширина буквы «w».</div></div>
+  </div>
+</section>
+
+<!-- 04 LAB -->
+<section class="s wrap" id="lab">
+  <div class="sh"><span class="no">04</span><h2>Как голос управляет формой</h2>
+    <p>Включите микрофон и попробуйте: протяжное «а» на удобной ноте, сирену снизу вверх, шёпот, короткие «па-па-па», паузу. Первые полсекунды ровного звука запоминают вашу комфортную ноту — от неё считаются лепестки.</p></div>
+  <div class="lab">
+    <div class="lab-stage">
+      <canvas id="labCv" aria-label="Живая форма"></canvas>
+      <div class="over"><span id="labMode">Модель</span><span id="labN"></span></div>
+      <div class="state" id="labState"></div>
+    </div>
+    <div class="panel">
+      <div class="modes">
+        <button class="btn sel" id="mModel" type="button">Модель</button>
+        <button class="btn micBtn2" id="mVoice" type="button">Мой голос</button>
+        <button class="btn" id="mCal" type="button" hidden>Заново найти ноту</button>
+      </div>
+      <div class="err" id="micErr" hidden></div>
+      <div class="ctrl"><label for="sP">Высота</label><input id="sP" type="range" min="0" max="100" step="1" value="17"><span id="oP">3</span></div>
+      <div class="ctrl"><label for="sL">Громкость</label><input id="sL" type="range" min="0" max="100" step="1" value="45"><span id="oL">45</span></div>
+      <div class="ctrl"><label for="sS">Устойчивость</label><input id="sS" type="range" min="0" max="100" step="1" value="90"><span id="oS">90</span></div>
+      <div class="modes" id="modelBtns">
+        <button class="btn" id="bKick" type="button">Атака</button>
+        <button class="btn" id="bNoise" type="button">Шёпот</button>
+        <button class="btn" id="bSil" type="button">Пауза</button>
+      </div>
+      <div class="reads">
+        <div class="read"><small>Нота</small><b class="num" id="rNote">—</b></div>
+        <div class="read"><small>Комфортная</small><b class="num" id="rRef">—</b></div>
+        <div class="read"><small>Удержание</small><b class="num" id="rHold">—</b></div>
+      </div>
+      <div class="plate-box">
+        <canvas id="labPlate" width="300" height="300"></canvas>
+        <div>
+          <div class="cap-t" style="margin-top:0">Ваша пластина</div>
+          <div class="cap-d" style="margin-bottom:10px">Каждый удержанный звук оставляет отпечаток. Цвет — блок занятия.</div>
+          <div class="chips" id="blockChips">
+            <button class="chip" data-c="rasp" type="button"><i style="background:var(--rasp)"></i>Тело</button>
+            <button class="chip" data-c="lime" type="button"><i style="background:var(--lime)"></i>Дыхание</button>
+            <button class="chip sel" data-c="kale" type="button"><i style="background:var(--kale)"></i>Фонация</button>
+            <button class="chip" data-c="vanilla" type="button"><i style="background:var(--vanilla)"></i>Артикуляция</button>
+          </div>
+          <div class="dl" style="margin-top:10px"><button class="btn" id="plClear" type="button">Очистить</button><button class="btn" id="plSave" type="button">Сохранить PNG</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tbl" style="margin-top:40px">
+  <table>
+    <thead><tr><th>Свойство голоса</th><th>Что делает форма</th><th>Упражнение, где это главное</th></tr></thead>
+    <tbody>
+      <tr><td>Высота</td><td>Число лепестков. Комфортная нота — 3 (знак), каждые 3,5 полутона вверх — ещё лепесток, вниз — до двух. Шкала от вашей ноты, а не от герц.</td><td>Сирена, Интонационные качели</td></tr>
+      <tr><td>Устойчивость</td><td>Чёткость. Ровная нота защёлкивает фигуру, плавающая размывает её между соседними.</td><td>Гудение, Протяжные гласные</td></tr>
+      <tr><td>Громкость</td><td>Глубина лепестков, со сжатием: тихий голос уже собирает фигуру, громкий лишь углубляет её.</td><td>От шёпота до крика</td></tr>
+      <tr><td>Атака</td><td>Резкое начало — толчок, фигура вздрагивает и расходится. Мягкое начало собирает без толчка.</td><td>Мягкая атака звука</td></tr>
+      <tr><td>Длительность</td><td>Чем дольше держится звук, тем плотнее и резче узор.</td><td>Гудение в соломинку</td></tr>
+      <tr><td>Пауза</td><td>Материя медленно рассыпается, но слабый отпечаток остаётся.</td><td>Магия паузы</td></tr>
+      <tr><td>Шум, шёпот</td><td>Дымка вокруг фигуры без лепестков: у шума нет высоты, значит нет и моды.</td><td>Долгий выдох: С · Ш</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- 05 STATES -->
+<section class="s wrap" id="states">
+  <div class="sh"><span class="no">05</span><h2>Состояния</h2>
+    <p>Один закон, разные кадры. Из них собираются карточки упражнений, обложки и анимации. Ориентация всегда одна: лепесток вверх.</p></div>
+  <div class="states" id="statesGrid"></div>
+</section>
+
+<!-- 06 COLOR -->
+<section class="s wrap" id="color">
+  <div class="sh"><span class="no">06</span><h2>Цвет</h2>
+    <p>Палитра уже есть в приложении, и у неё есть роли: каждый блок занятия — свой цвет. Цвет не реагирует на громкость, он говорит, чем вы занимаетесь. Голос меняет только форму.</p></div>
+  <div class="pal">
+    <div class="sw" style="background:var(--vanilla)"><div><b>Vanilla</b><small>#FFFEFC</small></div><p>Бумага интерфейса. Частицы на тёмном. Артикуляция на пластине.</p></div>
+    <div class="sw" style="background:var(--rasp)"><div><b>Raspberry</b><small>#E780C0</small></div><p>Тело. Пыль на краю пластины.</p></div>
+    <div class="sw" style="background:var(--lime)"><div><b>Lemon Lime</b><small>#ECF176</small></div><p>Дыхание. Дымка выдоха.</p></div>
+    <div class="sw" style="background:var(--kale)"><div><b>Kale</b><small>#5EA879</small></div><p>Фонация. Чистые фигуры звука.</p></div>
+    <div class="sw" style="background:var(--ebony);color:var(--vanilla)"><div><b>Ebony</b><small>#192524</small></div><p>Пластина: фон знака, иконки и картинки дня. Текст.</p></div>
+    <div class="sw" style="background:var(--signal);color:var(--vanilla)"><div><b>Signal</b><small>#F0472C</small></div><p>Только «микрофон слушает» и серия дней. Не для фигур.</p></div>
+  </div>
+</section>
+
+<!-- 07 TRAIL -->
+<section class="s wrap" id="trail">
+  <div class="sh"><span class="no">07</span><h2>След</h2>
+    <p>Фигура, развёрнутая во времени: каждый слой — то же состояние чуть раньше. Это второй референс со свечением. Свечение — только для крупных носителей: постеров, заставок, обложек. В интерфейсе форма остаётся из частиц.</p></div>
+  <div class="grid g3 trails">
+    <div><canvas data-trail="0"></canvas><div class="cap-t">Сирена вверх</div><div class="cap-d">Число лепестков растёт от слоя к слою.</div></div>
+    <div><canvas data-trail="1"></canvas><div class="cap-t">Долгая нота</div><div class="cap-d">Одна фигура, затухающая во времени.</div></div>
+    <div><canvas data-trail="2"></canvas><div class="cap-t">Атака</div><div class="cap-d">Толчок расходится волнами.</div></div>
+  </div>
+</section>
+
+<!-- 08 DAY -->
+<section class="s wrap" id="day">
+  <div class="sh"><span class="no">08</span><h2>Картинка дня</h2>
+    <p>Все упражнения дня рисуют на одной пластине. Её нельзя получить иначе, чем отзанимавшись. Узор не оценивает: неровный день даёт рыхлый, но всё равно красивый рисунок.</p></div>
+  <div class="day">
+    <div class="day-plate">
+      <canvas id="dayCv" aria-label="Картинка дня"></canvas>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;gap:10px">
+        <div><div class="wm" style="font-size:26px">21 октября</div><div style="font-size:13px;opacity:.65;margin-top:4px" id="dayMeta"></div></div>
+        <button class="cap light" id="dayNext" type="button" style="padding:10px 16px;font-size:14px">Другой день</button>
+      </div>
+    </div>
+    <div>
+      <p class="lead">Пластина читается как разрез занятия: от края к центру — от тела к слову.</p>
+      <div class="legend">
+        <div><i style="background:var(--rasp)"></i><b>Тело</b><span class="muted">Внешнее кольцо пыли. Плотность — длительность упражнений.</span></div>
+        <div><i style="background:var(--lime)"></i><b>Дыхание</b><span class="muted">Дымка выдохов: шум без высоты, без лепестков.</span></div>
+        <div><i style="background:var(--kale)"></i><b>Фонация</b><span class="muted">Фигуры удержанных нот. Сколько лепестков — на какой высоте звучали.</span></div>
+        <div><i style="background:var(--vanilla);border:1px solid var(--rule)"></i><b>Артикуляция</b><span class="muted">Мелкие плотные фигуры в центре: слоги, скороговорки, паузы.</span></div>
+      </div>
+      <div class="week" id="week"></div>
+      <p class="note" style="margin-top:10px">Неделя. Пропущенный день — чистая пластина, без упрёков.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 09 MEDIA -->
+<section class="s wrap" id="media">
+  <div class="sh"><span class="no">09</span><h2>Носители</h2>
+    <p>Экраны приложения в его же стиле: цветная шапка блока, чёрная капсула таймера. Форма в упражнении реагирует на голос — если включить микрофон выше, она оживёт и здесь.</p></div>
+  <div class="phones">
+    <div class="phone"><div class="scr">
+      <div class="head" style="background:var(--kale)"><small>Фонация · 1 мин</small><h3>Сирена</h3></div>
+      <div class="body"><div class="hint">Скользите голосом снизу вверх и обратно</div><canvas id="phSiren"></canvas></div>
+      <div class="cap"><span class="t num" id="phT">0:42</span><span class="pl">II</span></div>
+    </div></div>
+    <div class="phone"><div class="scr" style="background:var(--ebony);color:var(--vanilla)">
+      <div class="head" style="padding-bottom:6px"><small style="opacity:.6">Сегодня готово</small><h3>Ваш голос за день</h3></div>
+      <div class="body"><canvas id="phDay"></canvas></div>
+      <div style="padding:0 18px 22px;display:flex;justify-content:space-between;font-size:14px"><span><b style="font-size:22px">23</b> мин</span><span><b style="font-size:22px">11</b> упражнений</span><span><b style="font-size:22px">5</b> дней подряд</span></div>
+    </div></div>
+    <div class="phone"><div class="scr" style="background:var(--ebony)">
+      <div class="body"><canvas id="phSplash"></canvas></div>
+    </div></div>
+  </div>
+  <div class="posters">
+    <canvas data-poster="0"></canvas>
+    <canvas data-poster="1"></canvas>
+    <canvas data-poster="2"></canvas>
+  </div>
+  <div class="socials">
+    <canvas data-social="0"></canvas>
+    <canvas data-social="1"></canvas>
+    <canvas data-social="2"></canvas>
+  </div>
+</section>
+
+<!-- 10 RULES -->
+<section class="s wrap" id="rules">
+  <div class="sh"><span class="no">10</span><h2>Правила</h2></div>
+  <div class="rules">
+    <div class="rule-i"><span class="k y">+</span><div><b>Голос строит, а не портит</b><p>Звук собирает материю. Тишина — рассыпанное состояние, а не «правильное».</p></div></div>
+    <div class="rule-i"><span class="k y">+</span><div><b>Только целые фигуры</b><p>Форма перескакивает между модами. Промежуточное состояние всегда размыто — это и есть узнаваемость.</p></div></div>
+    <div class="rule-i"><span class="k y">+</span><div><b>Тихий голос тоже собирает</b><p>Громкость сжата: шёпот на ноте даёт фигуру, крик лишь чуть углубляет её.</p></div></div>
+    <div class="rule-i"><span class="k y">+</span><div><b>Одна связь на упражнение</b><p>В сирене зритель следит за лепестками, в «от шёпота до крика» — за глубиной.</p></div></div>
+    <div class="rule-i"><span class="k y">+</span><div><b>Лепесток всегда вверх</b><p>Ориентация постоянна во всех носителях. Форма не вращается.</p></div></div>
+    <div class="rule-i"><span class="k y">+</span><div><b>Цвет — блок занятия</b><p>Цвет не реагирует на голос. Голос меняет только форму.</p></div></div>
+    <div class="rule-i"><span class="k n">−</span><div><b>Никакого круга</b><p>Идеальный круг рядом со словом читается как «o». Его нет ни в покое, ни в иконке.</p></div></div>
+    <div class="rule-i"><span class="k n">−</span><div><b>Никаких игр с буквами</b><p>Надпись статична. Знак никогда не встаёт на место буквы.</p></div></div>
+    <div class="rule-i"><span class="k n">−</span><div><b>Не оценивать</b><p>Фигура показывает звук, а не правильность. Никаких «идеально» за красивую форму.</p></div></div>
+    <div class="rule-i"><span class="k n">−</span><div><b>Не эквалайзер</b><p>Без столбиков, волн осциллографа и мерцания на каждый кадр. Материя инертна.</p></div></div>
+  </div>
+</section>
+
+<!-- 11 DEV -->
+<section class="s wrap" id="dev">
+  <div class="sh"><span class="no">11</span><h2>Для разработки</h2>
+    <p>Движок лежит рядом отдельным файлом <code>voiceform.js</code>, без зависимостей: его можно подключить в приложение как есть.</p></div>
+  <div class="tbl">
+  <table>
+    <thead><tr><th>Параметр</th><th>Значение</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td>Знак</td><td><code>n = 3, amp = 0.22</code>, лепесток вверх</td><td>Комфортная нота</td></tr>
+      <tr><td>Высота → лепестки</td><td><code>n = 3 + (нота − комфортная) / 3.5</code>, от 2 до 8</td><td>Шкала от голоса человека</td></tr>
+      <tr><td>Калибровка</td><td>медиана первых ~0,8 с ровного звука</td><td>Не нужен отдельный экран</td></tr>
+      <tr><td>Высота тона</td><td>YIN по 1024 отсчётам, 70–1100 Гц, ясность &gt; 0,8</td><td>Шёпот не получает ноту</td></tr>
+      <tr><td>Громкость</td><td><code>amp = 0.07 + 0.27 · level^0.6</code></td><td>Сжатие: тихим не хуже</td></tr>
+      <tr><td>Устойчивость</td><td>разброс ноты за 0,4 с; 0,12 полутона — идеально, 1 — размыто</td><td>Вибрато не ломает фигуру</td></tr>
+      <tr><td>Атака / затухание</td><td>сборка 0,14 за кадр, рассыпание 0,03, амплитуда 0,18 / 0,04</td><td>Ощущение материала</td></tr>
+      <tr><td>Пауза</td><td>после 0,3 с тишины, остаётся 12% порядка</td><td>Отпечаток</td></tr>
+      <tr><td>Удержание</td><td>набирается за 2,5 с ровного звука, сужает полосу частиц</td><td>Узор проявляется</td></tr>
+      <tr><td>Микрофон</td><td>без шумоподавления, эхоподавления и автоусиления</td><td>Иначе тихие звуки съедаются</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap"><span class="wm" style="font-size:20px;color:var(--ink)">woisee</span><span>Айдентика, черновик 1 · ветка identity · шрифт Inter Tight (OFL)</span></div></footer>
+
+<script src="voiceform.js"></script>
+<script>
+(function(){
+'use strict';
+const V = window.VoiceForm, TAU = V.TAU;
+const C = { ink:'#192524', paper:'#FFFFFF', paper2:'#F3F5F2', vanilla:'#FFFEFC', rasp:'#E780C0', lime:'#ECF176', kale:'#5EA879', ebony:'#192524', signal:'#F0472C', deep:'#2D4540', muted:'#5D6A67' };
+const FONT = '"Inter Tight","Helvetica Neue",Helvetica,Arial,sans-serif';
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+
+function fit(cv, w, h){
+  const d = DPR(); w = w || cv.clientWidth; h = h || cv.clientHeight;
+  const W = Math.max(1, Math.round(w*d)), H = Math.max(1, Math.round(h*d));
+  if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(d,0,0,d,0,0);
+  return { ctx, w, h, d };
+}
+
+/* ---------- живое состояние ---------- */
+const voice = new V.Voice();
+const live = { S: V.state(V.SILENCE), T: V.state(V.MARK), silent:false, mode:'model' };
+const model = { p:17, l:45, s:90, sil:false, noise:false, holdT:0 };
+
+function modelTarget(dt, t){
+  const T = live.T, st = model.s/100;
+  const drift = (1-st)*(0.9*Math.sin(t*1.7) + 0.5*Math.sin(t*4.3));
+  T.n = Math.min(8, Math.max(2, 2 + model.p/100*6 + drift));
+  T.amp = model.noise ? 0.05 : 0.07 + 0.27*Math.pow(model.l/100, 0.6);
+  T.stab = model.noise ? 0.25 : st;
+  T.m = model.sil ? 0.12 : model.noise ? 0.6 : 1;
+  T.noise = model.noise ? 1 : 0;
+  model.holdT = (!model.sil && !model.noise && st > 0.6) ? Math.min(1, model.holdT + dt/2.5) : Math.max(0, model.holdT - dt*0.8);
+  T.hold = model.holdT;
+  live.silent = model.sil;
+}
+
+/* ---------- RAF и видимость ---------- */
+const views = [];
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.target._v) e.target._v.vis = e.isIntersecting; }), { rootMargin:'120px' });
+function addView(el, fn){ const v = { el, fn, vis:false }; el._v = v; io.observe(el); views.push(v); return v; }
+let last = performance.now(), T0 = 0;
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now; T0 += dt;
+  if (live.mode === 'voice' && voice.on){ voice.update(dt); Object.assign(live.T, voice.T); live.silent = voice.f.silent; voice.T.kick = 0; }
+  else modelTarget(dt, T0);
+  V.ease(live.S, live.T, dt);
+  for (const v of views) if (v.vis) v.fn(dt, T0);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- HERO ---------- */
+const heroCv = $('#heroCv');
+const heroM = V.makeMatter(innerWidth < 700 ? 3600 : 6500, 11);
+const heroS = V.state(V.SILENCE), heroT = V.state(V.MARK);
+let heroClock = 0;
+addView($('#hero'), (dt) => {
+  heroClock += dt;
+  const { ctx, w, h } = fit(heroCv);
+  ctx.fillStyle = C.ebony; ctx.fillRect(0,0,w,h);
+  let S = heroS, silent = false;
+  if (voice.on){ S = live.S; silent = live.silent; }
+  else {
+    // демо: рассыпано → собирается в знак → короткая фраза → снова знак
+    const c = heroClock % 14;
+    if (heroClock < 1.3){ Object.assign(heroT, V.SILENCE); silent = true; }
+    else {
+      Object.assign(heroT, V.MARK);
+      heroT.hold = Math.min(1, (heroClock-1.3)/2.5);
+      if (c > 8 && c < 10.5){ heroT.n = 3 + Math.min(1, (c-8)/0.8)*1.98; heroT.amp = 0.3; heroT.stab = 0.85; heroT.hold = 0.4; }
+      if (c > 8 && c < 8.05) heroT.kick = 0.7;
+      if (c > 11.6 && c < 12.8){ heroT.m = 0.12; silent = true; }
+    }
+    V.ease(heroS, heroT, dt);
+  }
+  V.stepMatter(heroM, S, dt, silent);
+  const R = Math.min(w, h) * (w < 700 ? 0.24 : 0.3);
+  const cx = w < 700 ? w/2 : w*0.62, cy = w < 700 ? h*0.33 : h*0.47;
+  V.draw(ctx, heroM, cx, cy, R, C.vanilla, w < 700 ? 1.2 : 1.45);
+});
+
+/* ---------- статичные кадры ---------- */
+const PRESETS = {
+  silence:   V.state({ m:0.12, hold:0, amp:0.1 }),
+  unstable:  V.state({ n:3.45, stab:0.35, hold:0.2, amp:0.24 }),
+  mark:      V.state(V.MARK),
+};
+const statics = [];
+function renderStatic(cv, S, o){
+  o = o || {};
+  const { ctx, w, h } = fit(cv);
+  ctx.clearRect(0,0,w,h);
+  if (o.bg){ ctx.fillStyle = o.bg; ctx.fillRect(0,0,w,h); }
+  const M = V.makeMatter(o.N || Math.round(1800 + w*4.5), o.seed || 7);
+  V.settle(M, S, o.seed || 7);
+  V.draw(ctx, M, w/2, h/2 + (o.dy||0)*h, Math.min(w,h)*(o.R || 0.29), o.color || C.ink, o.dot || (w > 300 ? 1.15 : 0.95));
+}
+function addStatic(cv, fn){ statics.push([cv, fn]); fn(); }
+$$('canvas[data-static]').forEach(cv => {
+  const S = PRESETS[cv.dataset.static];
+  addStatic(cv, () => renderStatic(cv, S, { color: cv.dataset.color ? C[cv.dataset.color] : C.ink }));
+});
+
+/* ---------- знак ---------- */
+const markBig = $('#markBig');
+addStatic(markBig, () => renderStatic(markBig, PRESETS.mark, { color:C.vanilla, N: 9000, R:0.3, dot:1.45, seed:3 }));
+$$('canvas[data-solid]').forEach(cv => {
+  const s = +cv.dataset.solid;
+  addStatic(cv, () => {
+    const { ctx } = fit(cv, s, s); ctx.clearRect(0,0,s,s);
+    V.strokeMark(ctx, V.MARK, s/2, s/2, s*0.31, C.ink, Math.max(1.6, s*0.075));
+  });
+  cv.style.width = cv.style.height = s + 'px';
+});
+function drawIcon(ctx, s, kind){
+  const bg = kind === 'lime' ? C.lime : C.ebony, fg = kind === 'lime' ? C.ink : C.vanilla;
+  ctx.fillStyle = bg; ctx.fillRect(0,0,s,s);
+  if (kind === 'solid') V.strokeMark(ctx, V.MARK, s/2, s/2, s*0.27, fg, Math.max(1.5, s*0.06));
+  else {
+    const M = V.makeMatter(Math.round(Math.min(5000, 500 + s*s*0.08)), 5);
+    V.settle(M, V.MARK, 5);
+    V.draw(ctx, M, s/2, s/2, s*0.29, fg, Math.max(0.6, s/180));
+  }
+}
+$$('canvas[data-icon]').forEach(cv => addStatic(cv, () => { const s = cv.clientWidth; const { ctx } = fit(cv, s, s); drawIcon(ctx, s, cv.dataset.icon); }));
+$$('canvas[data-lock]').forEach(cv => addStatic(cv, () => {
+  const s = cv.clientWidth; const { ctx } = fit(cv, s, s); ctx.clearRect(0,0,s,s);
+  if (s < 60) V.strokeMark(ctx, V.MARK, s/2, s/2, s*0.36, C[cv.dataset.lock], Math.max(2, s*0.09));
+  else { const M = V.makeMatter(1400, 9); V.settle(M, V.MARK, 9); V.draw(ctx, M, s/2, s/2, s*0.38, C[cv.dataset.lock], 1); }
+}));
+
+/* ---------- загрузки ---------- */
+function download(name, blob){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+function canvasPng(w, h, painter, name){ const c = document.createElement('canvas'); c.width = w; c.height = h; painter(c.getContext('2d'), w, h); c.toBlob(b => download(name, b), 'image/png'); }
+$$('[data-dl]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.dl;
+  if (k === 'mark-solid-svg'){
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="${V.svgPath(V.MARK,256,256,160)}" fill="none" stroke="${C.ink}" stroke-width="36" stroke-linejoin="round"/></svg>`;
+    download('woisee-mark-contour.svg', new Blob([svg], { type:'image/svg+xml' }));
+  } else if (k === 'mark-dots-svg'){
+    const M = V.makeMatter(3200, 3); V.settle(M, V.MARK, 3);
+    let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="${C.ebony}"/><g fill="${C.vanilla}">`;
+    for (let i = 0; i < M.N; i++) s += `<circle cx="${(512+M.x[i]*300).toFixed(1)}" cy="${(512+M.y[i]*300).toFixed(1)}" r="${(M.sz[i]*1.3).toFixed(2)}"/>`;
+    download('woisee-mark-dots.svg', new Blob([s + '</g></svg>'], { type:'image/svg+xml' }));
+  } else if (k === 'mark-png'){
+    canvasPng(2048, 2048, (ctx, w) => { ctx.fillStyle = C.ebony; ctx.fillRect(0,0,w,w); const M = V.makeMatter(16000, 3); V.settle(M, V.MARK, 3); V.draw(ctx, M, w/2, w/2, w*0.3, C.vanilla, 3); }, 'woisee-mark-2048.png');
+  } else if (k === 'icon-png'){
+    canvasPng(1024, 1024, (ctx, w) => drawIcon(ctx, w, 'stipple'), 'woisee-icon-1024.png');
+  }
+}));
+
+/* ---------- лаборатория ---------- */
+const labCv = $('#labCv'), plate = $('#labPlate'), pctx = plate.getContext('2d');
+const labM = V.makeMatter(innerWidth < 700 ? 2200 : 3400, 21);
+let plateColor = C.kale, frameN = 0;
+function clearPlate(){ pctx.fillStyle = C.ebony; pctx.fillRect(0,0,300,300); }
+clearPlate();
+const NAMES_N = ['', '', 'два лепестка', 'три лепестка', 'четыре лепестка', 'пять лепестков', 'шесть лепестков', 'семь лепестков', 'восемь лепестков'];
+addView($('.lab-stage'), (dt) => {
+  const { ctx, w, h } = fit(labCv);
+  ctx.fillStyle = C.ebony; ctx.fillRect(0,0,w,h);
+  const S = live.S;
+  V.stepMatter(labM, S, dt, live.silent);
+  const R = Math.min(w, h)*0.29;
+  V.draw(ctx, labM, w/2, h/2, R, C.vanilla, 1.15);
+  // отпечаток на пластине
+  frameN++;
+  if (!live.silent && S.m > 0.55 && S.noise < 0.5 && (frameN % 2 === 0)){
+    pctx.fillStyle = plateColor; pctx.globalAlpha = 0.05 + 0.08*S.hold;
+    const step = 5, off = frameN % step;
+    for (let i = off; i < labM.N; i += step){ const x = 150 + labM.x[i]*100, y = 150 + labM.y[i]*100; pctx.fillRect(x-0.6, y-0.6, 1.2, 1.2); }
+    pctx.globalAlpha = 1;
+  } else if (S.noise > 0.5 && frameN % 2 === 0){
+    pctx.fillStyle = plateColor; pctx.globalAlpha = 0.035;
+    for (let i = frameN % 9; i < labM.N; i += 9){ pctx.fillRect(150 + labM.x[i]*100, 150 + labM.y[i]*100, 1, 1); }
+    pctx.globalAlpha = 1;
+  }
+  // подписи
+  const n0 = Math.floor(S.n), g = V.snap(S.n - n0), blur = 4*g*(1-g), nn = n0 + (g > 0.5 ? 1 : 0);
+  $('#labN').textContent = live.silent ? '' : (S.noise > 0.5 ? 'дымка' : NAMES_N[Math.min(8, nn)]);
+  let st;
+  if (live.silent) st = 'Пауза: материя рассыпается, отпечаток остаётся';
+  else if (S.noise > 0.5) st = 'Шум без высоты: дымка, фигуры нет';
+  else if (S.kick > 0.35) st = 'Атака: толчок';
+  else if (blur > 0.5 || S.stab < 0.45) st = 'Нота плавает: фигура между состояниями';
+  else if (S.hold > 0.85) st = 'Звук держится: узор проявился';
+  else st = 'Фигура собрана';
+  $('#labState').textContent = st;
+  if (live.mode === 'voice' && voice.on){
+    const f = voice.f;
+    $('#rNote').textContent = f.voiced ? (V.noteName(f.midi).split(' ')[0]) + ' · ' + Math.round(f.hz) : (f.noise ? 'шум' : '—');
+    $('#rRef').textContent = f.calibrated ? V.noteName(f.ref).split(' ')[0] + ' · ' + Math.round(440*Math.pow(2,(f.ref-69)/12)) : 'слушаю…';
+    syncSliders();
+  } else {
+    $('#rNote').textContent = '—'; $('#rRef').textContent = '—';
+  }
+  $('#rHold').textContent = Math.round(S.hold*100) + '%';
+});
+function syncSliders(){
+  const S = live.S;
+  const p = Math.round((S.n-2)/6*100), l = Math.round(Math.pow(Math.max(0,(S.amp-0.07)/0.27), 1/0.6)*100), s = Math.round(S.stab*100);
+  $('#sP').value = p; $('#sL').value = Math.min(100,l); $('#sS').value = s;
+  $('#oP').textContent = Math.round(S.n*10)/10; $('#oL').textContent = Math.min(100,l); $('#oS').textContent = s;
+}
+[['#sP','p','#oP'],['#sL','l','#oL'],['#sS','s','#oS']].forEach(([id,k,o]) => {
+  const el = $(id); el.addEventListener('input', () => {
+    model[k] = +el.value; model.sil = false; model.noise = false; setModelBtns();
+    $(o).textContent = k === 'p' ? Math.round((2 + model.p/100*6)*10)/10 : el.value;
+  });
+});
+$('#oP').textContent = Math.round((2 + model.p/100*6)*10)/10;
+function setModelBtns(){ $('#bSil').classList.toggle('sel', model.sil); $('#bNoise').classList.toggle('sel', model.noise); }
+$('#bKick').addEventListener('click', () => { live.T.kick = 1; model.sil = false; setModelBtns(); });
+$('#bSil').addEventListener('click', () => { model.sil = !model.sil; model.noise = false; setModelBtns(); });
+$('#bNoise').addEventListener('click', () => { model.noise = !model.noise; model.sil = false; setModelBtns(); });
+$$('#blockChips .chip').forEach(ch => ch.addEventListener('click', () => {
+  $$('#blockChips .chip').forEach(c => c.classList.remove('sel')); ch.classList.add('sel'); plateColor = C[ch.dataset.c];
+}));
+$('#plClear').addEventListener('click', clearPlate);
+$('#plSave').addEventListener('click', () => plate.toBlob(b => download('woisee-plastina.png', b), 'image/png'));
+
+/* ---------- микрофон ---------- */
+function setMode(m){
+  live.mode = m;
+  $('#mModel').classList.toggle('sel', m === 'model');
+  $('#mVoice').classList.toggle('sel', m === 'voice');
+  $('#mCal').hidden = m !== 'voice';
+  $('#modelBtns').hidden = m === 'voice';
+  ['#sP','#sL','#sS'].forEach(id => $(id).disabled = m === 'voice');
+  $('#labMode').textContent = m === 'voice' ? '● Микрофон слушает' : 'Модель';
+  $$('.micBtn').forEach(b => { b.classList.toggle('on', voice.on); b.querySelector('span').textContent = voice.on ? 'Выключить микрофон' : 'Включить микрофон'; });
+  $('#heroRead').textContent = voice.on ? 'Тяните «а-а-а», потом сирену вверх. Первые полсекунды — калибровка' : 'Скажите «а-а-а» на удобной ноте';
+}
+async function micOn(){
+  $('#micErr').hidden = true;
+  try { await voice.start(); setMode('voice'); return true; }
+  catch (e){
+    const msg = location.protocol !== 'https:' && location.hostname !== 'localhost' ? 'Микрофон работает только по https.' : 'Нет доступа к микрофону. Разрешите его в настройках браузера.';
+    $('#micErr').textContent = msg; $('#micErr').hidden = false; $('#heroRead').textContent = msg; return false;
+  }
+}
+function micOff(){ voice.stop(); setMode('model'); }
+$$('.micBtn').forEach(b => b.addEventListener('click', () => voice.on ? micOff() : micOn()));
+$('#mVoice').addEventListener('click', () => voice.on ? setMode('voice') : micOn());
+$('#mModel').addEventListener('click', () => { if (voice.on) voice.stop(); setMode('model'); });
+$('#mCal').addEventListener('click', () => voice.recalibrate());
+
+/* ---------- состояния ---------- */
+const STATES = [
+  ['Тишина', 'материя рассыпана, отпечаток 12%', V.state({ m:0.12, hold:0, amp:0.1 })],
+  ['Низкий звук', 'на 3,5 полутона ниже: 2', V.state({ n:2, amp:0.24 })],
+  ['Комфортная нота', 'знак: 3', V.state(V.MARK)],
+  ['Выше', '+3,5 полутона: 4', V.state({ n:4 })],
+  ['Ещё выше', '+7 полутонов: 5', V.state({ n:5, amp:0.2 })],
+  ['Высоко', '+октава и выше: 6–7', V.state({ n:7, amp:0.17 })],
+  ['Нота плавает', 'между 3 и 4, размыто', V.state({ n:3.5, stab:0.35, hold:0.2 })],
+  ['Тихо', 'фигура есть, лепестки мелкие', V.state({ amp:0.09 })],
+  ['Громко', 'лепестки глубже', V.state({ amp:0.34 })],
+  ['Атака', 'толчок, полоса расходится', V.state({ kick:0.75, hold:0.3 })],
+  ['Шёпот, «с-с-с»', 'дымка без лепестков', V.state({ noise:1, m:0.6, amp:0.05, stab:0.25, hold:0 })],
+  ['Живое', 'текущее состояние голоса', null],
+];
+const sg = $('#statesGrid');
+STATES.forEach(([t, d, S], i) => {
+  const el = document.createElement('div'); el.className = 'st' + (S ? '' : ' live');
+  el.innerHTML = `<canvas></canvas><div class="cap-t">${t}</div><div class="cap-d">${d}</div>`;
+  sg.appendChild(el);
+  const cv = el.querySelector('canvas');
+  if (S) addStatic(cv, () => renderStatic(cv, S, { seed: 30 + i, R:0.27 }));
+  else { const M = V.makeMatter(1500, 44); addView(el, (dt) => { const { ctx, w, h } = fit(cv); ctx.clearRect(0,0,w,h); V.stepMatter(M, live.S, dt, live.silent); V.draw(ctx, M, w/2, h/2, Math.min(w,h)*0.27, C.vanilla, 1); }); }
+});
+
+/* ---------- след ---------- */
+function shapePath(ctx, S, cx, cy, R, from, to){
+  const steps = 200; ctx.beginPath();
+  for (let k = 0; k <= steps; k++){ const th = from + (to-from)*k/steps, r = V.contour(th, S)*R; const x = cx + r*Math.cos(th), y = cy + r*Math.sin(th); k ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }
+}
+function drawTrail(ctx, w, h, kind, scale){
+  scale = scale || 1;
+  const cfg = [
+    { bg:C.ebony, rim:C.lime, core:C.kale, glow:C.lime, ns:k => 2 + k*0.9, R:0.2, step:0.1, copies:7 },
+    { bg:'#241C2B', rim:C.rasp, core:C.vanilla, glow:C.rasp, ns:() => 3, R:0.22, step:0.095, copies:7 },
+    { bg:C.deep, rim:C.vanilla, core:C.lime, glow:C.lime, ns:() => 3, R:0.17, step:0.11, copies:6, kick:true },
+  ][kind];
+  ctx.fillStyle = cfg.bg; ctx.fillRect(0,0,w,h);
+  const R = Math.min(w,h)*cfg.R*1.25, x0 = w*0.26, cy = h/2;
+  for (let k = cfg.copies-1; k >= 0; k--){
+    const S = V.state({ n: Math.min(8, cfg.ns(k)), amp:0.22, kick: cfg.kick ? Math.max(0, 0.9 - k*0.12) : 0 });
+    const x = x0 + k*w*cfg.step, sc = 1 + k*(cfg.kick ? 0.16 : 0.03);
+    const a = k === 0 ? 1 : 0.85*(1 - k/cfg.copies);
+    ctx.save(); ctx.globalAlpha = a;
+    if (k > 0){ ctx.beginPath(); ctx.rect(x - R*sc*0.15, 0, w, h); ctx.clip(); }
+    shapePath(ctx, S, x, cy, R*sc, 0, TAU);
+    const g = ctx.createRadialGradient(x, cy, 0, x, cy, R*sc*1.25);
+    g.addColorStop(0, k === 0 ? cfg.core : cfg.bg); g.addColorStop(0.62, k === 0 ? cfg.core : cfg.bg); g.addColorStop(1, cfg.rim);
+    ctx.fillStyle = g; ctx.shadowColor = cfg.glow; ctx.shadowBlur = 28*scale; ctx.fill();
+    ctx.restore();
+  }
+}
+$$('canvas[data-trail]').forEach(cv => addStatic(cv, () => { const { ctx, w, h } = fit(cv); drawTrail(ctx, w, h, +cv.dataset.trail); }));
+
+/* ---------- картинка дня ---------- */
+const PLAN = {
+  body:[['Полулежачее положение',360],['Плечи: сжать и отпустить',75],['Наклоны головы',60],['Внутренняя улыбка',45],['Свободная челюсть',90]],
+  breath:[['Дыхание животом',60],['«Собачка»',75],['Долгий выдох',60],['Дыхание 4-4-8-4',100]],
+  phon:[['Зевок',60],['Мягкая атака',75],['Гудение',90],['Соломинка',60],['Три резонатора',90],['Восьмёрка',60],['Посылка звука',75],['Сирена',60],['От шёпота до крика',75],['Качели',120]],
+  artic:[['Разминка',45],['Губы',75],['Язык',90],['Ряды согласных',45],['Скороговорки',120],['Протяжные гласные',60],['Пробка',180],['Смена темпа',120],['Магия паузы',120]],
+};
+function pick(r, arr, k){ const a = arr.slice(); const out = []; while (out.length < k && a.length) out.push(a.splice((r()*a.length)|0, 1)[0]); return out; }
+function makeDay(seed){
+  const r = V.rng(seed);
+  return { body: pick(r, PLAN.body, 2 + (r()*3|0)), breath: pick(r, PLAN.breath, 1 + (r()*3|0)), phon: pick(r, PLAN.phon, 3 + (r()*4|0)), artic: pick(r, PLAN.artic, 2 + (r()*3|0)), r };
+}
+function drawDay(ctx, s, seed, opt){
+  opt = opt || {};
+  const day = makeDay(seed), r = day.r, cx = s/2, cy = s/2, P = s*0.47, dot = Math.max(0.55, s/520);
+  if (!opt.transparent){ ctx.fillStyle = C.ebony; ctx.fillRect(0,0,s,s); }
+  if (opt.empty) { const M = V.makeMatter(500, seed); V.settle(M, V.state({ m:0, hold:0 }), seed); V.draw(ctx, M, cx, cy, P*0.5, C.vanilla, dot, 0.18); return day; }
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, P*1.06, 0, TAU); ctx.clip();
+  // тело: пыль по краю
+  day.body.forEach(([, d]) => {
+    const n = Math.round(d*5*(s/600)**2 + 60); ctx.fillStyle = C.rasp;
+    for (let i = 0; i < n; i++){ const th = r()*TAU, rad = P*(0.9 + V.gauss(r)*0.09); ctx.globalAlpha = 0.25 + r()*0.5; const z = (0.6 + r()*1.2)*dot; ctx.fillRect(cx + rad*Math.cos(th), cy + rad*Math.sin(th), z, z); }
+  });
+  // дыхание: дымка
+  day.breath.forEach(([, d], k) => {
+    const M = V.makeMatter(Math.round(d*12*(s/600)**2 + 120), seed*7 + k);
+    V.settle(M, V.state({ noise:1, m:0.85, amp:0.04, stab:0.2, hold:0 }), seed + k);
+    V.draw(ctx, M, cx, cy, P*(0.66 + k*0.04), C.lime, dot, 0.5);
+  });
+  // фонация: чистые фигуры
+  day.phon.forEach(([name, d], k) => {
+    const n = name === 'Сирена' ? 2 + r()*5 : 2 + Math.round(r()*4 + (r() < 0.4 ? 0 : 1)), stab = 0.55 + r()*0.45;
+    const S = V.state({ n: Math.min(7, n), amp: 0.12 + r()*0.18, stab, hold: 0.4 + r()*0.6 });
+    const M = V.makeMatter(Math.round(d*18*(s/600)**2 + 150), seed*13 + k);
+    V.settle(M, S, seed + 3*k);
+    V.draw(ctx, M, cx, cy, P*(0.36 + r()*0.16), C.kale, dot*1.15, 0.95);
+  });
+  // артикуляция: мелкие плотные фигуры
+  day.artic.forEach(([, d], k) => {
+    const reps = 2 + (r()*3|0);
+    for (let q = 0; q < reps; q++){
+      const S = V.state({ n: 2 + Math.round(r()*4), amp: 0.2, kick: r()*0.5, hold: 0.7 });
+      const M = V.makeMatter(Math.round(d*3*(s/600)**2 + 60), seed*17 + k*5 + q);
+      V.settle(M, S, seed + k + q);
+      V.draw(ctx, M, cx, cy, P*(0.13 + r()*0.12), C.vanilla, dot, 0.85);
+    }
+  });
+  ctx.restore();
+  return day;
+}
+let daySeed = 2110;
+const dayCv = $('#dayCv');
+function renderDay(){
+  const s = dayCv.clientWidth; const { ctx } = fit(dayCv, s, s);
+  const day = drawDay(ctx, s, daySeed);
+  const all = [].concat(day.body, day.breath, day.phon, day.artic);
+  $('#dayMeta').textContent = Math.round(all.reduce((a, x) => a + x[1], 0)/60) + ' мин · ' + all.length + ' упражнений';
+}
+addStatic(dayCv, renderDay);
+$('#dayNext').addEventListener('click', () => { daySeed = (daySeed*48271 + 7) % 2147483647; renderDay(); });
+const week = $('#week'), WD = ['пн','вт','ср','чт','пт','сб','вс'];
+WD.forEach((d, i) => {
+  const f = document.createElement('figure'); f.innerHTML = `<canvas></canvas>${d}`; week.appendChild(f);
+  const cv = f.querySelector('canvas');
+  addStatic(cv, () => { const s = cv.clientWidth; const { ctx } = fit(cv, s, s); ctx.clearRect(0,0,s,s); drawDay(ctx, s, 500 + i*31, { transparent:true, empty: i === 3 }); });
+});
+
+/* ---------- носители ---------- */
+const sirenCv = $('#phSiren'), sirenM = V.makeMatter(1600, 61), sirenS = V.state(V.MARK), sirenT = V.state(V.MARK);
+let sirenClock = 0;
+addView(sirenCv.closest('.phone'), (dt) => {
+  sirenClock += dt;
+  const { ctx, w, h } = fit(sirenCv); ctx.clearRect(0,0,w,h);
+  let S = sirenS, sil = false;
+  if (voice.on){ S = live.S; sil = live.silent; }
+  else {
+    const c = sirenClock % 7;
+    sirenT.n = 2 + 4.6*(0.5 - 0.5*Math.cos(Math.min(c, 6)/6*TAU)); sirenT.stab = 0.92; sirenT.amp = 0.22; sirenT.hold = 0.6;
+    sirenT.m = c > 6.1 ? 0.12 : 1; sil = c > 6.1;
+    V.ease(sirenS, sirenT, dt);
+  }
+  V.stepMatter(sirenM, S, dt, sil);
+  V.draw(ctx, sirenM, w/2, h*0.5, Math.min(w,h)*0.3, C.ink, 1);
+  const left = 59 - Math.floor(sirenClock % 60);
+  $('#phT').textContent = '0:' + String(left).padStart(2, '0');
+});
+const phDay = $('#phDay');
+addStatic(phDay, () => { const { ctx, w, h } = fit(phDay); ctx.clearRect(0,0,w,h); const s = Math.min(w, h)*0.94; ctx.save(); ctx.translate((w-s)/2, (h-s)/2); drawDay(ctx, s, 777, { transparent:true }); ctx.restore(); });
+const splash = $('#phSplash'), splashM = V.makeMatter(1800, 71), splashS = V.state(V.SILENCE), splashT = V.state(V.SILENCE);
+let splashClock = 0;
+addView(splash.closest('.phone'), (dt) => {
+  splashClock += dt; const c = splashClock % 6;
+  const { ctx, w, h } = fit(splash); ctx.fillStyle = C.ebony; ctx.fillRect(0,0,w,h);
+  Object.assign(splashT, c < 1 ? V.SILENCE : V.MARK); splashT.hold = Math.min(1, Math.max(0, (c-1)/2));
+  V.ease(splashS, splashT, dt); V.stepMatter(splashM, splashS, dt, c < 1);
+  V.draw(ctx, splashM, w/2, h*0.42, w*0.26, C.vanilla, 1);
+  ctx.globalAlpha = Math.min(1, Math.max(0, (c-2)/0.6)); ctx.fillStyle = C.vanilla; ctx.font = `800 34px ${FONT}`; ctx.textAlign = 'center';
+  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '-1.7px';
+  ctx.fillText('woisee', w/2, h*0.74); ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(255,254,252,.55)'; ctx.font = `500 13px ${FONT}`; if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
+  ctx.fillText('Заставка: голос собирает знак', w/2, h - 26);
+});
+
+function wordmark(ctx, x, y, size, color, align){
+  ctx.fillStyle = color; ctx.font = `800 ${size}px ${FONT}`; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = (-0.05*size) + 'px';
+  ctx.fillText('woisee', x, y);
+  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
+}
+function text(ctx, str, x, y, size, color, weight, align){
+  ctx.fillStyle = color; ctx.font = `${weight||500} ${size}px ${FONT}`; ctx.textAlign = align || 'left';
+  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = (weight >= 700 ? -0.035*size : -0.005*size) + 'px';
+  String(str).split('\n').forEach((l, i) => ctx.fillText(l, x, y + i*size*1.0));
+  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = '0px';
+}
+function drawPoster(ctx, w, h, k){
+  const u = w/100;
+  if (k === 0){
+    ctx.fillStyle = C.ebony; ctx.fillRect(0,0,w,h);
+    const M = V.makeMatter(Math.round(w*w*0.06), 81); V.settle(M, V.state({ n:5, amp:0.2, hold:1 }), 81);
+    V.draw(ctx, M, w/2, h*0.44, w*0.34, C.vanilla, Math.max(0.8, w/360));
+    wordmark(ctx, 6*u, 12*u, 9*u, C.vanilla);
+    text(ctx, 'Голос\nсобирает\nформу', 6*u, h - 35*u, 10.5*u, C.lime, 800);
+    text(ctx, 'Занятия голосом 15–30 минут в день', 6*u, h - 5*u, 3*u, 'rgba(255,254,252,.65)', 500);
+  } else if (k === 1){
+    ctx.fillStyle = C.kale; ctx.fillRect(0,0,w,h);
+    text(ctx, 'Сирена', 6*u, 18*u, 16*u, C.ink, 800);
+    text(ctx, 'Скользите голосом снизу вверх.\nФорма отвечает каждой ноте.', 6*u, 27*u, 3.6*u, C.ink, 500);
+    const ns = [2,3,4,5,6,7];
+    ns.forEach((n, i) => {
+      const col = i % 2, row = (i/2)|0, cx = w*(0.3 + col*0.4), cy = h*(0.44 + row*0.16);
+      const M = V.makeMatter(Math.round(w*w*0.008), 90 + i); V.settle(M, V.state({ n, amp: n > 5 ? 0.17 : 0.22 }), 90 + i);
+      V.draw(ctx, M, cx, cy, w*0.075, C.ink, Math.max(0.7, w/420));
+    });
+    wordmark(ctx, w - 6*u, h - 5*u, 6*u, C.ink, 'right');
+  } else {
+    drawTrail(ctx, w, h, 1, w/400);
+    text(ctx, 'Скажите\nчто-нибудь', 6*u, 16*u, 11*u, C.vanilla, 800);
+    wordmark(ctx, 6*u, h - 6*u, 7*u, C.vanilla);
+  }
+}
+function drawSocial(ctx, s, k){
+  const u = s/100;
+  if (k === 0){
+    ctx.fillStyle = C.lime; ctx.fillRect(0,0,s,s);
+    ctx.save(); ctx.beginPath(); ctx.arc(s/2, s*0.47, s*0.36, 0, TAU); ctx.fillStyle = C.ebony; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(s*0.14, s*0.11); drawDay(ctx, s*0.72, 333, { transparent:true }); ctx.restore();
+    text(ctx, 'Мой голос, 21 октября', 6*u, s - 6*u, 4.4*u, C.ink, 700);
+    wordmark(ctx, s - 6*u, s - 6*u, 5*u, C.ink, 'right');
+  } else if (k === 1){
+    ctx.fillStyle = C.rasp; ctx.fillRect(0,0,s,s);
+    const M = V.makeMatter(Math.round(s*s*0.035), 101); V.settle(M, V.state({ m:0.12, hold:0 }), 101);
+    V.draw(ctx, M, s/2, s*0.48, s*0.3, C.ink, Math.max(0.7, s/400));
+    text(ctx, 'Тишина — это\nрассыпанный голос', 6*u, 12*u, 7*u, C.ink, 800);
+    wordmark(ctx, 6*u, s - 6*u, 5*u, C.ink);
+  } else {
+    ctx.fillStyle = C.vanilla; ctx.fillRect(0,0,s,s);
+    const ns = [2, 3, 4, 5];
+    ns.forEach((n, i) => { const M = V.makeMatter(Math.round(s*s*0.012), 120 + i); V.settle(M, V.state({ n }), 120 + i); V.draw(ctx, M, s*(0.2 + i*0.2), s*0.5, s*0.08, C.ink, Math.max(0.6, s/500)); });
+    text(ctx, 'Каждые 3,5 полутона —\nещё один лепесток', 6*u, 14*u, 5.6*u, C.ink, 800);
+    wordmark(ctx, 6*u, s - 6*u, 5*u, C.ink);
+  }
+}
+$$('canvas[data-poster]').forEach(cv => addStatic(cv, () => { const { ctx, w, h } = fit(cv); drawPoster(ctx, w, h, +cv.dataset.poster); }));
+$$('canvas[data-social]').forEach(cv => addStatic(cv, () => { const s = cv.clientWidth; const { ctx } = fit(cv, s, s); drawSocial(ctx, s, +cv.dataset.social); }));
+
+/* ---------- запуск ---------- */
+let rt;
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => statics.forEach(([, fn]) => fn()), 200); });
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => statics.forEach(([, fn]) => fn()));
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
