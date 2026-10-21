@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#F6F2E8">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="woisee">
@@ -35,9 +35,10 @@ button,.item,.row{touch-action:manipulation;-webkit-user-select:none;user-select
 /* Layout: Swiss-style single column on warm grey paper. Huge numerals as heroes, hairline rules, a stack of colored block cards, a floating black capsule for nav and for the timer.
    Deliberately one light visual world, like the references. */
 :root{
-  /* palette: Cheviot, Grape Mist, Midnight Dreams, Neptune's Wrath, Isotonic Water, Pacific Panorama + signal red */
-  --paper:#F6F2E8; --paper-2:#FDFBF6; --ink:#002233; --muted:#56687A; --rule:rgba(0,34,51,.16); --soft:#C5C0C9;
-  --signal:#F0472C; --lime:#DDFF55; --deep:#11425D; --sky:#C0D6EA;
+  /* palette: Vanilla/white, Raspberry, Lemon Lime, Kale, Ebony + signal red */
+  --paper:#FFFFFF; --paper-2:#F3F5F2; --ink:#192524; --muted:#5D6A67; --rule:rgba(25,37,36,.14); --soft:#E1E6E0;
+  --signal:#F0472C; --lime:#ECF176; --deep:#2D4540;
+  --rasp:#E780C0; --kale:#5EA879; --ebony:#192524; --vanilla:#FFFEFC;
   --f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
   color-scheme:light;
 }
@@ -49,9 +50,9 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-r
 h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:800;letter-spacing:-.03em}
 p{margin:0}
 .num{font-variant-numeric:tabular-nums}
-.b-body,.b-breath,.b-phon,.b-stage{--cf:var(--ink);--cl:rgba(0,34,51,.2);--cbox:rgba(253,251,246,.6);--ca:var(--ink)}
-.b-body{--c:var(--sky);--cai:var(--sky)} .b-breath{--c:var(--soft);--cai:var(--soft)} .b-phon{--c:var(--lime);--cai:var(--lime)} .b-stage{--c:#DDD7CB;--cai:#DDD7CB}
-.b-artic{--c:var(--deep);--cf:var(--paper);--cl:rgba(246,242,232,.22);--cbox:rgba(246,242,232,.14);--ca:var(--lime);--cai:var(--deep)}
+.b-body,.b-breath,.b-phon,.b-stage{--cf:var(--ink);--cl:rgba(25,37,36,.2);--cbox:rgba(255,255,255,.55);--ca:var(--ink)}
+.b-body{--c:var(--rasp);--cai:var(--rasp)} .b-breath{--c:var(--lime);--cai:var(--lime)} .b-phon{--c:var(--kale);--cai:var(--kale);--cbox:rgba(255,255,255,.4)} .b-stage{--c:#D6DCD5;--cai:#D6DCD5}
+.b-artic{--c:var(--ebony);--cf:var(--vanilla);--cl:rgba(255,254,252,.18);--cbox:rgba(255,254,252,.12);--ca:var(--lime);--cai:var(--ebony)}
 
 .app{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:18px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -94,7 +95,7 @@ p{margin:0}
 
 /* stack of block cards */
 .stack{display:flex;flex-direction:column}
-.blk{background:var(--c);color:var(--cf);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;box-shadow:0 -1px 0 rgba(0,34,51,.08)}
+.blk{background:var(--c);color:var(--cf);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;box-shadow:0 -1px 0 rgba(25,37,36,.08)}
 .blk:first-child{margin-top:0}
 .blk:last-child{padding-bottom:20px}
 .blk header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:12px}
@@ -244,7 +245,7 @@ p{margin:0}
 .cap .acts{display:flex;align-items:center;gap:8px}
 .go{width:68px;height:68px;border-radius:50%;background:var(--signal);color:var(--ink);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05}
 .go.alt{background:var(--paper-2)}
-.chip{border:1px solid rgba(246,242,232,.35);border-radius:99px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--paper-2)}
+.chip{border:1px solid rgba(255,254,252,.35);border-radius:99px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--paper-2)}
 .cap.fin{background:var(--lime);color:var(--ink)}
 .cap.fin .fill{display:none}
 .cap.fin .time span{opacity:.7}
@@ -659,7 +660,7 @@ function widget(e){
       return `<div class="swatch" id="focusW"><div class="snds">${Object.keys(SOUNDS).map(s=>`<button class="snd" data-act="snd" data-v="${s}" aria-pressed="${ex.sw.sound===s}"><b>${SOUNDS[s]}</b><span class="num" id="best-${s}">${b[s]?'рекорд '+Math.round(b[s]):'нет замера'}</span></button>`).join('')}</div>
       <div class="sw-line"><div><div class="sw-num" id="swNum">0.0</div><span class="note" id="swLbl">секунд на [${SOUNDS[ex.sw.sound]}]</span></div><button class="sw-btn" data-act="sw" id="swBtn">Старт<br>выдоха</button></div>
       <p class="rec" id="swRec" hidden></p></div>`;}
-    case 'breath':return `<div class="pacer" id="focusW"><div class="wrap"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(0,34,51,.4)" stroke-width="1.5" stroke-dasharray="3 6"/><circle id="pcC" cx="100" cy="100" r="40" fill="var(--ink)"/></svg><div class="lbl"><b id="pcLbl">Готовы?</b><span id="pcNum"></span></div></div><p>Вдох 4 · задержка 4 · выдох 8 · задержка 4</p></div>`;
+    case 'breath':return `<div class="pacer" id="focusW"><div class="wrap"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(25,37,36,.4)" stroke-width="1.5" stroke-dasharray="3 6"/><circle id="pcC" cx="100" cy="100" r="40" fill="var(--ink)"/></svg><div class="lbl"><b id="pcLbl">Готовы?</b><span id="pcNum"></span></div></div><p>Вдох 4 · задержка 4 · выдох 8 · задержка 4</p></div>`;
     case 'intervals':return `<div class="phase" id="focusW"><div><b id="phLbl">Дышите</b><p class="note" style="color:var(--ink);margin-top:6px">30 работа · 15 отдых · 30 работа</p></div><span id="phNum">0:30</span></div>`;
     case 'twister':return `<div class="read" id="twText">${esc(TWISTERS[ex.tw])}</div><button class="ghost" data-act="tw">Другая скороговорка</button>`;
     case 'phrase':return `<div class="read" id="phText" style="text-align:center">${esc(PHRASES[ex.ph])}</div><ul class="listrows">${MOODS.map(m=>`<li><span>${m[0]}</span><span class="a">${m[1]}</span></li>`).join('')}</ul><button class="ghost" data-act="ph">Другая фраза</button>`;
