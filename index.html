@@ -898,7 +898,7 @@ function viewMeasure(){
 function viewFree(){
   if(!HAS_FORM)return `<p class="note">Свободный режим работает в приложении woisee.</p>`;
   return `<div class="free-ctl"><button class="go big ${gm.on?'alt':''}" data-act="freemic">${gm.on?'Стоп':'Слушать'}</button>
-  <p class="note free-txt">${gm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':'Можно звучать одной: нота соберёт точки в форму вашего голоса. А можно позвать кого-то рядом — несколько голосов сплетаются в общий узор, и видно, какая сила и красота у звучания вместе.'}</p></div>`;
+  <p class="note free-txt">${gm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':'Можно звучать одной, а можно позвать кого-то и увидеть силу и красоту нескольких голосов.'}</p></div>`;
 }
 function viewExhale(){
   const b=data.profile.bests||{},s=ms.sound,today=(data.days[dkey()]||{}).exhale||{},e=EX.exhale;
