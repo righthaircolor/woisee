@@ -174,7 +174,7 @@ p{margin:0}
 
 /* floating nav capsule */
 .nav{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:5;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));pointer-events:none}
-.nav nav{max-width:300px;margin:0 auto;background:var(--ink);border-radius:99px;padding:6px;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.nav nav{max-width:380px;margin:0 auto;background:var(--ink);border-radius:99px;padding:6px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.18)}
 .nav button{padding:13px 0;border-radius:99px;color:var(--paper-2);font-size:14px;font-weight:500;text-align:center}
 .nav button[aria-current="page"]{background:var(--paper-2);color:var(--ink)}
 
@@ -271,8 +271,8 @@ p{margin:0}
 .vf-over{position:absolute;left:max(18px,env(safe-area-inset-left,0px));bottom:6px;display:flex;align-items:baseline;gap:10px;pointer-events:none}
 .vf-over b{font-size:22px;font-weight:600;letter-spacing:-.02em}
 .vf-over span{font-size:40px;font-weight:300;line-height:1}
-.hero-grid{display:grid;grid-template-columns:1fr minmax(0,150px);gap:10px;align-items:end}
-.plate-sm{width:100%;aspect-ratio:1;max-width:100%;display:block;margin:-10px -10px -10px 0}
+.hero-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.plate-sm{--ph:calc(clamp(84px,26vw,112px) * .74);width:calc(var(--ph) * 1.5);height:calc(var(--ph) * 1.5);display:block;margin:calc(var(--ph) * -.25) calc(var(--ph) * -.2) calc(var(--ph) * -.25 + 1px) 0}
 .tlw{position:relative;height:40px;margin:2px -4px 0}
 .tlw canvas{width:100%;height:40px;display:block}
 .tlw .redpill{position:absolute;top:42px;left:0}
@@ -302,6 +302,16 @@ button.cal-d:active{transform:scale(.94)}
 .sheet .primary{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:99px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px}
 .ghost.wide{align-self:stretch;text-align:center;padding:14px}
 .icon-btn.plain{background:var(--paper-2);flex:none}
+/* tab Замер */
+.seg2{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:99px;padding:4px;gap:4px}
+.seg2 button{padding:11px 0;border-radius:99px;text-align:center;font-weight:600;font-size:15px}
+.seg2 button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.msr{background:var(--paper-2);border-radius:30px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.vf-stage.free{aspect-ratio:1/1;margin-top:-10px;margin-bottom:-10px}
+.free-ctl{display:flex;align-items:center;gap:16px}
+.free-ctl .note{flex:1;min-width:0}
+.go.big{width:96px;height:96px;font-size:16px;flex:none}
+.go.big.alt{background:var(--ink);color:var(--signal)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -310,6 +320,7 @@ button.cal-d:active{transform:scale(.94)}
 
 <div class="nav"><nav>
   <button data-act="tab" data-v="path" id="t-path">Сегодня</button>
+  <button data-act="tab" data-v="measure" id="t-measure">Замер</button>
   <button data-act="tab" data-v="library" id="t-library">Упражнения</button>
 </nav></div>
 
@@ -609,11 +620,11 @@ function dayEntries(k){
   return out;
 }
 function seedOf(k){return parseInt(k.replace(/-/g,''),10)%2147483647;}
-function drawDay(ctx,s,list,upto,seed,pal){
-  pal=pal||PAL.white;
+function drawDay(ctx,s,list,upto,seed,pal,opt){
+  pal=pal||PAL.white;opt=opt||{};
   ctx.clearRect(0,0,s,s);
   if(!list.length)return;
-  const R=s*.4,cx=s/2,cy=s/2,dot=Math.max(.9,s/380),dens=(s/600)*(s/600);
+  const R=s*(opt.r||.4),cx=s/2,cy=s/2,dot=opt.dot||Math.max(.9,s/380),dens=(s/600)*(s/600)*(opt.dot?Math.max(.35,1.6/opt.dot):1);
   const total=list.reduce((a,e)=>a+e.sec,0);let a0=-Math.PI/2;
   list.forEach((e,k)=>{
     const span=Math.PI*2*e.sec/total,done=e.done&&k<upto,r=Field.rng(seed*31+k*7+1);
@@ -664,7 +675,7 @@ function paintPlates(root){
   root=root||document;
   root.querySelectorAll('canvas[data-plate]').forEach(cv=>{
     const k=cv.dataset.plate,s=cv.clientWidth;if(!s)return;
-    const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'white']);
+    const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'white'],{dot:+cv.dataset.dot||0,r:+cv.dataset.r||0});
   });
   root.querySelectorAll('canvas[data-day]').forEach(cv=>drawDayCircle(cv,cv.dataset.day));
   root.querySelectorAll('canvas[data-exchart]').forEach(cv=>drawExDots(cv,cv.dataset.exchart,!!cv.dataset.mini));
@@ -767,6 +778,91 @@ function drawExDots(cv,s,mini){
 function openSheet(html){$('sheet').innerHTML=html;$('scrim').hidden=false;}
 function closeSheet(){$('scrim').hidden=true;$('sheet').innerHTML='';}
 
+/* ---------- tab «Замер»: long exhale measurements + free mode with the microphone ---------- */
+const ms={sound:'s',running:false,start:0,last:null,raf:0,rec:''};
+const fm={F:null,S:null,T:null,raf:0,t:0,last:0,on:false,err:false};
+
+function viewMeasure(){
+  const m=state.mtab||'exhale';
+  return topbar()+`
+  <div style="display:flex;flex-direction:column;gap:14px"><h1 class="big-title">Замер</h1>
+  <div class="seg2" role="tablist">
+    <button role="tab" data-act="mtab" data-v="exhale" aria-selected="${m==='exhale'}">Выдох</button>
+    <button role="tab" data-act="mtab" data-v="free" aria-selected="${m==='free'}">Свободно</button>
+  </div></div>
+  ${m==='exhale'?viewExhale():viewFree()}`;
+}
+function viewExhale(){
+  const b=data.profile.bests||{},s=ms.sound,today=(data.days[dkey()]||{}).exhale||{},e=EX.exhale;
+  return `<section class="msr">
+    <div class="snds">${Object.keys(SOUNDS).map(x=>`<button class="snd" data-act="msnd" data-v="${x}" aria-pressed="${x===s}"><b>${SOUNDS[x]}</b><span class="num">${b[x]?'рекорд '+Math.round(b[x]):'нет замера'}</span></button>`).join('')}</div>
+    <div class="sw-line"><div><div class="sw-num" id="msNum">${(ms.last||0).toFixed(1)}</div><span class="note">секунд на [${SOUNDS[s]}]${today[s]?' · сегодня лучший '+Math.round(today[s]):''}</span></div>
+      <button class="sw-btn ${ms.running?'run':''}" data-act="msw" id="msBtn">${ms.running?'Стоп':ms.last!=null?'Ещё<br>попытка':'Старт<br>выдоха'}</button></div>
+    <p class="rec" id="msRec" ${ms.rec?'':'hidden'}>${esc(ms.rec)}</p>
+    <div id="msHist">${exhaleHist(s)}</div>
+  </section>
+  <section class="sec"><h4>Как замерять</h4><ol class="steps">${e.steps.map((x,i)=>`<li><span class="n num">${i+1}</span><span>${esc(x.replace('ниже ',''))}</span></li>`).join('')}</ol></section>
+  <div class="feelbox"><b>Цель</b>${esc(e.feel)}</div>`;
+}
+function recordExhale(sound,v){
+  const k=dkey(),d=getDay(k),prev=(data.profile.bests||{})[sound]||0;
+  if(!d.exhale[sound]||v>d.exhale[sound])d.exhale[sound]=v;
+  d.seconds=(d.seconds||0)+Math.round(v);saveDay(k);
+  if(v>prev){data.profile.bests=Object.assign({},data.profile.bests,{[sound]:v});saveProfile();}
+  return prev;
+}
+function msToggle(){
+  audioInit();
+  if(!ms.running){ms.running=true;ms.start=performance.now();ms.rec='';lockScreen();render();
+    const fr=()=>{if(!ms.running)return;const n=$('msNum');if(n)n.textContent=((performance.now()-ms.start)/1000).toFixed(1);ms.raf=requestAnimationFrame(fr);};ms.raf=requestAnimationFrame(fr);return;}
+  ms.running=false;cancelAnimationFrame(ms.raf);unlockScreen();
+  const v=Math.round((performance.now()-ms.start)/100)/10;ms.last=v;
+  if(v>=2){const prev=recordExhale(ms.sound,v);if(v>prev){ms.rec=prev?`Новый рекорд на [${SOUNDS[ms.sound]}]: ${v} сек`:`Первый замер на [${SOUNDS[ms.sound]}]: ${v} сек`;tone(880,.4,.15);}}
+  render();
+}
+function msStop(){if(ms.running){ms.running=false;cancelAnimationFrame(ms.raf);unlockScreen();}}
+
+function viewFree(){
+  if(!HAS_FORM)return `<p class="note">Свободный режим работает в приложении woisee.</p>`;
+  return `<div class="vf-stage free"><canvas id="freeCv" aria-label="Точки, которые собирает ваш голос"></canvas></div>
+  <div class="free-ctl"><button class="go big ${fm.on?'alt':''}" data-act="freemic">${fm.on?'Стоп':'Слушать'}</button>
+  <p class="note">${fm.err?'Нет доступа к микрофону. Разрешите его в настройках телефона для Safari.':'Гудите, пойте, тяните гласные. Ровный звук собирает точки в узор, высота меняет узор, тишина рассыпает.'}</p></div>`;
+}
+function freeStart(){
+  cancelAnimationFrame(fm.raf);fm.raf=0;
+  if(!HAS_FORM||!$('freeCv'))return;
+  if(!fm.F)fm.F=Field.make(innerWidth<700?5000:7000,21);
+  if(!fm.S){fm.S=Field.state({e:.08,hold:0});fm.T=Field.state({e:.08,hold:0});}
+  fm.last=performance.now();fm.raf=requestAnimationFrame(freeFrame);
+}
+function freeFrame(now){
+  if(state.tab!=='measure'||state.mtab!=='free'||!$('freeCv')||ex.open){fm.raf=0;return;}
+  const dt=Math.min(.05,(now-fm.last)/1000);fm.last=now;fm.t+=dt;
+  if(fm.on&&vf.voice&&vf.voice.on){
+    vf.voice.update(dt);Field.fromVoice(vf.voice,fm.T);
+    if(vf.voice.f.calibrated&&!data.profile.ref){data.profile.ref=vf.voice.ref;saveProfile();}
+  }else{const c=fm.t%10,amp=c<4?c/4:1-(c-4)/6;Object.assign(fm.T,{n:2,stab:.8,amp,e:.12,hold:0,noise:0});}
+  Field.ease(fm.S,fm.T,dt);
+  const cv=$('freeCv'),d=Math.min(devicePixelRatio||1,2),w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==Math.round(w*d)||cv.height!==Math.round(h*d)){cv.width=Math.round(w*d);cv.height=Math.round(h*d);}
+  const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
+  Field.step(fm.F,fm.S,dt,fm.t);Field.draw(ctx,fm.F,w/2,h/2,Math.min(w,h)*.56,FC.ink,1.1);
+  fm.raf=requestAnimationFrame(freeFrame);
+}
+async function freeMic(){
+  if(fm.on){freeMicOff();render();return;}
+  try{
+    if(!vf.voice)vf.voice=new VoiceForm.Voice();
+    if(!vf.voice.on)await vf.voice.start();
+    if(data.profile.ref&&vf.voice.ref==null)vf.voice.ref=data.profile.ref;
+    fm.on=true;fm.err=false;lockScreen();
+    if(!data.profile.mic||data.profile.mic==='denied'){data.profile.mic='granted';saveProfile();}
+  }catch(e){fm.on=false;fm.err=true;}
+  render();
+}
+function freeMicOff(){if(fm.on){fm.on=false;if(vf.voice&&vf.voice.on){try{vf.voice.stop();}catch(e){}}unlockScreen();}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&fm.on){freeMicOff();if(state.tab==='measure')render();}});
+
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -850,10 +946,11 @@ function nextUndone(plan,done,after){
 /* ---------- views ---------- */
 const state={tab:'path',choosing:false,sound:'s'};
 function render(){
-  for(const t of ['path','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
-  $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():viewLibrary();
+  for(const t of ['path','measure','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
+  $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():state.tab==='measure'?viewMeasure():viewLibrary();
   paintPlates($('view'));
   if(HAS_FORM&&state.tab==='path')tlStart();
+  if(HAS_FORM&&state.tab==='measure'&&state.mtab==='free')freeStart();
 }
 function topbar(){
   const st=streak();
@@ -887,15 +984,11 @@ function viewPath(){
   return topbar()+`
   <section class="hero">
     <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><p class="kicker">${d.dur} минут<br>акцент: ${esc(f.name)}</p></div>
-    <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<canvas class="plate-sm" data-plate="${dkey()}" aria-label="Картинка дня"></canvas>`:''}</div>
+    <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<canvas class="plate-sm" data-plate="${dkey()}" data-dot="2.4" data-r=".27" aria-label="Картинка дня"></canvas>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
     <div class="tl-foot"><span class="note num">≈ ${Math.round(sumD(plan)/60)} мин упражнений</span><button class="lnk" data-act="choose">Изменить время</button></div>
   </section>
   ${!cur?`<section class="donecard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
-  <button class="measure" data-act="single" data-v="exhale">
-    <div class="m-top"><div><span class="idx">Замер</span><h3>Долгий выдох</h3><p class="sub">${te.s?'Сегодня на [С]: '+Math.round(te.s)+' с':'Сегодня ещё не замеряли'} · С · Ш · З · Ж</p></div><div class="m-rec"><b class="num">${bs?Math.round(bs):'—'}</b><span>рекорд [С], сек</span></div></div>
-    ${HAS_FORM&&bs?'<canvas class="m-chart" data-exchart="s" data-mini="1" aria-hidden="true"></canvas>':''}
-  </button>
   <section class="stack">${stack}</section>
   <p class="note">Ни одно упражнение не должно вызывать боль. Лёгкое растяжение — нормально, резкая боль — сигнал остановиться.</p>`;
 }
@@ -937,7 +1030,6 @@ function viewProgress(){
 }
 function viewLibrary(){
   let h=topbar()+`<h1 class="big-title">Упражнения</h1><p class="note">Все упражнения из руководства. Откройте любое, чтобы прочитать и сделать отдельно.</p><div class="lib">`;
-  h+=`<h3 class="b-measure"><i></i>Замер</h3><button class="item" data-act="single" data-v="exhale"><span>${esc(EX.exhale.t)}</span><span class="d num">${(data.profile.bests||{}).s?'рекорд '+Math.round(data.profile.bests.s)+' с':'нет замера'}</span></button>`;
   for(const b of ['body','breath','phon','artic','stage']){
     const ids=Object.keys(EX).filter(id=>EX[id].b===b&&id!=='exhale');
     h+=`<h3 class="b-${b}"><i></i>${esc(BNAME[b])}</h3>${ids.map(id=>`<button class="item" data-act="single" data-v="${id}"><span>${esc(EX[id].t)}</span><span class="d num">${id==='exhale'&&(data.profile.bests||{}).s?'рекорд '+Math.round(data.profile.bests.s)+' с · ':''}${fmt(EX[id].d)}</span></button>`).join('')}`;
@@ -1166,7 +1258,11 @@ document.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-act]');if(!b)return;
   const a=b.dataset.act,v=b.dataset.v;
   switch(a){
-    case 'tab':state.tab=v;state.choosing=false;render();window.scrollTo(0,0);break;
+    case 'tab':if(v!=='measure'){freeMicOff();msStop();}state.tab=v;state.choosing=false;render();window.scrollTo(0,0);break;
+    case 'mtab':if(v!=='free')freeMicOff();msStop();state.mtab=v;render();break;
+    case 'msnd':if(!ms.running){ms.sound=v;ms.last=null;ms.rec='';render();}break;
+    case 'msw':msToggle();break;
+    case 'freemic':freeMic();break;
     case 'streak':state.from=state.tab==='progress'?state.from:state.tab;state.tab='progress';state.choosing=false;render();window.scrollTo(0,0);break;
     case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k);d.dur=+v;d.focus=f.id;d.plan=buildPlan(+v,f);saveDay(k);state.choosing=false;render();window.scrollTo(0,0);break;}
     case 'choose':state.choosing=true;render();window.scrollTo(0,0);break;
