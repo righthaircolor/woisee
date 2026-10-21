@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" content="#121A19">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="woisee">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="Ежедневные занятия голосом на 15–30 минут">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -35,12 +35,12 @@ button,.item,.row{touch-action:manipulation;-webkit-user-select:none;user-select
 /* Layout: Swiss-style single column on warm grey paper. Huge numerals as heroes, hairline rules, a stack of colored block cards, a floating black capsule for nav and for the timer.
    Deliberately one light visual world, like the references. */
 :root{
-  /* palette: Vanilla/white, Raspberry, Lemon Lime, Kale, Ebony + signal red */
-  --paper:#FFFFFF; --paper-2:#F3F5F2; --ink:#192524; --muted:#5D6A67; --rule:rgba(25,37,36,.14); --soft:#E1E6E0;
-  --signal:#F0472C; --lime:#ECF176; --deep:#2D4540;
+  /* palette, dark by default: Ebony ground, Vanilla text; Raspberry, Lemon Lime, Kale, Vanilla blocks; signal red */
+  --paper:#121A19; --paper-2:#1D2826; --ink:#F4F2EC; --muted:#9AA7A3; --rule:rgba(255,254,252,.14); --soft:#2C3836;
+  --signal:#F0472C; --lime:#ECF176; --deep:#DCDFD8;
   --rasp:#E780C0; --kale:#5EA879; --ebony:#192524; --vanilla:#FFFEFC;
   --f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
-  color-scheme:light;
+  color-scheme:dark;
 }
 html,body{height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent;letter-spacing:-.005em}
@@ -50,9 +50,9 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-r
 h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:800;letter-spacing:-.03em}
 p{margin:0}
 .num{font-variant-numeric:tabular-nums}
-.b-body,.b-breath,.b-phon,.b-stage{--cf:var(--ink);--cl:rgba(25,37,36,.2);--cbox:rgba(255,255,255,.55);--ca:var(--ink)}
+.b-body,.b-breath,.b-phon,.b-stage,.b-artic{--cf:var(--ebony);--cl:rgba(25,37,36,.2);--cbox:rgba(255,255,255,.55);--ca:var(--ebony)}
 .b-body{--c:var(--rasp);--cai:var(--rasp)} .b-breath{--c:var(--lime);--cai:var(--lime)} .b-phon{--c:var(--kale);--cai:var(--kale);--cbox:rgba(255,255,255,.4)} .b-stage{--c:#D6DCD5;--cai:#D6DCD5}
-.b-artic{--c:var(--ebony);--cf:var(--vanilla);--cl:rgba(255,254,252,.18);--cbox:rgba(255,254,252,.12);--ca:var(--lime);--cai:var(--ebony)}
+.b-artic{--c:var(--vanilla);--cai:var(--vanilla);--cbox:rgba(25,37,36,.07)}
 
 .app{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:18px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -312,6 +312,14 @@ button.cal-d:active{transform:scale(.94)}
 .free-ctl .note{flex:1;min-width:0}
 .go.big{width:96px;height:96px;font-size:16px;flex:none}
 .go.big.alt{background:var(--ink);color:var(--signal)}
+/* dark theme: on coloured and lime surfaces the text and lines turn dark */
+.blk,.ex-head,.feelbox,.warnbox,.donecard,.ex.win,.cap.fin,.menu .item:active{--ink:var(--ebony);--muted:rgba(25,37,36,.68);--rule:rgba(25,37,36,.16);--paper-2:#FFFEFC;color:var(--ink)}
+.cap{--paper-2:var(--ebony)}
+.cap .chip{border-color:rgba(25,37,36,.25)}
+.redpill{color:#FFFEFC}
+.scrim{background:rgba(0,0,0,.6)}
+.sheet{background:var(--paper-2)}
+.sheet .ghost,.sheet .hist li{border-color:var(--rule)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -496,10 +504,11 @@ const SOUNDS={s:'С',sh:'Ш',z:'З',zh:'Ж'};
 
 /* ---------- voice form: the cloud that the voice organises (see "woisee: голос собирает форму") ---------- */
 const HAS_FORM=typeof window.Field!=='undefined'&&typeof window.VoiceForm!=='undefined';
-const FC={ink:'#192524',vanilla:'#FFFEFC',rasp:'#E780C0',lime:'#ECF176',kale:'#5EA879',ebony:'#192524',signal:'#F0472C',soft:'#C9CEC8'};
+const FC={dot:'#F4F2EC',ground:'#121A19',ink:'#192524',vanilla:'#FFFEFC',rasp:'#E780C0',lime:'#ECF176',kale:'#5EA879',ebony:'#192524',signal:'#F0472C',soft:'#C9CEC8'};
 /* plate colours per background: dots only, never a filled plate */
 const PAL={
   white:{body:'#E780C0',breath:'#C2C73A',phon:'#5EA879',artic:'#192524',pale:'#B8BEB7'},
+  dark:{body:'#E780C0',breath:'#ECF176',phon:'#5EA879',artic:'#FFFEFC',pale:'#4A5754'},
   lime:{body:'#D9539F',breath:'#7C8120',phon:'#3F8A5B',artic:'#192524',pale:'#B7BC52'}
 };
 const REDUCED=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -578,7 +587,7 @@ function formFrame(now){
   const cv=$('vfCv'),d=Math.min(devicePixelRatio||1,2),w=cv.clientWidth,h=cv.clientHeight;
   if(cv.width!==Math.round(w*d)||cv.height!==Math.round(h*d)){cv.width=Math.round(w*d);cv.height=Math.round(h*d);}
   const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
-  Field.step(vf.F,vf.S,dt,vf.t);Field.draw(ctx,vf.F,w/2,h/2,Math.min(w,h)*.56,FC.ink,1.05);
+  Field.step(vf.F,vf.S,dt,vf.t);Field.draw(ctx,vf.F,w/2,h/2,Math.min(w,h)*.56,FC.dot,1.05);
   vf.raf=requestAnimationFrame(formFrame);
 }
 /* features for the picture of the day: long steady notes, attacks, noise and pauses. No audio is kept. */
@@ -621,7 +630,7 @@ function dayEntries(k){
 }
 function seedOf(k){return parseInt(k.replace(/-/g,''),10)%2147483647;}
 function drawDay(ctx,s,list,upto,seed,pal,opt){
-  pal=pal||PAL.white;opt=opt||{};
+  pal=pal||PAL.dark;opt=opt||{};
   ctx.clearRect(0,0,s,s);
   if(!list.length)return;
   const R=s*(opt.r||.4),cx=s/2,cy=s/2,dot=opt.dot||Math.max(.9,s/380),dens=(s/600)*(s/600)*(opt.dot?Math.max(.35,1.6/opt.dot):1);
@@ -656,9 +665,9 @@ function drawDayCircle(cv,k){
   const ctx=fitCv(cv,s),r=s/2-1.5,c=s/2,today=dkey(),d=data.days[k],has=ok(k)||(d&&(d.log||[]).length);
   ctx.clearRect(0,0,s,s);
   ctx.beginPath();ctx.arc(c,c,r,0,Math.PI*2);
-  if(k>today){ctx.strokeStyle=FC.soft;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);return;}
-  if(!has){ctx.fillStyle='#E4E8E3';ctx.fill();return;}
-  ctx.fillStyle=FC.ebony;ctx.fill();
+  if(k>today){ctx.strokeStyle='#3A4744';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);return;}
+  if(!has){ctx.fillStyle='#1E2927';ctx.fill();return;}
+  ctx.fillStyle='#34423F';ctx.fill();
   const rng=Field.rng(seedOf(k)),mins=(d.seconds||0)/60,voiced=(d.log||[]).reduce((a,x)=>a+(x.notes||[]).length,0);
   const n=Math.round(Math.min(220,40+mins*7+voiced*6)),ox=c-r*.22,oy=c+r*.2,sig=r*(.26+Math.min(.18,voiced*.01));
   ctx.fillStyle=FC.vanilla;
@@ -674,7 +683,7 @@ function paintPlates(root){
   root=root||document;
   root.querySelectorAll('canvas[data-plate]').forEach(cv=>{
     const k=cv.dataset.plate,s=cv.clientWidth;if(!s)return;
-    const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'white'],{dot:+cv.dataset.dot||0,r:+cv.dataset.r||0});
+    const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'dark'],{dot:+cv.dataset.dot||0,r:+cv.dataset.r||0});
   });
   root.querySelectorAll('canvas[data-day]').forEach(cv=>drawDayCircle(cv,cv.dataset.day));
   root.querySelectorAll('canvas[data-exchart]').forEach(cv=>drawExDots(cv,cv.dataset.exchart,!!cv.dataset.mini));
@@ -690,10 +699,10 @@ function revealPlate(cv,k,pal){
 }
 async function sharePlate(k){
   const cv=document.createElement('canvas'),S=1080,ctx=fitCv(cv,S);
-  ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,S,S);
-  const tmp=document.createElement('canvas'),tctx=fitCv(tmp,S);const e=dayEntries(k);drawDay(tctx,S,e,e.length,seedOf(k),PAL.white);
+  ctx.fillStyle=FC.ground;ctx.fillRect(0,0,S,S);
+  const tmp=document.createElement('canvas'),tctx=fitCv(tmp,S);const e=dayEntries(k);drawDay(tctx,S,e,e.length,seedOf(k),PAL.dark);
   ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tmp,0,0);
-  ctx.fillStyle=FC.ink;ctx.font='800 '+Math.round(cv.width*.045)+'px "Inter Tight", sans-serif';ctx.fillText('woisee',cv.width*.06,cv.height*.94);
+  ctx.fillStyle=FC.dot;ctx.font='800 '+Math.round(cv.width*.045)+'px "Inter Tight", sans-serif';ctx.fillText('woisee',cv.width*.06,cv.height*.94);
   ctx.font='400 '+Math.round(cv.width*.03)+'px "Inter Tight", sans-serif';ctx.textAlign='right';ctx.fillText(dateLong(parseKey(k)),cv.width*.94,cv.height*.94);
   const blob=await new Promise(r=>cv.toBlob(r,'image/png'));if(!blob)return;
   const file=new File([blob],'woisee-'+k+'.png',{type:'image/png'});
@@ -715,7 +724,7 @@ function openDay(k){
       ${exs?`<li><span>Долгий выдох</span><span class="m num">${exs}</span></li>`:''}
       ${feel?`<li><span>Голос после</span><span class="m">${feel}</span></li>`:''}
     </ul>
-    <p class="note">Розовые точки — тело, жёлтые — дыхание, зелёные узоры — фонация, тёмное кружево — артикуляция. По часовой стрелке от 12, в порядке занятий.</p>
+    <p class="note">Розовые точки — тело, жёлтые — дыхание, зелёные узоры — фонация, белое кружево — артикуляция. По часовой стрелке от 12, в порядке занятий.</p>
     ${HAS_FORM&&list.some(x=>x.done)?`<button class="ghost wide" data-act="shareplate" data-v="${k}">Сохранить картинку</button>`:''}`);
   paintPlates($('sheet'));
 }
@@ -746,7 +755,7 @@ function tlStart(){
     for(const q of tl.P){
       const A=q.st===1?4.2:q.st===2?.9:1.6,tt=still?0:t;
       const px=q.hx+Math.sin(tt*q.sp+q.p1)*A+(q.st===1?Math.sin(tt*.7+q.p2)*2.5:0),py=q.hy+Math.cos(tt*q.sp*1.3+q.p2)*A;
-      ctx.fillStyle=q.st===2?FC.ink:q.st===1?FC.signal:FC.soft;ctx.globalAlpha=q.st===0?.9:.85;
+      ctx.fillStyle=q.st===2?FC.dot:q.st===1?FC.signal:'#3A4744';ctx.globalAlpha=q.st===0?.9:.85;
       ctx.fillRect(px-q.z/2,py-q.z/2,q.z,q.z);
     }
     ctx.globalAlpha=1;
@@ -761,16 +770,16 @@ function drawExDots(cv,s,mini){
   const W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
   const ctx=fitCv(cv,W,H),pts=exPoints(s);ctx.clearRect(0,0,W,H);
   const step=mini?4:2,B=mini?3:18,T=mini?3:6,max=Math.max(44,Math.ceil(Math.max(0,...pts.map(p=>p.v))/4)*4+4),y=v=>T+(H-T-B)*(1-v/max);
-  ctx.strokeStyle='rgba(25,37,36,.25)';ctx.setLineDash([2,4]);ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(255,254,252,.25)';ctx.setLineDash([2,4]);ctx.lineWidth=1;
   [30,40].forEach(v=>{ctx.beginPath();ctx.moveTo(0,y(v));ctx.lineTo(W,y(v));ctx.stroke();});ctx.setLineDash([]);
-  if(!mini){ctx.fillStyle='#5D6A67';ctx.font='10px "Inter Tight", sans-serif';ctx.textAlign='right';ctx.fillText('цель 30–40 с',W-2,y(40)-4);}
+  if(!mini){ctx.fillStyle='#9AA7A3';ctx.font='10px "Inter Tight", sans-serif';ctx.textAlign='right';ctx.fillText('цель 30–40 с',W-2,y(40)-4);}
   const cols=Math.max(pts.length,mini?8:7),slot=W/cols,dz=Math.max(3,Math.min(slot*.42,(H-T-B)/(max/step)*.82));
   pts.forEach((p,i)=>{
     const cx=slot*(i+.5),last=i===pts.length-1,k=Math.round(p.v/step);
-    ctx.fillStyle=last?FC.signal:FC.ink;
+    ctx.fillStyle=last?FC.signal:FC.dot;
     for(let j=0;j<k;j++){const vy=y((j+.5)*step);ctx.beginPath();ctx.arc(cx,vy,dz/2,0,Math.PI*2);ctx.fill();}
-    if(!mini){const dd=parseKey(p.k);ctx.fillStyle='#5D6A67';ctx.textAlign='center';ctx.font='10px "Inter Tight", sans-serif';ctx.fillText(dd.getDate()+'.'+pad(dd.getMonth()+1),cx,H-4);
-      ctx.fillStyle=FC.ink;ctx.font='600 11px "Inter Tight", sans-serif';ctx.fillText(Math.round(p.v),cx,y(p.v)-dz);}
+    if(!mini){const dd=parseKey(p.k);ctx.fillStyle='#9AA7A3';ctx.textAlign='center';ctx.font='10px "Inter Tight", sans-serif';ctx.fillText(dd.getDate()+'.'+pad(dd.getMonth()+1),cx,H-4);
+      ctx.fillStyle=FC.dot;ctx.font='600 11px "Inter Tight", sans-serif';ctx.fillText(Math.round(p.v),cx,y(p.v)-dz);}
   });
 }
 
@@ -845,7 +854,7 @@ function freeFrame(now){
   const cv=$('freeCv'),d=Math.min(devicePixelRatio||1,2),w=cv.clientWidth,h=cv.clientHeight;
   if(cv.width!==Math.round(w*d)||cv.height!==Math.round(h*d)){cv.width=Math.round(w*d);cv.height=Math.round(h*d);}
   const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,w,h);
-  Field.step(fm.F,fm.S,dt,fm.t);Field.draw(ctx,fm.F,w/2,h/2,Math.min(w,h)*.56,FC.ink,1.1);
+  Field.step(fm.F,fm.S,dt,fm.t);Field.draw(ctx,fm.F,w/2,h/2,Math.min(w,h)*.56,FC.dot,1.1);
   fm.raf=requestAnimationFrame(freeFrame);
 }
 async function freeMic(){
