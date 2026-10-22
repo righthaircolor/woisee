@@ -89,10 +89,11 @@ p{margin:0}
 .count{display:block;white-space:nowrap}
 .count b{font-weight:300;font-size:clamp(84px,26vw,112px);line-height:.8;letter-spacing:-.06em;margin-right:10px}
 .count span{display:inline-block;vertical-align:baseline;white-space:normal;font-size:15px;line-height:1.2}
-.hero-grid{margin-top:28px}
+.hero-grid{margin-top:57px}
 .hero-row:has(.hero-dur){align-items:flex-start}
 .hero-dur{line-height:1;padding-top:2.4px}
-.plate-sm{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.plate-hit{position:relative;display:block;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.plate-hit::after{content:"";position:absolute;inset:-22px -18px -10px -36px}
 .tl{display:flex;gap:3px;height:22px;margin-top:4px}
 .tl .s{position:relative;background:var(--soft);min-width:4px}
 .tl .s.dn{background:var(--ink)}
@@ -278,7 +279,7 @@ p{margin:0}
 .vf-over span{font-size:40px;font-weight:300;line-height:1}
 .hero-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
 .plate-sm{--ph:calc(clamp(84px,26vw,112px) * .74);width:calc(var(--ph) * 1.5);height:calc(var(--ph) * 1.5);display:block;margin:calc(var(--ph) * -.25) calc(var(--ph) * -.2) calc(var(--ph) * -.25 + 1px) 0}
-.tlw{position:relative;height:40px;margin:2px -4px 66px}
+.tlw{position:relative;height:40px;margin:2px -4px 37px}
 .tlw canvas{width:100%;height:40px;display:block}
 .tlw .redpill{position:absolute;top:42px;left:0}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
@@ -1372,7 +1373,7 @@ function viewPath(){
   return topbar()+`
   <section class="hero">
     <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><p class="kicker hero-dur">${d.dur} минут</p></div>
-    <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<canvas class="plate-sm" data-liveday="${dkey()}" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"></canvas>`:''}</div>
+    <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<span class="plate-hit" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"><canvas class="plate-sm" data-liveday="${dkey()}" aria-hidden="true"></canvas></span>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
   </section>
   ${!cur?`<section class="donecard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
