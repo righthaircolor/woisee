@@ -336,6 +336,14 @@ button.cal-d:active{transform:scale(.94)}
 .gif-ico.wait{opacity:.35;pointer-events:none}
 .gif-ico.ready{background:var(--signal);border-color:var(--signal);color:#fff}
 .sheet .day-stage{margin-left:calc(-1 * max(18px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(18px,env(safe-area-inset-right,0px)))}
+/* account */
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border-radius:99px;background:#FFFFFF;color:#1F1F1F;font-weight:600;font-size:16px;border:1px solid rgba(25,37,36,.16)}
+.gbtn svg{width:20px;height:20px}
+.pr-acct{display:flex;flex-direction:column;gap:12px}
+.pr-acct .ghost{align-self:center}
+.nudge{display:flex;flex-direction:column;gap:10px;border:1px solid var(--ink);border-radius:26px;padding:18px}
+.nudge b{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.nudge p{margin:0;font-size:15px}
 /* profile */
 .pr-top{height:36px}
 .pr-gear{width:44px;height:44px;display:grid;place-items:center;margin:-4px -11px -4px 0;background:none;color:var(--ink)}
@@ -449,7 +457,7 @@ button.cal-d:active{transform:scale(.94)}
 <section class="ex" id="ex" hidden></section>
 <div class="tbar" id="tbar" hidden></div>
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
-<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script>
+<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script><script src="supabase.js"></script>
 <script>
 /* ---------- blocks and exercises (from the guide) ---------- */
 const BLOCKS=[
@@ -1576,6 +1584,101 @@ function viewProfile(){
 document.addEventListener('change',ev=>{if(ev.target&&ev.target.id==='prNameIn'){data.profile.name=ev.target.value.trim().slice(0,40);saveProfile();}});
 window.addEventListener('resize',()=>{if(state.tab==='profile')profLayout();});
 
+/* ---------- account: sign in with Google (Supabase), progress synced to one row per person ----------
+   Everything still lives on the phone first. After sign-in the local copy and the saved copy are merged
+   (nothing done on either side is lost), then every change is sent a few seconds later. */
+const SB_URL='https://oluhdvdquxqhayefkgnd.supabase.co',SB_KEY='sb_publishable_gy0OZBpam9Trzd-c--A9ag_n2w04P7J';
+const acct={sb:null,user:null,ready:false,timer:0,busy:false,err:''};
+function acctInit(){
+  if(!window.supabase||!window.supabase.createClient)return;
+  try{
+    acct.sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  }catch(e){acct.sb=null;return;}
+  acct.sb.auth.onAuthStateChange((ev,session)=>{
+    const was=acct.user&&acct.user.id,u=session?session.user:null;
+    acct.user=u;acct.ready=true;
+    if(u&&u.id!==was)setTimeout(acctPull,0);
+    if(!u&&was)render();
+  });
+  acct.sb.auth.getSession().then(({data:s})=>{acct.ready=true;acct.user=s&&s.session?s.session.user:null;if(acct.user)acctPull();else rerenderAcct();}).catch(()=>{acct.ready=true;});
+}
+function rerenderAcct(){if(!ex.open&&['settings','profile','path'].includes(state.tab))render();}
+async function acctSignIn(){
+  if(!acct.sb){acct.err='Вход недоступен: нет связи с сервером.';rerenderAcct();return;}
+  acct.err='';
+  const back=location.origin+location.pathname;
+  try{const {error}=await acct.sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:back,queryParams:{prompt:'select_account'}}});if(error)throw error;}
+  catch(e){acct.err='Не получилось открыть вход через Google. Попробуйте ещё раз.';rerenderAcct();}
+}
+async function acctSignOut(){
+  if(!acct.sb)return;
+  await acctPush();
+  try{await acct.sb.auth.signOut();}catch(e){}
+  acct.user=null;render();
+}
+/* merge: a day keeps whichever copy has more practice, and the done lists are joined; records keep the best */
+function mergeData(L,R){
+  const out={days:Object.assign({},R.days||{}),profile:Object.assign({},R.profile||{},L.profile||{})};
+  for(const k in (L.days||{})){
+    const a=L.days[k],b=out.days[k];
+    if(!b){out.days[k]=a;continue;}
+    const main=(a.seconds||0)>=(b.seconds||0)?a:b,other=main===a?b:a,m=Object.assign({},other,main);
+    m.done=[...new Set([...(main.done||[]),...(other.done||[])])];
+    if((other.log||[]).length>(main.log||[]).length)m.log=other.log;
+    if(other.exhale||main.exhale){m.exhale=Object.assign({},other.exhale||{});for(const s in (main.exhale||{}))m.exhale[s]=Math.max(m.exhale[s]||0,main.exhale[s]);}
+    out.days[k]=m;
+  }
+  const bl=(L.profile||{}).bests||{},br=(R.profile||{}).bests||{},bests=Object.assign({},br);
+  for(const s in bl)bests[s]=Math.max(bests[s]||0,bl[s]);
+  out.profile.bests=bests;
+  for(const key of ['name','ref']){const lv=(L.profile||{})[key],rv=(R.profile||{})[key];out.profile[key]=lv!=null&&lv!==''?lv:rv;}
+  return out;
+}
+async function acctPull(){
+  if(!acct.sb||!acct.user||acct.busy)return;
+  acct.busy=true;
+  try{
+    const {data:row,error}=await acct.sb.from('progress').select('data').eq('user_id',acct.user.id).maybeSingle();
+    if(error)throw error;
+    const merged=row&&row.data&&row.data.days?mergeData(data,row.data):data;
+    if(ex.open){const k=dkey();if(data.days[k])merged.days[k]=data.days[k];}
+    data.days=merged.days;data.profile=Object.assign({},data.profile,merged.profile);
+    if(!data.profile.name){const md=acct.user.user_metadata||{},n=(md.given_name||md.full_name||md.name||'').trim().split(/\s+/)[0];if(n)data.profile.name=n;}
+    saveLocal(true);acct.err='';
+    await acctPush();
+  }catch(e){acct.err='Прогресс пока не сохранился в аккаунте. Он есть на телефоне, попробуем ещё раз позже.';}
+  acct.busy=false;rerenderAcct();
+}
+async function acctPush(){
+  clearTimeout(acct.timer);acct.timer=0;
+  if(!acct.sb||!acct.user)return;
+  try{const {error}=await acct.sb.from('progress').upsert({user_id:acct.user.id,data:{days:data.days,profile:data.profile},updated_at:new Date().toISOString()});if(error)throw error;acct.err='';}
+  catch(e){acct.err='Прогресс пока не сохранился в аккаунте. Он есть на телефоне, попробуем ещё раз позже.';}
+}
+/* every local save schedules one upload a few seconds later */
+function acctDirty(){if(acct.user&&!acct.busy){clearTimeout(acct.timer);acct.timer=setTimeout(acctPush,4000);}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&acct.timer)acctPush();});
+
+/* the block in Settings, and the reminder after the first day */
+function acctBlock(){
+  if(!acct.sb)return '';
+  if(acct.user){
+    const md=acct.user.user_metadata||{},mail=acct.user.email||md.email||'';
+    return `<section class="pr-acct"><div class="pr-h"><h2>Аккаунт</h2></div>
+      <div class="pr-line"><span>${esc(mail)}<small>Прогресс сохраняется в аккаунте и восстановится на любом устройстве.</small></span><button class="ghost" data-act="signout">Выйти</button></div>
+      ${acct.err?`<p class="note">${esc(acct.err)}</p>`:''}</section>`;
+  }
+  return `<section class="pr-acct"><div class="pr-h"><h2>Аккаунт</h2></div>
+    <p class="note">Войдите, чтобы прогресс не потерялся и восстановился на другом телефоне. Всё, что уже сделано, перенесётся в аккаунт.</p>
+    <button class="gbtn" data-act="signin">${ICON_G}Войти через Google</button>
+    ${acct.err?`<p class="note">${esc(acct.err)}</p>`:''}</section>`;
+}
+function acctNudge(){
+  if(!acct.sb||!acct.ready||acct.user)return '';
+  return `<div class="nudge"><b>Сохраните прогресс</b><p>Войдите через Google — и ваши дни, рекорды и нота не потеряются, даже если сменить телефон.</p><button class="gbtn" data-act="signin">${ICON_G}Войти через Google</button></div>`;
+}
+const ICON_G='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>';
+
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -1601,7 +1704,7 @@ const weekday=d=>{const w=d.toLocaleDateString('ru-RU',{weekday:'long'});return 
 const LS='svobodny-golos-v1';
 let data={days:{},profile:{sound:true,bests:{}}};
 function loadLocal(){try{const raw=localStorage.getItem(LS);if(raw){const d=JSON.parse(raw);if(d&&d.days){data.days=d.days;data.profile=Object.assign({},data.profile,d.profile||{});}}}catch(e){}}
-function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(data));}catch(e){}}
+function saveLocal(fromAcct){try{localStorage.setItem(LS,JSON.stringify(data));}catch(e){}if(!fromAcct&&typeof acctDirty==='function')acctDirty();}
 let db=null,uid=null,cloud=false;
 const queues={};
 function writeDoc(name,obj){
@@ -1717,7 +1820,7 @@ function viewPath(){
     <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<span class="plate-hit" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"><canvas class="plate-sm" data-liveday="${dkey()}" aria-hidden="true"></canvas></span>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
   </section>
-  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
+  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}${typeof acctNudge==='function'?acctNudge():''}</section>`:''}
   <section class="stack">${stack}</section>${HAS_FORM?'<canvas id="pathCv" aria-hidden="true"></canvas>':''}</div>`;
 }
 const FEEL_NOTE={easy:'Отлично. Завтра можно взять 20 или 30 минут.',ok:'Хороший рабочий темп. Главное — регулярность.',tired:'Дайте голосу отдохнуть: меньше говорить громко, пить тёплую воду. Завтра хватит 15 минут, особенно гудения и соломинки.'};
@@ -1734,6 +1837,7 @@ function viewSettings(){
     ${HAS_FORM?`<div class="pr-line"><span>Микрофон в упражнениях<small>Голос собирает форму. Звук не записывается.</small></span>${sw('mic',data.profile.micOff!==true,'Микрофон в упражнениях')}</div>
     <div class="pr-line"><span>Радуга нот<small>Цвет точек — нота. Выключено — один цвет.</small></span>${sw('rain',data.profile.rain!==false,'Радуга нот')}</div>`:''}
   </section>
+  ${typeof acctBlock==='function'?acctBlock():''}
   <section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>Резервная копия</h3></div>
     <p class="note">Прогресс хранится на этом телефоне. Раз в месяц сохраняйте копию в «Файлы» — с ней можно восстановить всё на новом телефоне.</p>
     <div class="backup"><button class="ghost" data-act="export">Сохранить копию</button><button class="ghost" data-act="import">Загрузить копию</button></div>
@@ -1942,6 +2046,7 @@ function showDayDone(){
     ${st?`<p style="font-size:18px">${st} ${plural(st,'день','дня','дней')} подряд. Все четыре блока пройдены.</p>`:''}
     ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня. Её рисуют только ваши занятия: каждый сектор — упражнение, по часовой стрелке от 12.</p><button class="blackbtn" data-act="gifday" data-v="${k}">Сохранить гифку дня ${ICON_ARROW}</button>`:''}
     ${feelBlock(d.feel)}
+    ${typeof acctNudge==='function'?acctNudge():''}
     <button class="blackbtn" data-act="close">На главную ${ICON_ARROW}</button></div>`;
   $('ex').scrollTop=0;
   if(HAS_FORM){revealPlate($('winPlate'),k,PAL.lime);setTimeout(()=>dayGif(k).catch(()=>{}),2600);}
@@ -2004,6 +2109,8 @@ document.addEventListener('click',ev=>{
     case 'streak':state.from=['profile','settings'].includes(state.tab)?state.from:state.tab;state.tab='profile';state.choosing=false;render();window.scrollTo(0,0);break;
     case 'profile':state.tab='profile';render();window.scrollTo(0,0);break;
     case 'settings':state.tab='settings';render();window.scrollTo(0,0);break;
+    case 'signin':acctSignIn();break;
+    case 'signout':acctSignOut();break;
     case 'prnote':{const c=$('prNoteCard');if(c)c.scrollIntoView({behavior:REDUCED()?'auto':'smooth',block:'center'});break;}
     case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k),np=buildPlan(+v,f);
       (d.done||[]).forEach(id=>{if(!np.includes(id))np.push(id);});
@@ -2056,6 +2163,7 @@ document.addEventListener('click',ev=>{
 loadLocal();render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+if(typeof acctInit==='function')acctInit();
 </script>
 </body>
 </html>
