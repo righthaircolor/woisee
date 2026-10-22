@@ -569,7 +569,9 @@ const VLINK={
  duo:['duo_unison','duo_intervals','duo_chord']
 };
 function vlink(id){for(const k in VLINK)if(VLINK[k].includes(id))return k;return null;}
-function usesMic(id){return !!vlink(id);}
+function usesMic(id){return id!=='exhale';}
+/* exercises without voice: the form follows the room and the breath */
+function isAmbient(id){const k=vlink(id);return !k||k==='noise';}
 function isDuo(id){return vlink(id)==='duo';}
 const COMFORT_DEFAULT=55;
 function uOfMidi(midi){const ref=data.profile.ref||COMFORT_DEFAULT,refOct=Math.floor(ref/12)-1;return Math.max(0,Math.min(47,midi-12*refOct));}
@@ -596,14 +598,14 @@ function formClose(){cancelAnimationFrame(vf.raf);vf.raf=0;stopListening();}
 /* the one-time question about the microphone lives in a sheet, not in the exercise */
 function askMic(){
   openSheet(`<h3>Голос соберёт форму</h3>
-    <p>В голосовых и дыхательных упражнениях woisee слушает микрофон: нота собирает точки в форму, выдох раздувает облако, пауза рассыпает. Если звучат несколько голосов, их формы сплетаются в общий узор.</p>
+    <p>Во всех упражнениях woisee слушает микрофон: нота собирает точки в форму, выдох раздувает облако, пауза рассыпает. Там, где голоса нет, точки следуют за дыханием и звуками вокруг. Если звучат несколько голосов, их формы сплетаются в общий узор.</p>
     <p class="note">Звук не записывается и не покидает телефон. Сохраняются только признаки голоса для картинки дня и карты голоса. Выключить можно в настройках на странице прогресса.</p>
     <div class="sheet-acts"><button class="primary" data-act="micyes">Включить микрофон</button><button class="ghost wide" data-act="micno">Без микрофона</button></div>`);
 }
 async function startListening(){
   if(!usesMic(ex.id)||!micAllowed()||vf.listening)return;
   try{
-    const L=ensureLive();await L.start();
+    const L=ensureLive();await L.start();L.solo.opt.ambient=isAmbient(ex.id);L.solo.amb=null;L.solo.ambFloor=null;
     if(data.profile.ref&&L.voice.ref==null)L.voice.ref=data.profile.ref;
     vf.listening=true;vf.rec.mic=true;
     if(data.profile.mic!=='granted'){data.profile.mic='granted';saveProfile();}
@@ -611,6 +613,7 @@ async function startListening(){
 }
 function stopListening(){
   if(vf.live&&vf.live.on){collectMulti();vf.live.stop();}
+  if(vf.live)vf.live.solo.opt.ambient=false;
   vf.listening=false;closeSeg();
 }
 /* without a live voice: a breathing cloud, or a demo of the exercise's main link */

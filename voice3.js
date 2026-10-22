@@ -95,6 +95,18 @@
     T.amp = 0.15 + 0.85*Math.pow(voiced ? Math.min(1, f.level || 0) : lev, 0.6);
     T.stab = voiced ? f.stab : T.stab; T.e = silent ? 0.08 : 1; T.hold = voiced ? voice.hold : 0;
     if (!voiced && nz > .5 && !silent){ this.exh += dt; this.exhLast = this.exh; } else if (silent || voiced) this.exh = 0;
+    /* ambient: exercises without voice listen to the room and the breath — the cloud never goes still,
+       quiet room = slow fine haze, breath close to the phone = it swells and runs */
+    if (this.opt.ambient && !voiced){
+      /* own room floor: drops at once, rises 4 dB/s — so a steady room settles quickly and breath stands out */
+      if (f.db > -88){ if (this.ambFloor == null || f.db < this.ambFloor) this.ambFloor = f.db; else this.ambFloor = Math.min(f.db, this.ambFloor + 4*dt); }
+      const absA = clamp((f.db + 72)/36, 0, 1), rel = this.ambFloor == null ? 0 : clamp((f.db - this.ambFloor - 3)/20, 0, 1);
+      const a = clamp(.12 + .45*absA + .6*rel, 0, 1);
+      this.amb = this.amb == null ? a : this.amb + (a - this.amb)*Math.min(1, dt*(a > this.amb ? 6 : 1.5));
+      T.noise = Math.max(T.noise, .55 + .45*this.amb); T.vo = 0; T.hold = 0; T.stab = .25;
+      T.e = .28 + .72*this.amb; T.amp = .18 + .75*this.amb;
+      if (!act) T.cent = T.cent + (.3 - T.cent)*Math.min(1, dt*.5);
+    }
     if (voice.T.kick){ this.kick = voice.T.kick; this.front = 0; voice.T.kick = 0; }
     Object.assign(this.info, { voiced, midi, silent, noise: T.noise, cent: T.cent, stab: f.stab, level: f.level || 0, act });
     return this.info;
