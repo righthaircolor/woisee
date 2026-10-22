@@ -856,6 +856,7 @@ function paintPlates(root){
     const k=cv.dataset.plate,s=cv.clientWidth;if(!s)return;
     const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'dark'],{dot:+cv.dataset.dot||0,r:+cv.dataset.r||0});
   });
+  if(root.querySelector('canvas[data-daypic]'))paintDayPics(root);
   root.querySelectorAll('canvas[data-liveday]').forEach(cv=>miniDay(cv,cv.dataset.liveday));
   root.querySelectorAll('canvas[data-day]').forEach(cv=>drawDayCircle(cv,cv.dataset.day));
   root.querySelectorAll('canvas[data-exchart]').forEach(cv=>drawExDots(cv,cv.dataset.exchart,!!cv.dataset.mini));
@@ -897,7 +898,6 @@ function openDay(k){
       ${exs?`<li><span>Долгий выдох</span><span class="m num">${exs}</span></li>`:''}
       ${feel?`<li><span>Голос после</span><span class="m">${feel}</span></li>`:''}
     </ul>
-    <p class="note" id="dayLegend">Розовые точки — тело, жёлтые — дыхание, зелёные формы — ноты фонации, белые — артикуляция. По часовой стрелке от 12, в порядке занятий.</p>
 `);
   paintPlates($('sheet'));if(HAS_FORM)dayStage(k);
 }
@@ -1268,10 +1268,11 @@ function paintFrames(ctx,frames,mul,W,H,live){
   W=W||GIF_W;H=H||GIF_H;
   paintAt(ctx,frames,mul,W/2,H*(live?.5:.46),W*(live?.56:.5),1);
 }
-function paintAt(ctx,frames,mul,cx,cy,R,minZ){
+function paintAt(ctx,frames,mul,cx,cy,R,minZ,mono){
+  if(mono)ctx.fillStyle=mono;
   for(const f of frames){
     const xy=f.xy,sa=f.sa,ci=f.ci,n=ci.length;
-    for(let i=0;i<n;i++){const z=Math.max(minZ,sa[i*2]/4000*R);ctx.fillStyle=f.cols[ci[i]];ctx.globalAlpha=Math.min(1,sa[i*2+1]/255*mul);ctx.fillRect(cx+xy[i*2]/8000*R-z/2,cy+xy[i*2+1]/8000*R-z/2,z,z);}
+    for(let i=0;i<n;i++){const z=Math.max(minZ,sa[i*2]/4000*R);if(!mono)ctx.fillStyle=f.cols[ci[i]];ctx.globalAlpha=Math.min(1,sa[i*2+1]/255*mul);ctx.fillRect(cx+xy[i*2]/8000*R-z/2,cy+xy[i*2+1]/8000*R-z/2,z,z);}
   }
   ctx.globalAlpha=1;
 }
@@ -1279,13 +1280,44 @@ function paintAt(ctx,frames,mul,cx,cy,R,minZ){
 const pingpong=(i,n)=>{if(n<2)return 0;const p=i%(2*n-2);return p<n?p:2*n-2-p;};
 function dayLayers(clips,i){return clips.map(c=>c.frames[pingpong(i,c.frames.length)]);}
 const layerMul=n=>Math.min(1,1.8/Math.sqrt(Math.max(1,n)));
-/* a day without clips (before this version): the old picture of the day, swaying */
-function paintPlateFrame(ctx,k,ph,W,H){
+/* a day without clips (practised before clips were kept): rebuilt from what the day remembers —
+   every held note as its own form, every breathing or noisy exercise as its noise field, quiet ones as a faint haze —
+   all laid over each other at one centre. No sectors, no block colours. */
+function synthLayers(k){
+  const d=data.days[k];if(!d)return [];
+  const out=[];
+  (d.log||[]).forEach((L,i)=>{
+    const ns=(L.notes||[]).filter(n=>n.midi!=null).sort((a,b)=>(b.sec||0)-(a.sec||0)).slice(0,3);
+    if(ns.length)ns.forEach((n,q)=>out.push({t:'n',u:uOfMidi(n.midi),seed:i*13+q*5+1}));
+    else if((L.noiseSec||0)>2||L.noiseCentroid!=null||L.b==='breath')out.push({t:'z',cent:L.noiseCentroid!=null?L.noiseCentroid:.3,seed:i*13+3});
+    else out.push({t:'q',seed:i*13+7});
+  });
+  if(!out.length&&d.done)d.done.forEach((id,i)=>out.push(EX[id]&&EX[id].b==='breath'?{t:'z',cent:.3,seed:i*13+3}:{t:'q',seed:i*13+7}));
+  out.sort((a,b)=>(a.t==='n'?0:1)-(b.t==='n'?0:1));
+  return out.slice(0,16);
+}
+function paintSynth(ctx,k,cx,cy,R,rot,mono){
+  const L=synthLayers(k);if(!L.length)return;
+  const mul=Math.min(1,1.7/Math.sqrt(L.length)),N=Math.max(60,Math.min(900,Math.round(R*R*.03))),rain=data.profile.rain!==false,dot=Math.max(.8,R/170);
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot||0);ctx.translate(-cx,-cy);
+  L.forEach(l=>{
+    if(l.t==='n')Voice3.renderForm(ctx,cx,cy,R,l.u,N,l.seed,mono||(rain?Voice3.noteColor(l.u):FC.dot),mul,dot,0,data.profile.lace!==true);
+    else Voice3.renderNoise(ctx,cx,cy,R,l.t==='z'?l.cent:.15,Math.round(N*(l.t==='z'?1:.6)),l.seed,mono||FC.dot,mul*(l.t==='z'?.9:.45),dot);
+  });
+  ctx.restore();ctx.globalAlpha=1;
+}
+function paintPlateFrame(ctx,k,ph,W,H,live){
   W=W||GIF_W;H=H||GIF_H;
-  const S=W,e=dayEntries(k),tmp=paintPlateFrame.cv||(paintPlateFrame.cv=document.createElement('canvas'));
-  tmp.width=S;tmp.height=S;const t=tmp.getContext('2d');
-  drawDay(t,S,e,e.length,seedOf(k),PAL.dark,{dot:1.25*S/GIF_W,ph});
-  ctx.drawImage(tmp,0,H*.46-S/2);
+  paintSynth(ctx,k,W/2,H*(live?.5:.46),W*(live?.4:.38),.07*Math.sin(2*Math.PI*ph));
+}
+/* still pictures of days (the week in the profile): the first frame of the clips, or the rebuilt day */
+async function paintDayPics(root){
+  for(const cv of (root||document).querySelectorAll('canvas[data-daypic]')){
+    const k=cv.dataset.daypic,s=cv.clientWidth;if(!s)continue;
+    const clips=await dayClips(k),ctx=fitCv(cv,s);ctx.clearRect(0,0,s,s);
+    if(clips.length)paintAt(ctx,dayLayers(clips,0),layerMul(clips.length),s/2,s/2,s*.42,.6);
+    else paintSynth(ctx,k,s/2,s/2,s*.42,0);
+  }
 }
 function gifText(ctx,day){
   ctx.globalAlpha=1;ctx.fillStyle=FC.dot;ctx.textBaseline='alphabetic';
@@ -1322,14 +1354,14 @@ async function dayGif(k){
 async function dayStage(k){
   cancelAnimationFrame(mom.dayRaf);
   const cv=$('dayCv');if(!cv)return;
-  const clips=await dayClips(k),leg=$('dayLegend');if(leg)leg.hidden=!!clips.length;
+  const clips=await dayClips(k);
   const mul=layerMul(clips.length),t0=performance.now();
   const frame=now=>{
     const c=$('dayCv');if(!c){mom.dayRaf=0;return;}
     const {ctx,w,h}=fitLive(c),i=Math.floor((now-t0)/1000*GIF_FPS),sc=w/GIF_W;
     ctx.save();ctx.scale(sc,sc);
     const H=h/sc;
-    if(clips.length)paintFrames(ctx,dayLayers(clips,i),mul,GIF_W,H,true);else paintPlateFrame(ctx,k,(i%48)/48,GIF_W,H);
+    if(clips.length)paintFrames(ctx,dayLayers(clips,i),mul,GIF_W,H,true);else paintPlateFrame(ctx,k,(i%96)/96,GIF_W,H,true);
     ctx.restore();
     mom.dayRaf=REDUCED()?0:requestAnimationFrame(frame);
   };
@@ -1374,10 +1406,10 @@ if(HAS_FORM)setTimeout(gifPrune,4000);
 
 /* ---- small living picture of the day (Сегодня): the same layers, redrawn 12 times a second ---- */
 const mini={list:[],raf:0};
-async function miniDay(cv,k){
-  const clips=await dayClips(k);
+async function miniDay(cv,k,opt){
+  const clips=await dayClips(k);opt=opt||{};
   mini.list=mini.list.filter(e=>e.cv!==cv&&e.cv.isConnected);
-  mini.list.push({cv,k,clips,mul:layerMul(clips.length)*.85,last:-1});
+  mini.list.push({cv,k,clips,mul:layerMul(clips.length)*(opt.mono?1:.85),last:-1,r:opt.r||.3,mono:opt.mono||null});
   if(!mini.raf)mini.raf=requestAnimationFrame(miniFrame);
 }
 function miniFrame(now){
@@ -1388,8 +1420,8 @@ function miniFrame(now){
     if(i===e.last)continue;e.last=i;
     const s=e.cv.clientWidth;if(!s)continue;
     const ctx=fitCv(e.cv,s);ctx.clearRect(0,0,s,s);
-    if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*.3,.8);
-    else{const en=dayEntries(e.k);drawDay(ctx,s,en,en.length,seedOf(e.k),PAL.dark,{dot:2.4,r:.26,ph:(i%48)/48});}
+    if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*e.r,.8,e.mono);
+    else paintSynth(ctx,e.k,s/2,s/2,s*e.r*.95,.07*Math.sin(2*Math.PI*(i%96)/96),e.mono);
   }
   mini.raf=REDUCED()?0:requestAnimationFrame(miniFrame);
 }
@@ -1563,7 +1595,7 @@ function viewProfile(){
   </section>
   <section class="pr-streak">
     <div class="pr-big"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<br>подряд</span></div>
-    <div class="pr-week">${week.map(w=>w.has?`<button class="pr-day" data-act="day" data-v="${w.k}" aria-label="${esc(dateLong(parseKey(w.k)))}"><canvas data-plate="${w.k}" data-dot="1" data-r=".44"></canvas><span class="${w.t?'t':''}">${w.w}</span></button>`:`<span class="pr-day off"><i></i><span class="${w.t?'t':''}">${w.w}</span></span>`).join('')}</div>
+    <div class="pr-week">${week.map(w=>w.has?`<button class="pr-day" data-act="day" data-v="${w.k}" aria-label="${esc(dateLong(parseKey(w.k)))}"><canvas data-daypic="${w.k}"></canvas><span class="${w.t?'t':''}">${w.w}</span></button>`:`<span class="pr-day off"><i></i><span class="${w.t?'t':''}">${w.w}</span></span>`).join('')}</div>
   </section>
   <section class="pr-note" id="prNoteCard">
     <div><span class="note">Комфортная нота</span>
@@ -2044,12 +2076,12 @@ function showDayDone(){
     <h1 class="huge">Готово.</h1>
     <div class="mins"><b class="num">${mins}</b><span>${plural(mins,'минута','минуты','минут')}<br>голоса сегодня</span></div>
     ${st?`<p style="font-size:18px">${st} ${plural(st,'день','дня','дней')} подряд. Все четыре блока пройдены.</p>`:''}
-    ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня. Её рисуют только ваши занятия: каждый сектор — упражнение, по часовой стрелке от 12.</p><button class="blackbtn" data-act="gifday" data-v="${k}">Сохранить гифку дня ${ICON_ARROW}</button>`:''}
+    ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня: все упражнения сегодня, наложенные друг на друга.</p><button class="blackbtn" data-act="gifday" data-v="${k}">Сохранить гифку дня ${ICON_ARROW}</button>`:''}
     ${feelBlock(d.feel)}
     ${typeof acctNudge==='function'?acctNudge():''}
     <button class="blackbtn" data-act="close">На главную ${ICON_ARROW}</button></div>`;
   $('ex').scrollTop=0;
-  if(HAS_FORM){revealPlate($('winPlate'),k,PAL.lime);setTimeout(()=>dayGif(k).catch(()=>{}),2600);}
+  if(HAS_FORM){miniDay($('winPlate'),k,{mono:'#192524',r:.36});setTimeout(()=>dayGif(k).catch(()=>{}),2600);}
 }
 function swToggle(){
   const sw=ex.sw,btn=$('swBtn');audioInit();
