@@ -16,7 +16,7 @@ h3{margin:0;font-weight:800;letter-spacing:-.03em}
 .page{max-width:980px;margin:0 auto;padding:32px 20px 60px;display:grid;grid-template-columns:400px 1fr;gap:40px;align-items:start}
 @media (max-width:860px){.page{grid-template-columns:1fr}}
 .phone{background:var(--ink);border-radius:46px;padding:12px;position:sticky;top:20px}
-.scr{background:var(--paper);border-radius:36px;padding:18px 14px 26px;min-height:760px}
+.scr{background:var(--paper);border-radius:36px;padding:18px 14px 26px;height:760px;overflow-y:auto;scrollbar-width:none}.scr::-webkit-scrollbar{display:none}
 .top{display:flex;justify-content:space-between;align-items:center;padding:6px 6px 16px}
 .top b{font-size:24px;font-weight:800;letter-spacing:-.05em}
 .top span{font-size:13px;color:var(--muted)}
@@ -36,7 +36,6 @@ h3{margin:0;font-weight:800;letter-spacing:-.03em}
 .blk .cnt{font-weight:300;font-size:44px;line-height:.9;letter-spacing:-.05em;transition:font-size .35s}
 .blk .cnt small{font-size:18px}
 .blk.closed h3{font-size:28px}.blk.closed .cnt{font-size:34px}.blk.closed .sub{opacity:0;height:0;margin:0;overflow:hidden}
-.blk.fin .cnt::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ca);margin-left:6px;vertical-align:6px}
 .body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .45s cubic-bezier(.3,.7,.2,1)}
 .blk.closed .body{grid-template-rows:0fr}
 .body>div{overflow:hidden;min-height:0}
@@ -72,21 +71,22 @@ h3{margin:0;font-weight:800;letter-spacing:-.03em}
 </head>
 <body>
 <div class="page">
-  <div class="phone"><div class="scr">
+  <div class="phone"><div class="scr" id="scr">
     <div class="top"><b>woisee</b><span id="prog">1 из 13</span></div>
     <div class="wrapS" id="wrapS"><div class="donecard" id="donecard"><h3>Занятие на сегодня выполнено</h3><p>18 мин практики. Завтра будет новый акцент.</p></div><section class="stack" id="stack"></section><canvas id="cv" aria-hidden="true"></canvas></div>
   </div></div>
   <div class="side">
     <h1>Текущее упражнение в списке</h1>
-    <p>Раскрыта только папка с текущим упражнением, остальные собраны. Текущее упражнение обведено контуром из точек, которые медленно текут по кругу. Разделители, которые касаются контура, исчезают.</p>
-    <p>Завершите упражнение кнопкой или нажатием на «▶». После последнего упражнения блока его папка собирается, следующая раскрывается, и точки перетекают на её первое упражнение. Собранную папку можно открыть нажатием, чтобы посмотреть упражнения.</p>
+    <p>Пройденные папки и папка с текущим упражнением открыты, будущие собраны. Текущее упражнение обведено контуром из точек, которые медленно текут по кругу. Разделители, которые касаются контура, исчезают.</p>
+    <p>Завершите упражнение кнопкой или нажатием на «▶». После последнего упражнения блока его папка остаётся открытой с зачёркнутыми упражнениями, следующая раскрывается, точки перетекают на её первое упражнение, а список сам прокручивается к нему. Вручную папки не сворачиваются и не раскрываются.</p>
     <div class="ctl"><button class="btn dark" id="next">Завершить упражнение</button><button class="btn" id="reset">Сначала</button></div>
     <ol>
       <li>Пройденные: зачёркнуты, галочка в круге.</li>
       <li>Текущее: контур из точек, крупнее название, кнопка «▶».</li>
       <li>Закрытые: прозрачность 42%, замок, нажатие не работает.</li>
-      <li>Папка пройденного блока: собрана, счётчик «3/3» с точкой.</li>
-      <li>Если свернуть папку с текущим упражнением, контур обводит её шапку.</li>
+      <li>Пройденная папка: остаётся открытой, все строки зачёркнуты, счётчик «3/3».</li>
+      <li>Будущие папки: собраны до шапки, не нажимаются.</li>
+      <li>Всё пройдено: все папки открыты, сверху карточка «Занятие выполнено» в контуре.</li>
     </ol>
   </div>
 </div>
@@ -103,8 +103,6 @@ const BLOCKS=[
  {id:'artic',name:'Артикуляция',sub:'Чёткие слова и живая речь',ex:[['Активные губы',75],['Скороговорки',120],['Магия паузы',120]]}];
 const PLAN=[];BLOCKS.forEach((b,bi)=>b.ex.forEach((e,ei)=>PLAN.push({bi,ei})));
 let done=1;                          // сколько упражнений пройдено (по порядку)
-const peek=new Set();                // папки, открытые нажатием
-let curHidden=false;                 // папку с текущим упражнением свернули
 const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 const $=id=>document.getElementById(id);
 function curPos(){return done<PLAN.length?PLAN[done]:null}
@@ -112,12 +110,12 @@ function render(){
   const cp=curPos();
   $('stack').innerHTML=BLOCKS.map((b,bi)=>{
     const first=PLAN.findIndex(p=>p.bi===bi),n=b.ex.length,dn=Math.max(0,Math.min(n,done-first));
-    const isActive=cp&&cp.bi===bi,isFin=dn===n;
-    const open=(isActive&&!curHidden)||peek.has(bi);
+    const isActive=cp&&cp.bi===bi;
+    const open=!cp||bi<=cp.bi;          // пройденные и текущая папки открыты, будущие собраны
     const rows=b.ex.map((e,ei)=>{const gi=first+ei,st=gi<done?'dn':gi===done?'cur':'lk';
       const before=(cp&&cp.bi===bi&&ei===cp.ei-1)?' before':'';
       return `<li><button class="row ${st}${before}" data-gi="${gi}" ${st==='lk'?'aria-disabled="true" tabindex="-1"':''}><span class="t">${e[0]}</span><span class="d">${fmt(e[1])}</span><span class="box">${st==='dn'?ICON_CHECK:st==='cur'?ICON_PLAY:ICON_LOCK}</span></button></li>`}).join('');
-    return `<article class="blk b-${b.id} ${open?'':'closed'} ${isFin?'fin':''}" data-bi="${bi}"><button class="hdr" data-fold="${bi}" style="display:block;width:100%" aria-expanded="${open}"><header><div><span class="idx">0${bi+1}</span><h3>${b.name}</h3><p class="sub">${b.sub}</p></div><span class="cnt">${dn}<small>/${n}</small></span></header></button>
+    return `<article class="blk b-${b.id} ${open?'':'closed'}" data-bi="${bi}"><header><div><span class="idx">0${bi+1}</span><h3>${b.name}</h3><p class="sub">${b.sub}</p></div><span class="cnt">${dn}<small>/${n}</small></span></header>
       <div class="body"><div><ul class="${isActive&&cp.ei===0?'nofirst':''}">${rows}</ul></div></div></article>`}).join('');
   $('prog').textContent=cp?(done+1)+' из '+PLAN.length:'всё готово';
   $('donecard').classList.toggle('on',!cp);
@@ -126,17 +124,14 @@ function render(){
 function finish(){
   if(!curPos()){reset();return}
   const was=curPos();done++;const now=curPos();
-  if(!now||now.bi!==was.bi){peek.delete(was.bi);curHidden=false;}
-  burst=1;render();
+  burst=1;render();follow(!now||now.bi!==was.bi?520:60);
 }
-function reset(){done=0;peek.clear();curHidden=false;burst=1;render()}
-$('stack').addEventListener('click',e=>{
-  const f=e.target.closest('[data-fold]');
-  if(f){const bi=+f.dataset.fold,cp=curPos();
-    if(cp&&cp.bi===bi){curHidden=!curHidden}else{peek.has(bi)?peek.delete(bi):peek.add(bi)}
-    render();return}
-  const r=e.target.closest('.row');if(r&&r.classList.contains('cur'))finish();
-});
+function reset(){done=0;burst=1;render();$('scr').scrollTo({top:0,behavior:'smooth'})}
+// после перехода текущее упражнение (или карточка «выполнено») плавно въезжает в центр экрана
+function follow(delay){setTimeout(()=>{const el=document.querySelector('.row.cur')||$('donecard'),sc=$('scr');if(!el)return;
+  const r=el.getBoundingClientRect(),sr=sc.getBoundingClientRect();
+  const top=sc.scrollTop+r.top-sr.top-(sc.clientHeight-r.height)/2;sc.scrollTo({top:Math.max(0,top),behavior:RM.matches?'auto':'smooth'})},delay)}
+$('stack').addEventListener('click',e=>{const r=e.target.closest('.row');if(r&&r.classList.contains('cur'))finish()});
 $('next').addEventListener('click',finish);$('reset').addEventListener('click',reset);
 
 /* ---------- контур из точек ---------- */
@@ -144,11 +139,9 @@ const wrap=$('wrapS'),cv=$('cv'),ctx=cv.getContext('2d');
 const RM=matchMedia('(prefers-reduced-motion: reduce)');
 let W=0,H=0,D=1;
 function size(){D=Math.min(devicePixelRatio||1,2);const w=wrap.offsetWidth,h=wrap.offsetHeight;if(w===W&&h===H)return;W=w;H=h;cv.width=W*D;cv.height=H*D;cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(D,0,0,D,0,0)}
-// цель: строка текущего упражнения; если её папка свёрнута — шапка папки; если всё пройдено — карточка «выполнено»
+// цель: строка текущего упражнения; если всё пройдено — карточка «выполнено»
 function target(){
   const b=wrap.getBoundingClientRect();let el=document.querySelector('.row.cur'),pad=0,col=null;
-  const blk=el&&el.closest('.blk');
-  if(el&&blk&&blk.classList.contains('closed')){el=blk.querySelector('header');pad=10}
   if(!el){el=$('donecard');if(!el.classList.contains('on'))return null}
   const r=el.getBoundingClientRect();if(r.height<4)return null;
   const host=el.closest('.blk');col=host?getComputedStyle(host).getPropertyValue('--cdot').trim():'#192524';
