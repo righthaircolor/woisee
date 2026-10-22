@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#192524">
+<title>woisee · текущее упражнение в списке</title>
+<link rel="stylesheet" href="../fonts.css">
+<style>
+:root{--paper:#FFFFFF;--paper-2:#F3F5F2;--ink:#192524;--muted:#5D6A67;--rule:rgba(25,37,36,.14);--signal:#F0472C;--lime:#ECF176;--rasp:#E780C0;--kale:#5EA879;--ebony:#192524;--deep:#2D4540;--vanilla:#FFFEFC;--f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper-2);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;text-align:inherit}
+button:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:10px}
+h3{margin:0;font-weight:800;letter-spacing:-.03em}
+.page{max-width:980px;margin:0 auto;padding:32px 20px 60px;display:grid;grid-template-columns:400px 1fr;gap:40px;align-items:start}
+@media (max-width:860px){.page{grid-template-columns:1fr}}
+.phone{background:var(--ink);border-radius:46px;padding:12px;position:sticky;top:20px}
+.scr{background:var(--paper);border-radius:36px;padding:18px 14px 26px;min-height:760px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:6px 6px 16px}
+.top b{font-size:24px;font-weight:800;letter-spacing:-.05em}
+.top span{font-size:13px;color:var(--muted)}
+
+/* блоки-папки */
+.wrapS{position:relative}
+.stack{display:flex;flex-direction:column}
+.blk{--c:var(--rasp);--cf:var(--ink);--cl:rgba(25,37,36,.2);--ca:var(--ink);--cai:var(--c);--cbox:rgba(255,255,255,.4);--cdot:#FFFEFC;
+  background:var(--c);color:var(--cf);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;position:relative}
+.blk:first-child{margin-top:0}.blk:last-child{padding-bottom:20px}
+.b-body{--c:var(--rasp)}.b-breath{--c:var(--lime);--cdot:#192524}.b-phon{--c:var(--kale)}
+.b-artic{--c:var(--deep);--cf:var(--vanilla);--cl:rgba(255,254,252,.18);--ca:var(--lime);--cai:var(--deep);--cbox:rgba(255,254,252,.14)}
+.blk header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:12px;width:100%}
+.blk .idx{font-size:13px;font-weight:500;opacity:.7}
+.blk h3{font-size:34px;line-height:1;transition:font-size .35s}
+.blk .sub{font-size:14px;opacity:.75;margin-top:6px;transition:opacity .3s}
+.blk .cnt{font-weight:300;font-size:44px;line-height:.9;letter-spacing:-.05em;transition:font-size .35s}
+.blk .cnt small{font-size:18px}
+.blk.closed h3{font-size:28px}.blk.closed .cnt{font-size:34px}.blk.closed .sub{opacity:0;height:0;margin:0;overflow:hidden}
+.blk.fin .cnt::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ca);margin-left:6px;vertical-align:6px}
+.body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .45s cubic-bezier(.3,.7,.2,1)}
+.blk.closed .body{grid-template-rows:0fr}
+.body>div{overflow:hidden;min-height:0}
+.blk ul{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--cl)}
+.blk ul.nofirst{border-top-color:transparent}
+.row{display:grid;grid-template-columns:1fr auto 34px;gap:12px;align-items:center;width:100%;padding:13px 0;border-bottom:1px solid var(--cl);transition:border-color .3s,opacity .3s}
+.blk li:last-child .row{border-bottom-color:transparent}
+.row.before{border-bottom-color:transparent}
+.row .t{font-size:17px;font-weight:500;line-height:1.25;min-width:0}
+.row .d{font-size:14px;opacity:.7;font-variant-numeric:tabular-nums}
+.box{width:30px;height:30px;border-radius:9px;background:var(--cbox);display:grid;place-items:center;justify-self:end}
+.box svg{width:16px;height:16px}
+.row.dn .t{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.55}.row.dn .d{opacity:.4}
+.row.dn .box{background:var(--ca);color:var(--cai);border-radius:50%}
+.row.lk{opacity:.42;cursor:default}
+.row.cur{margin:10px -8px;width:calc(100% + 16px);padding:18px 10px 18px 20px;border-bottom-color:transparent;grid-template-columns:1fr auto 50px}
+.row.cur .t{font-size:18px;font-weight:700}
+.row.cur .box{width:50px;height:50px;border-radius:50%;background:var(--ca);color:var(--cai)}
+.row.cur .box svg{width:20px;height:20px}
+.donecard{background:var(--lime);border-radius:30px;padding:22px 20px;margin-bottom:12px;display:none}
+.donecard.on{display:block}.donecard h3{font-size:28px;line-height:1}.donecard p{margin:8px 0 0;font-size:14px}
+#cv{position:absolute;left:0;top:0;pointer-events:none;z-index:20}
+
+/* панель справа */
+.side h1{font-size:40px;line-height:.95;font-weight:800;letter-spacing:-.04em;margin:0 0 14px}
+.side p{color:var(--muted);margin:0 0 12px;max-width:52ch}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:99px;padding:9px 16px;font-size:14px;font-weight:600;background:var(--paper)}
+.btn.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.side ol{padding-left:20px;margin:0;color:var(--ink)}.side li{margin-bottom:8px}
+.side code{font-size:.9em;background:var(--paper);padding:1px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="phone"><div class="scr">
+    <div class="top"><b>woisee</b><span id="prog">1 из 13</span></div>
+    <div class="wrapS" id="wrapS"><div class="donecard" id="donecard"><h3>Занятие на сегодня выполнено</h3><p>18 мин практики. Завтра будет новый акцент.</p></div><section class="stack" id="stack"></section><canvas id="cv" aria-hidden="true"></canvas></div>
+  </div></div>
+  <div class="side">
+    <h1>Текущее упражнение в списке</h1>
+    <p>Раскрыта только папка с текущим упражнением, остальные собраны. Текущее упражнение обведено контуром из точек, которые медленно текут по кругу. Разделители, которые касаются контура, исчезают.</p>
+    <p>Завершите упражнение кнопкой или нажатием на «▶». После последнего упражнения блока его папка собирается, следующая раскрывается, и точки перетекают на её первое упражнение. Собранную папку можно открыть нажатием, чтобы посмотреть упражнения.</p>
+    <div class="ctl"><button class="btn dark" id="next">Завершить упражнение</button><button class="btn" id="reset">Сначала</button></div>
+    <ol>
+      <li>Пройденные: зачёркнуты, галочка в круге.</li>
+      <li>Текущее: контур из точек, крупнее название, кнопка «▶».</li>
+      <li>Закрытые: прозрачность 42%, замок, нажатие не работает.</li>
+      <li>Папка пройденного блока: собрана, счётчик «3/3» с точкой.</li>
+      <li>Если свернуть папку с текущим упражнением, контур обводит её шапку.</li>
+    </ol>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON_PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+const ICON_LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+const BLOCKS=[
+ {id:'body',name:'Тело',sub:'Свободное тело — главный резонатор',ex:[['Плечи: сжать и отпустить',75],['Наклоны головы',60],['Внутренняя улыбка',45]]},
+ {id:'breath',name:'Дыхание',sub:'Топливо голоса: опора и спокойствие',ex:[['Дыхание животом',60],['«Собачка»',75],['Долгий выдох: С · Ш · З · Ж',60]]},
+ {id:'phon',name:'Фонация',sub:'Чистый объёмный звук без напряжения',ex:[['Мягкая атака звука',75],['Гудение',90],['Сирена',60],['Интонационные качели',120]]},
+ {id:'artic',name:'Артикуляция',sub:'Чёткие слова и живая речь',ex:[['Активные губы',75],['Скороговорки',120],['Магия паузы',120]]}];
+const PLAN=[];BLOCKS.forEach((b,bi)=>b.ex.forEach((e,ei)=>PLAN.push({bi,ei})));
+let done=1;                          // сколько упражнений пройдено (по порядку)
+const peek=new Set();                // папки, открытые нажатием
+let curHidden=false;                 // папку с текущим упражнением свернули
+const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const $=id=>document.getElementById(id);
+function curPos(){return done<PLAN.length?PLAN[done]:null}
+function render(){
+  const cp=curPos();
+  $('stack').innerHTML=BLOCKS.map((b,bi)=>{
+    const first=PLAN.findIndex(p=>p.bi===bi),n=b.ex.length,dn=Math.max(0,Math.min(n,done-first));
+    const isActive=cp&&cp.bi===bi,isFin=dn===n;
+    const open=(isActive&&!curHidden)||peek.has(bi);
+    const rows=b.ex.map((e,ei)=>{const gi=first+ei,st=gi<done?'dn':gi===done?'cur':'lk';
+      const before=(cp&&cp.bi===bi&&ei===cp.ei-1)?' before':'';
+      return `<li><button class="row ${st}${before}" data-gi="${gi}" ${st==='lk'?'aria-disabled="true" tabindex="-1"':''}><span class="t">${e[0]}</span><span class="d">${fmt(e[1])}</span><span class="box">${st==='dn'?ICON_CHECK:st==='cur'?ICON_PLAY:ICON_LOCK}</span></button></li>`}).join('');
+    return `<article class="blk b-${b.id} ${open?'':'closed'} ${isFin?'fin':''}" data-bi="${bi}"><button class="hdr" data-fold="${bi}" style="display:block;width:100%" aria-expanded="${open}"><header><div><span class="idx">0${bi+1}</span><h3>${b.name}</h3><p class="sub">${b.sub}</p></div><span class="cnt">${dn}<small>/${n}</small></span></header></button>
+      <div class="body"><div><ul class="${isActive&&cp.ei===0?'nofirst':''}">${rows}</ul></div></div></article>`}).join('');
+  $('prog').textContent=cp?(done+1)+' из '+PLAN.length:'всё готово';
+  $('donecard').classList.toggle('on',!cp);
+  $('next').textContent=cp?'Завершить упражнение':'Сначала';
+}
+function finish(){
+  if(!curPos()){reset();return}
+  const was=curPos();done++;const now=curPos();
+  if(!now||now.bi!==was.bi){peek.delete(was.bi);curHidden=false;}
+  burst=1;render();
+}
+function reset(){done=0;peek.clear();curHidden=false;burst=1;render()}
+$('stack').addEventListener('click',e=>{
+  const f=e.target.closest('[data-fold]');
+  if(f){const bi=+f.dataset.fold,cp=curPos();
+    if(cp&&cp.bi===bi){curHidden=!curHidden}else{peek.has(bi)?peek.delete(bi):peek.add(bi)}
+    render();return}
+  const r=e.target.closest('.row');if(r&&r.classList.contains('cur'))finish();
+});
+$('next').addEventListener('click',finish);$('reset').addEventListener('click',reset);
+
+/* ---------- контур из точек ---------- */
+const wrap=$('wrapS'),cv=$('cv'),ctx=cv.getContext('2d');
+const RM=matchMedia('(prefers-reduced-motion: reduce)');
+let W=0,H=0,D=1;
+function size(){D=Math.min(devicePixelRatio||1,2);const w=wrap.offsetWidth,h=wrap.offsetHeight;if(w===W&&h===H)return;W=w;H=h;cv.width=W*D;cv.height=H*D;cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(D,0,0,D,0,0)}
+// цель: строка текущего упражнения; если её папка свёрнута — шапка папки; если всё пройдено — карточка «выполнено»
+function target(){
+  const b=wrap.getBoundingClientRect();let el=document.querySelector('.row.cur'),pad=0,col=null;
+  const blk=el&&el.closest('.blk');
+  if(el&&blk&&blk.classList.contains('closed')){el=blk.querySelector('header');pad=10}
+  if(!el){el=$('donecard');if(!el.classList.contains('on'))return null}
+  const r=el.getBoundingClientRect();if(r.height<4)return null;
+  const host=el.closest('.blk');col=host?getComputedStyle(host).getPropertyValue('--cdot').trim():'#192524';
+  return {x:r.left-b.left-pad,y:r.top-b.top-pad,w:r.width+2*pad,h:r.height+2*pad,col};
+}
+// точка на периметре скруглённого прямоугольника, s ∈ [0,1), по часовой стрелке
+function rrAt(g,s,o){const R=Math.min(24,g.h/2,g.w/2),a=g.w-2*R,b=g.h-2*R,q=Math.PI*R/2,L=2*a+2*b+4*q;let d=((s%1)+1)%1*L;
+  const seg=[[a,0],[q,1],[b,2],[q,3],[a,4],[q,5],[b,6],[q,7]];
+  for(const [len,k] of seg){if(d<=len||k===7){const f=len?d/len:0;
+    switch(k){case 0:o[0]=g.x+R+a*f;o[1]=g.y;o[2]=0;o[3]=-1;return;
+      case 2:o[0]=g.x+g.w;o[1]=g.y+R+b*f;o[2]=1;o[3]=0;return;
+      case 4:o[0]=g.x+g.w-R-a*f;o[1]=g.y+g.h;o[2]=0;o[3]=1;return;
+      case 6:o[0]=g.x;o[1]=g.y+g.h-R-b*f;o[2]=-1;o[3]=0;return;
+      default:{const cx=[0,g.x+g.w-R,0,g.x+g.w-R,0,g.x+R,0,g.x+R][k],cy=[0,g.y+R,0,g.y+g.h-R,0,g.y+g.h-R,0,g.y+R][k],a0=[0,-Math.PI/2,0,0,0,Math.PI/2,0,Math.PI][k],an=a0+f*Math.PI/2;
+        o[2]=Math.cos(an);o[3]=Math.sin(an);o[0]=cx+o[2]*R;o[1]=cy+o[3]*R;return}}}
+    d-=len}}
+const N=1500,P=[];const gs=()=>{let u=0;while(!u)u=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.283*Math.random())};
+for(let i=0;i<N;i++)P.push({s:Math.random(),sp:.6+Math.random()*.8,n:gs(),x:NaN,y:NaN,z:.9+Math.random()*1.3,a:.45+Math.random()*.55});
+let flow=0,t=0,last=performance.now(),burst=0,col='#FFFEFC';const o=[0,0,0,0];
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;t+=dt;size();
+  const still=RM.matches;flow+=still?0:dt*.018;burst*=Math.pow(.95,dt*60);
+  ctx.clearRect(0,0,W,H);const g=target();
+  if(g){col=g.col||col;ctx.fillStyle=col;
+    const k=still?1:1-Math.pow(1-(burst>.05?.07:.16),dt*60);
+    for(const p of P){rrAt(g,p.s+flow*p.sp,o);const off=p.n*2.4+(still?0:Math.sin(t*2.2+p.s*40)*1.2);const tx=o[0]+o[2]*off,ty=o[1]+o[3]*off;
+      if(isNaN(p.x)){p.x=tx;p.y=ty}
+      const j=(!still&&burst>.05)?burst*3:0;p.x+=(tx-p.x)*k+gs()*j;p.y+=(ty-p.y)*k+gs()*j;
+      ctx.globalAlpha=p.a;ctx.fillRect(p.x-p.z/2,p.y-p.z/2,p.z,p.z)}
+    ctx.globalAlpha=1}
+  requestAnimationFrame(frame);
+}
+render();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
