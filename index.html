@@ -86,9 +86,14 @@ p{margin:0}
 .hero-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
 .hero-row h2{font-size:30px;line-height:1}
 .hero-row .kicker{text-align:right}
-.count{display:flex;align-items:flex-end;gap:10px}
-.count b{font-weight:300;font-size:clamp(84px,26vw,112px);line-height:.8;letter-spacing:-.06em}
-.count span{font-size:15px;line-height:1.2;padding-bottom:4px}
+.count{display:block;white-space:nowrap}
+.count b{font-weight:300;font-size:clamp(84px,26vw,112px);line-height:.8;letter-spacing:-.06em;margin-right:10px}
+.count span{display:inline-block;vertical-align:baseline;white-space:normal;font-size:15px;line-height:1.2}
+.hero-dur{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dur-btns{display:flex;gap:12px}
+.dur-btns .lnk{font-size:14px;color:var(--ink)}
+.hero-grid{margin-top:28px}
+.plate-sm{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .tl{display:flex;gap:3px;height:22px;margin-top:4px}
 .tl .s{position:relative;background:var(--soft);min-width:4px}
 .tl .s.dn{background:var(--ink)}
@@ -759,6 +764,7 @@ function paintPlates(root){
     const k=cv.dataset.plate,s=cv.clientWidth;if(!s)return;
     const ctx=fitCv(cv,s),e=dayEntries(k);drawDay(ctx,s,e,e.length,seedOf(k),PAL[cv.dataset.pal||'dark'],{dot:+cv.dataset.dot||0,r:+cv.dataset.r||0});
   });
+  root.querySelectorAll('canvas[data-liveday]').forEach(cv=>miniDay(cv,cv.dataset.liveday));
   root.querySelectorAll('canvas[data-day]').forEach(cv=>drawDayCircle(cv,cv.dataset.day));
   root.querySelectorAll('canvas[data-exchart]').forEach(cv=>drawExDots(cv,cv.dataset.exchart,!!cv.dataset.mini));
   root.querySelectorAll('canvas[data-vmap]').forEach(cv=>drawVoiceMap(cv));
@@ -1118,10 +1124,12 @@ async function dayClips(k){
 /* frames laid over each other; with many layers each one is fainter, so repeated shapes glow and the rest is haze */
 function paintFrames(ctx,frames,mul,W,H,live){
   W=W||GIF_W;H=H||GIF_H;
-  const R=W*(live?.56:.5),cx=W/2,cy=H*(live?.5:.46);
+  paintAt(ctx,frames,mul,W/2,H*(live?.5:.46),W*(live?.56:.5),1);
+}
+function paintAt(ctx,frames,mul,cx,cy,R,minZ){
   for(const f of frames){
     const xy=f.xy,sa=f.sa,ci=f.ci,n=ci.length;
-    for(let i=0;i<n;i++){const z=Math.max(1,sa[i*2]/4000*R);ctx.fillStyle=f.cols[ci[i]];ctx.globalAlpha=Math.min(1,sa[i*2+1]/255*mul);ctx.fillRect(cx+xy[i*2]/8000*R-z/2,cy+xy[i*2+1]/8000*R-z/2,z,z);}
+    for(let i=0;i<n;i++){const z=Math.max(minZ,sa[i*2]/4000*R);ctx.fillStyle=f.cols[ci[i]];ctx.globalAlpha=Math.min(1,sa[i*2+1]/255*mul);ctx.fillRect(cx+xy[i*2]/8000*R-z/2,cy+xy[i*2+1]/8000*R-z/2,z,z);}
   }
   ctx.globalAlpha=1;
 }
@@ -1221,6 +1229,28 @@ async function gifPrune(){
   }catch(e){}
 }
 if(HAS_FORM)setTimeout(gifPrune,4000);
+
+/* ---- small living picture of the day (Сегодня): the same layers, redrawn 12 times a second ---- */
+const mini={list:[],raf:0};
+async function miniDay(cv,k){
+  const clips=await dayClips(k);
+  mini.list=mini.list.filter(e=>e.cv!==cv&&e.cv.isConnected);
+  mini.list.push({cv,k,clips,mul:layerMul(clips.length)*.85,last:-1});
+  if(!mini.raf)mini.raf=requestAnimationFrame(miniFrame);
+}
+function miniFrame(now){
+  mini.list=mini.list.filter(e=>e.cv.isConnected);
+  if(!mini.list.length){mini.raf=0;return;}
+  const i=Math.floor(now/1000*GIF_FPS);
+  for(const e of mini.list){
+    if(i===e.last)continue;e.last=i;
+    const s=e.cv.clientWidth;if(!s)continue;
+    const ctx=fitCv(e.cv,s);ctx.clearRect(0,0,s,s);
+    if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*.32,.75);
+    else{const en=dayEntries(e.k);drawDay(ctx,s,en,en.length,seedOf(e.k),PAL.dark,{dot:2.4,r:.27,ph:(i%48)/48});}
+  }
+  mini.raf=REDUCED()?0:requestAnimationFrame(miniFrame);
+}
 
 
 /* ---------- helpers ---------- */
@@ -1342,10 +1372,9 @@ function viewPath(){
   });
   return topbar()+`
   <section class="hero">
-    <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><p class="kicker">${d.dur} минут<br>акцент: ${esc(f.name)}</p></div>
-    <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<canvas class="plate-sm" data-plate="${dkey()}" data-dot="2.4" data-r=".27" aria-label="Картинка дня"></canvas>`:''}</div>
+    <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><div class="kicker hero-dur"><span>${d.dur} минут</span><span class="dur-btns">${d.dur>15?'<button class="lnk" data-act="durstep" data-v="-1">Короче</button>':''}${d.dur<30?'<button class="lnk" data-act="durstep" data-v="1">Дольше</button>':''}</span></div></div>
+    <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<canvas class="plate-sm" data-liveday="${dkey()}" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"></canvas>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
-    <div class="tl-foot"><span class="note num">≈ ${Math.round(sumD(plan)/60)} мин упражнений</span><button class="lnk" data-act="choose">Изменить время</button></div>
   </section>
   ${!cur?`<section class="donecard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
   <section class="stack">${stack}</section>
@@ -1629,6 +1658,10 @@ document.addEventListener('click',ev=>{
     case 'streak':state.from=state.tab==='progress'?state.from:state.tab;state.tab='progress';state.choosing=false;render();window.scrollTo(0,0);break;
     case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k);d.dur=+v;d.focus=f.id;d.plan=buildPlan(+v,f);saveDay(k);state.choosing=false;render();window.scrollTo(0,0);break;}
     case 'choose':state.choosing=true;render();window.scrollTo(0,0);break;
+    case 'durstep':{const k=dkey(),d=getDay(k),S=[15,20,30],nv=S[Math.max(0,Math.min(2,S.indexOf(d.dur)+(+v)))];if(nv===d.dur)break;
+      const f=focusFor(k),np=buildPlan(nv,f);(d.done||[]).forEach(id=>{if(!np.includes(id))np.push(id);});
+      d.dur=nv;d.focus=f.id;d.plan=np.map((id,i)=>({id,i})).sort((a,b)=>BI(a.id)-BI(b.id)||a.i-b.i).map(o=>o.id);saveDay(k);render();break;}
+    case 'openday':openDay(v);break;
     case 'cancelChoose':state.choosing=false;render();break;
     case 'ex':openEx(v,'plan');break;
     case 'single':openEx(v,todayPlan()&&todayPlan().plan.includes(v)?'plan':'single');break;

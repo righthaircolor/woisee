@@ -1,5 +1,5 @@
 // woisee offline cache. Bump VERSION after changing any file so phones pick up the update.
-const VERSION = 'woisee-v15-gif2';
+const VERSION = 'woisee-v16';
 const FILES = [
   './',
   './index.html',
