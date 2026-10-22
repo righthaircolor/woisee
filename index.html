@@ -251,6 +251,7 @@ p{margin:0}
 .cap .time{display:flex;flex-direction:column}
 .cap .time b{font-weight:300;font-size:34px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
 .cap .time span{font-size:12px;opacity:.65}
+.cap .time b.big{font-size:min(82px,calc((100vw - 223px) / 1.79));line-height:.73;letter-spacing:-.06em;position:relative;left:-10px;top:.7px}
 .cap .acts{display:flex;align-items:center;gap:8px}
 .go{width:68px;height:68px;border-radius:50%;background:var(--signal);color:var(--ink);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05}
 .go.alt{background:var(--paper-2)}
@@ -1500,7 +1501,6 @@ function renderCard(){
     <div class="ex-top"><button class="icon-btn" data-act="close" aria-label="Закрыть">${ICON_X}</button><div class="segs">${segs}</div>${inPlan?'<button class="skip" data-act="skip">Пропустить</button>':'<span></span>'}</div>
     <span class="pill" style="align-self:flex-start">${bi>=0?'0'+(bi+1)+' · ':''}${esc(BNAME[e.b])}</span>
     <h2 class="ex-title">${esc(e.t)}</h2>
-    <div class="clock"><b id="bigClock">${fmt(e.d)}</b><span id="clockLbl">таймер</span></div>
   </div></div>
   <div class="ex-body">
     ${formPanel(e)}
@@ -1513,13 +1513,13 @@ function renderCard(){
 function renderBar(){
   const e=EX[ex.id],el=elapsed(),dur=e.d+ex.extra,rem=Math.max(0,dur-el);
   let label,acts,fin=false;
-  if(ex.status==='ready'){label='прочитайте и начните';acts=`<button class="go" data-act="go">Старт</button>`;}
-  else if(ex.status==='run'){label='осталось';acts=`<button class="chip" data-act="plus">+30 с</button><button class="go alt" data-act="pause">Пауза</button>`;}
-  else if(ex.status==='pause'){label='пауза';acts=`<button class="chip" data-act="finishNow">Готово</button><button class="go" data-act="go" aria-label="Продолжить">${ICON_PLAY.replace('<svg','<svg style="width:28px;height:28px"')}</button>`;}
+  if(ex.status==='ready'){label='';acts=`<button class="go" data-act="go">Старт</button>`;}
+  else if(ex.status==='run'){label='';acts=`<button class="chip" data-act="plus">+30 с</button><button class="go alt" data-act="pause">Пауза</button>`;}
+  else if(ex.status==='pause'){label='';acts=`<button class="chip" data-act="finishNow">Готово</button><button class="go" data-act="go" aria-label="Продолжить">${ICON_PLAY.replace('<svg','<svg style="width:28px;height:28px"')}</button>`;}
   else{fin=true;const d=todayPlan(),nx=ex.mode==='plan'&&d?nextUndone(d.plan,d.done,ex.id):null;
     label=ex.mode!=='plan'?'упражнение выполнено':nx?'дальше: '+EX[nx].t:'последнее упражнение дня';
     acts=`<button class="go" data-act="next">${ex.mode!=='plan'?'Выйти':nx?'Дальше':'Финиш'}</button>`;}
-  $('tbar').innerHTML=`<div class="cap ${fin?'fin':''}"><i class="fill" id="tFill" style="width:${fin?100:Math.min(100,el/dur*100)}%"></i><div class="time"><b id="tTime">${fin?'Готово':fmt(rem)}</b><span>${esc(label)}</span></div><div class="acts">${acts}</div></div>`;
+  $('tbar').innerHTML=`<div class="cap ${fin?'fin':''}"><i class="fill" id="tFill" style="width:${fin?100:Math.min(100,el/dur*100)}%"></i><div class="time"><b id="tTime" class="${fin?'':'big'}">${fin?'Готово':fmt(rem)}</b>${label?`<span>${esc(label)}</span>`:''}</div><div class="acts">${acts}</div></div>`;
 }
 function tick(){
   if(!ex.open)return;
