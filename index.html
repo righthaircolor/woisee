@@ -57,7 +57,20 @@ p{margin:0}
 
 .app{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:18px calc(110px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.logo{font-weight:800;font-size:24px;letter-spacing:-.05em}
+.logo{font-weight:800;font-size:24px;letter-spacing:-.05em;cursor:pointer}
+.hero-dur{text-align:right;color:var(--muted);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:rgba(154,167,163,.5)}
+.gobtn{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;background:var(--signal);color:#FFFEFC;border-radius:99px;padding:10px 10px 10px 26px;margin:0 0 22px;text-align:left}
+.gobtn span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.gobtn b{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.gobtn small{font-size:14px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gobtn svg{flex:none;width:58px;height:58px;padding:17px;border-radius:50%;background:#FFFEFC;color:var(--signal)}
+.choose-acts{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.segs i{position:relative;cursor:pointer}
+.segs i::after{content:"";position:absolute;left:0;right:0;top:-14px;bottom:-14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:14px;max-width:calc(100% - 36px);background:#2C3836;color:#F4F2EC;border-radius:99px;padding:10px 10px 10px 18px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity .35s}
+.toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast button{flex:none;background:#F4F2EC;color:#192524;border-radius:99px;padding:8px 14px;font-weight:600}
+.toast.out{opacity:0}
 .streak{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;border:1px solid var(--rule);border-radius:99px;padding:7px 10px 7px 12px}
 .streak svg{width:14px;height:14px;margin-left:-2px}
 .back{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600;margin-left:-6px}
@@ -820,7 +833,7 @@ function tlStart(){
   cancelAnimationFrame(tl.raf);tl.raf=0;
   const cv=$('tlCv'),d=todayPlan();if(!cv||!d)return;
   const W=cv.clientWidth,H=cv.clientHeight,band=22,top=(H-band)/2;
-  const plan=d.plan,cur=nextUndone(plan,d.done,null),total=sumD(plan),gap=3,usable=W-gap*(plan.length-1);
+  const plan=d.plan,cur=curOf(d),total=sumD(plan),gap=3,usable=W-gap*(plan.length-1);
   const rng=(window.Field?Field.rng:(s=>{let x=s;return()=>(x=(x*16807)%2147483647)/2147483647;}))(seedOf(dkey()));
   const P=[];let x=0,curX=0;
   plan.forEach(id=>{
@@ -1256,6 +1269,14 @@ function miniFrame(now){
   mini.raf=REDUCED()?0:requestAnimationFrame(miniFrame);
 }
 
+/* «Начать сначала»: the day's clips go too */
+async function clipsClear(k){
+  mom.cache.delete('d:'+k);
+  try{const db=await gifDb();const st=db.transaction('g','readwrite').objectStore('g');
+    st.openCursor(IDBKeyRange.bound('c:'+k+':','c:'+k+':~')).onsuccess=ev=>{const c=ev.target.result;if(!c)return;c.delete();c.continue();};}catch(e){}
+}
+window.clipsClear=clipsClear;
+
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -1329,6 +1350,12 @@ function buildPlan(min,focus){
   return items.map((id,i)=>({id,i})).sort((a,b)=>BI(a.id)-BI(b.id)||a.i-b.i).map(o=>o.id);
 }
 function todayPlan(){const d=data.days[dkey()];return d&&d.plan?d:null;}
+/* where the day stands: the exercise she was on (even after a skip), else the next undone one */
+function curOf(d){
+  if(!d||!d.plan)return null;
+  if(d.at&&d.plan.includes(d.at)&&!d.done.includes(d.at))return d.at;
+  return nextUndone(d.plan,d.done,d.at&&d.plan.includes(d.at)?d.at:null);
+}
 function nextUndone(plan,done,after){
   const start=after==null?0:plan.indexOf(after)+1;
   for(let j=start;j<plan.length;j++)if(!done.includes(plan[j]))return plan[j];
@@ -1347,7 +1374,7 @@ function render(){
 }
 function topbar(){
   const st=streak();
-  return `<header class="top"><span class="logo">woisee</span><button class="streak num" data-act="streak" aria-label="Открыть прогресс"><i></i>${st} ${plural(st,'день','дня','дней')} подряд<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></header>`;
+  return `<header class="top"><button class="logo" data-act="home" aria-label="На главную">woisee</button><button class="streak num" data-act="streak" aria-label="Открыть прогресс"><i></i>${st} ${plural(st,'день','дня','дней')} подряд<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></header>`;
 }
 function viewChoose(){
   const k=dkey(),f=focusFor(k),d=data.days[k],t=new Date();
@@ -1358,12 +1385,12 @@ function viewChoose(){
   ${tired?`<div class="warnbox">В прошлый раз голос устал. Сегодня лучше взять 15 минут и не форсировать громкость.</div>`:''}
   <div class="menu">${[15,20,30].map(m=>`<button class="item" data-act="dur" data-v="${m}" aria-pressed="${!!(d&&d.dur===m)}"><b class="num">${m}</b><span>${esc(DUR_TEXT[m])}</span>${ICON_ARROW}</button>`).join('')}</div>
   <p class="note">Акцент дня — <b style="color:var(--ink)">${esc(f.name)}</b>. Он меняется после каждого занятия.</p>
-  ${d&&d.plan?`<button class="lnk" data-act="cancelChoose" style="align-self:flex-start">Оставить как было</button>`:''}`;
+  ${d&&d.plan?`<div class="choose-acts">${(d.done||[]).length||d.at?`<button class="ghost" data-act="restart">Начать сначала</button>`:''}<button class="lnk" data-act="cancelChoose">Оставить как было</button></div>`:''}`;
 }
 function viewPath(){
   const d=todayPlan();
   if(!d||state.choosing)return viewChoose();
-  const plan=d.plan,done=d.done,cur=nextUndone(plan,done,null),n=plan.filter(id=>done.includes(id)).length;
+  const plan=d.plan,done=d.done,cur=curOf(d),n=plan.filter(id=>done.includes(id)).length;
   const f=focusFor(dkey()),t=new Date();
   const tl=plan.map(id=>`<span class="s ${done.includes(id)?'dn':''} ${id===cur?'cur':''}" style="flex-grow:${EX[id].d}">${id===cur?'<span class="redpill">сейчас</span>':''}</span>`).join('');
   const bs=(data.profile.bests||{}).s,te=(data.days[dkey()]||{}).exhale||{};
@@ -1376,9 +1403,10 @@ function viewPath(){
   });
   return topbar()+`
   <section class="hero">
-    <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><p class="kicker hero-dur">${d.dur} минут</p></div>
+    <div class="hero-row"><h2>${esc(weekday(t))}<br><span style="font-weight:300">${esc(dateLong(t))}</span></h2><button class="kicker hero-dur" data-act="choose" aria-label="Изменить время или начать сначала">${d.dur} минут</button></div>
     <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<span class="plate-hit" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"><canvas class="plate-sm" data-liveday="${dkey()}" aria-hidden="true"></canvas></span>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
+    ${cur?`<button class="gobtn" data-act="start" data-v="${cur}"><span><b>${n||d.atAcc>3?'Продолжить':'Начать'}</b><small>${esc(EX[cur].t)}</small></span>${ICON_PLAY}</button>`:''}
   </section>
   ${!cur?`<section class="donecard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
   <section class="stack">${stack}</section>
@@ -1441,7 +1469,14 @@ const chimePhase=()=>tone(520,0.25,0.12);
 let wl=null;
 async function lockScreen(){try{if('wakeLock' in navigator&&document.visibilityState==='visible'&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null;});}}catch(e){}}
 function unlockScreen(){try{if(wl)wl.release();}catch(e){}wl=null;}
-document.addEventListener('visibilitychange',()=>{if(ex.open&&ex.status==='run'&&document.visibilityState==='visible')lockScreen();});
+document.addEventListener('visibilitychange',()=>{if(ex.open&&ex.status==='run'&&document.visibilityState==='visible')lockScreen();if(document.visibilityState==='hidden')savePos();});
+window.addEventListener('pagehide',savePos);
+/* opening the app mid-day: straight into the exercise where she stopped — one tap to continue */
+function resumeOnLaunch(){
+  const d=todayPlan();if(!d||state.choosing||ex.open)return;
+  const c=curOf(d);if(!c||!(d.done.length||d.atAcc>3))return;
+  openEx(c,'plan');
+}
 
 /* ---------- exercise screen ---------- */
 const ex={open:false,id:null,mode:'plan',status:'ready',acc:0,since:null,extra:0,counted:0,phase:-1,timer:null,
@@ -1455,17 +1490,28 @@ function openEx(id,mode){
   const di=daysBefore(dkey());
   if(!ex.open)Object.assign(ex,{tw:di%TWISTERS.length,ph:di%PHRASES.length,word:di%WORDS.length,poem:di%POEMS.length});
   Object.assign(ex,{open:true,id,mode,status:'ready',acc:0,since:null,extra:0,counted:0,phase:-1,logged:false});
+  if(mode==='plan'){const k=dkey(),d=getDay(k);
+    if(d.at===id&&d.atAcc>3&&!(d.done||[]).includes(id)&&d.atAcc<EX[id].d+(d.atExtra||0)){ex.acc=d.atAcc;ex.extra=d.atExtra||0;ex.counted=Math.round(d.atAcc);ex.status='pause';}
+    else{d.at=id;d.atAcc=0;d.atExtra=0;}
+    saveDay(k);}
   ex.sw.running=false;ex.sw.last=null;
   $('ex').hidden=false;$('tbar').hidden=false;document.body.style.overflow='hidden';
   renderCard();renderBar();formOpen();paintPlates($('ex'));
   $('ex').scrollTop=0;
   clearInterval(ex.timer);ex.timer=setInterval(tick,200);
 }
+function savePos(){
+  if(!ex.open||ex.mode!=='plan'||ex.status==='done')return;
+  const k=dkey(),d=data.days[k];if(!d||!d.plan)return;
+  d.at=ex.id;d.atAcc=Math.round(elapsed()*10)/10;d.atExtra=ex.extra;saveDay(k);
+}
 function countTime(){
   const el=Math.round(elapsed()),add=el-ex.counted;
   if(add>=5){const d=getDay(dkey());d.seconds=(d.seconds||0)+add;ex.counted=el;saveDay(dkey());}
 }
 function closeEx(){
+  if(ex.status==='run'){ex.acc=elapsed();ex.since=null;ex.status='pause';}
+  savePos();
   logExercise();if(HAS_FORM)formClose();
   countTime();
   ex.open=false;clearInterval(ex.timer);unlockScreen();
@@ -1497,7 +1543,7 @@ function widget(e){
 function renderCard(){
   const e=EX[ex.id],d=todayPlan(),inPlan=ex.mode==='plan'&&d;
   const bi=BLOCKS.findIndex(b=>b.id===e.b);
-  const segs=inPlan?d.plan.map(id=>`<i class="${d.done.includes(id)?'dn':''} ${id===ex.id?'cur':''}"></i>`).join(''):'';
+  const segs=inPlan?d.plan.map(id=>`<i class="${d.done.includes(id)?'dn':''} ${id===ex.id?'cur':''}" data-act="seg" data-v="${id}" role="button" aria-label="${esc(EX[id].t)}"></i>`).join(''):'';
   $('ex').className='ex b-'+e.b;
   $('ex').innerHTML=`
   <div class="ex-head"><div class="in">
@@ -1531,6 +1577,7 @@ function tick(){
     const bc=$('bigClock');if(bc)bc.textContent=fmt(rem);
     const cl=$('clockLbl');if(cl)cl.textContent=ex.status==='run'?'осталось':ex.status==='pause'?'пауза':'таймер';
   }
+  if(ex.status==='run'&&Math.floor(elapsed()/5)!==ex.posT){ex.posT=Math.floor(elapsed()/5);savePos();}
   if(ex.status==='run'){const tt=$('tTime');if(tt)tt.textContent=fmt(rem);const tf=$('tFill');if(tf)tf.style.width=Math.min(100,el/dur*100)+'%';}
   if(e.type==='breath'){
     let r=40,lbl='Готовы?',num='';
@@ -1562,13 +1609,15 @@ function go(){
   }
   tick();
 }
-function pause(){if(ex.status!=='run')return;ex.acc=elapsed();ex.since=null;ex.status='pause';if(HAS_FORM)stopListening();renderBar();tick();}
+function pause(){if(ex.status!=='run')return;ex.acc=elapsed();ex.since=null;ex.status='pause';savePos();if(HAS_FORM)stopListening();renderBar();tick();}
 function complete(withSound){
   ex.acc=elapsed();ex.since=null;ex.status='done';
   if(withSound)chimeEnd();
   countTime();
   const k=dkey(),d=getDay(k);
-  if(d.plan&&d.plan.includes(ex.id)&&!d.done.includes(ex.id)){d.done.push(ex.id);saveDay(k);}
+  if(d.plan&&d.plan.includes(ex.id)&&!d.done.includes(ex.id)){d.done.push(ex.id);}
+  if(d.plan&&d.at===ex.id){d.at=nextUndone(d.plan,d.done,ex.id);d.atAcc=0;d.atExtra=0;}
+  saveDay(k);
   if(HAS_FORM){stopListening();logExercise();}
   const bc=$('bigClock');if(bc)bc.textContent='0:00';const cl=$('clockLbl');if(cl)cl.textContent='готово';
   const seg=document.querySelector('.segs i.cur');if(seg)seg.className='dn';
@@ -1585,7 +1634,16 @@ function skipEx(){
   countTime();
   const i=d.plan.indexOf(ex.id);let nx=null;
   for(let j=i+1;j<d.plan.length;j++)if(!d.done.includes(d.plan[j])){nx=d.plan[j];break;}
-  if(nx)openEx(nx,'plan');else closeEx();
+  const was=ex.id;
+  if(ex.status==='run'){ex.acc=elapsed();ex.since=null;ex.status='pause';}
+  savePos();ex.lastSkip={id:was,acc:ex.acc,extra:ex.extra};
+  if(!nx)nx=nextUndone(d.plan,d.done,was);
+  if(nx&&nx!==was){openEx(nx,'plan');skipToast(was);}else closeEx();
+}
+function skipToast(id){
+  const old=document.querySelector('.toast');if(old)old.remove();
+  $('ex').insertAdjacentHTML('beforeend',`<div class="toast" role="status"><span>Пропущено: ${esc(EX[id].t)}</span><button data-act="unskip" data-v="${id}">Вернуть</button></div>`);
+  const t=document.querySelector('.toast');setTimeout(()=>{if(t&&t.isConnected){t.classList.add('out');setTimeout(()=>t.remove(),400);}},6000);
 }
 function showDayDone(){
   logExercise();if(HAS_FORM)formClose();
@@ -1593,7 +1651,7 @@ function showDayDone(){
   const k=dkey(),d=getDay(k),st=streak(),mins=Math.round(d.seconds/60);
   $('tbar').hidden=true;$('ex').className='ex win';
   $('ex').innerHTML=`<div class="win-in">
-    <span class="logo">woisee</span>
+    <button class="logo" data-act="home" aria-label="На главную" style="align-self:flex-start">woisee</button>
     <h1 class="huge">Готово.</h1>
     <div class="mins"><b class="num">${mins}</b><span>${plural(mins,'минута','минуты','минут')}<br>голоса сегодня</span></div>
     ${st?`<p style="font-size:18px">${st} ${plural(st,'день','дня','дней')} подряд. Все четыре блока пройдены.</p>`:''}
@@ -1659,7 +1717,20 @@ document.addEventListener('click',ev=>{
     case 'rain':data.profile.rain=data.profile.rain===false;saveProfile();if(vf.solo)formOpts(vf.solo.opt);if(fm.solo)formOpts(fm.solo.opt);render();break;
     case 'lace':data.profile.lace=data.profile.lace!==true;saveProfile();if(vf.solo)formOpts(vf.solo.opt);if(fm.solo)formOpts(fm.solo.opt);render();break;
     case 'streak':state.from=state.tab==='progress'?state.from:state.tab;state.tab='progress';state.choosing=false;render();window.scrollTo(0,0);break;
-    case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k);d.dur=+v;d.focus=f.id;d.plan=buildPlan(+v,f);saveDay(k);state.choosing=false;render();window.scrollTo(0,0);break;}
+    case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k),np=buildPlan(+v,f);
+      (d.done||[]).forEach(id=>{if(!np.includes(id))np.push(id);});
+      d.dur=+v;d.focus=f.id;d.plan=np.map((id,i)=>({id,i})).sort((a,b)=>BI(a.id)-BI(b.id)||a.i-b.i).map(o=>o.id);saveDay(k);
+      state.choosing=false;state.tab='path';render();window.scrollTo(0,0);
+      const c=curOf(d);if(c)openEx(c,'plan');break;}
+    case 'restart':{const k=dkey(),d=getDay(k);d.done=[];d.log=[];d.seconds=0;d.at=null;d.atAcc=0;delete d.feel;saveDay(k);
+      if(HAS_FORM&&window.clipsClear)clipsClear(k);
+      state.choosing=false;render();window.scrollTo(0,0);const c=curOf(d);if(c)openEx(c,'plan');break;}
+    case 'home':if(ex.open)closeEx();closeSheet();state.tab='path';state.choosing=false;render();window.scrollTo(0,0);break;
+    case 'start':openEx(v,'plan');go();break;
+    case 'seg':if(ex.mode==='plan'&&v!==ex.id){countTime();openEx(v,'plan');}break;
+    case 'unskip':{const ls=ex.lastSkip;countTime();openEx(v,'plan');
+      if(ls&&ls.id===v&&ls.acc>1){ex.acc=ls.acc;ex.extra=ls.extra||0;ex.counted=Math.round(ls.acc);ex.status='pause';savePos();renderBar();tick();}
+      const t=document.querySelector('.toast');if(t)t.remove();break;}
     case 'choose':state.choosing=true;render();window.scrollTo(0,0);break;
     case 'openday':openDay(v);break;
     case 'cancelChoose':state.choosing=false;render();break;
@@ -1699,6 +1770,7 @@ document.addEventListener('click',ev=>{
 loadLocal();render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+setTimeout(resumeOnLaunch,0);
 </script>
 </body>
 </html>
