@@ -65,8 +65,6 @@ p{margin:0}
 .gobtn small{font-size:14px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gobtn svg{flex:none;width:58px;height:58px;padding:17px;border-radius:50%;background:#FFFEFC;color:var(--signal)}
 .choose-acts{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.segs i{position:relative;cursor:pointer}
-.segs i::after{content:"";position:absolute;left:0;right:0;top:-14px;bottom:-14px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:14px;max-width:calc(100% - 36px);background:#2C3836;color:#F4F2EC;border-radius:99px;padding:10px 10px 10px 18px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity .35s}
 .toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toast button{flex:none;background:#F4F2EC;color:#192524;border-radius:99px;padding:8px 14px;font-weight:600}
@@ -1399,7 +1397,7 @@ function viewPath(){
     const ids=plan.filter(id=>EX[id].b===b.id);if(!ids.length)return;
     const bn=ids.filter(id=>done.includes(id)).length;
     stack+=`<article class="blk b-${b.id}"><header><div><span class="idx">0${bi+1}</span><h3>${esc(b.name)}</h3><p class="sub">${esc(b.sub)}</p></div><span class="cnt num">${bn}<small>/${ids.length}</small></span></header>
-      <ul>${ids.map(id=>{const isD=done.includes(id),isC=id===cur;return `<li><button class="row ${isD?'dn':''} ${isC?'cur':''}" data-act="ex" data-v="${id}"><span class="t">${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span><span class="box">${isD?ICON_CHECK:isC?ICON_PLAY:''}</span></button></li>`;}).join('')}</ul></article>`;
+      <ul>${ids.map(id=>{const isD=done.includes(id),isC=id===cur;return `<li>${isC?`<button class="row cur" data-act="start" data-v="${id}">`:`<div class="row ${isD?'dn':''}">`}<span class="t">${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span><span class="box">${isD?ICON_CHECK:isC?ICON_PLAY:''}</span>${isC?'</button>':'</div>'}</li>`;}).join('')}</ul></article>`;
   });
   return topbar()+`
   <section class="hero">
@@ -1543,7 +1541,7 @@ function widget(e){
 function renderCard(){
   const e=EX[ex.id],d=todayPlan(),inPlan=ex.mode==='plan'&&d;
   const bi=BLOCKS.findIndex(b=>b.id===e.b);
-  const segs=inPlan?d.plan.map(id=>`<i class="${d.done.includes(id)?'dn':''} ${id===ex.id?'cur':''}" data-act="seg" data-v="${id}" role="button" aria-label="${esc(EX[id].t)}"></i>`).join(''):'';
+  const segs=inPlan?d.plan.map(id=>`<i class="${d.done.includes(id)?'dn':''} ${id===ex.id?'cur':''}"></i>`).join(''):'';
   $('ex').className='ex b-'+e.b;
   $('ex').innerHTML=`
   <div class="ex-head"><div class="in">
@@ -1727,7 +1725,6 @@ document.addEventListener('click',ev=>{
       state.choosing=false;render();window.scrollTo(0,0);const c=curOf(d);if(c)openEx(c,'plan');break;}
     case 'home':if(ex.open)closeEx();closeSheet();state.tab='path';state.choosing=false;render();window.scrollTo(0,0);break;
     case 'start':openEx(v,'plan');go();break;
-    case 'seg':if(ex.mode==='plan'&&v!==ex.id){countTime();openEx(v,'plan');}break;
     case 'unskip':{const ls=ex.lastSkip;countTime();openEx(v,'plan');
       if(ls&&ls.id===v&&ls.acc>1){ex.acc=ls.acc;ex.extra=ls.extra||0;ex.counted=Math.round(ls.acc);ex.status='pause';savePos();renderBar();tick();}
       const t=document.querySelector('.toast');if(t)t.remove();break;}
