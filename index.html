@@ -1650,11 +1650,11 @@ function buildPlan(min,focus){
   return items.map((id,i)=>({id,i})).sort((a,b)=>BI(a.id)-BI(b.id)||a.i-b.i).map(o=>o.id);
 }
 function todayPlan(){const d=data.days[dkey()];return d&&d.plan?d:null;}
-/* where the day stands: the exercise she was on (even after a skip), else the next undone one */
+/* where the day stands: a strict path — always the first exercise not yet done, in plan order.
+   (d.at only remembers the second she stopped at inside that exercise.) */
 function curOf(d){
   if(!d||!d.plan)return null;
-  if(d.at&&d.plan.includes(d.at)&&!d.done.includes(d.at))return d.at;
-  return nextUndone(d.plan,d.done,d.at&&d.plan.includes(d.at)?d.at:null);
+  return d.plan.find(id=>!d.done.includes(id))||null;
 }
 function nextUndone(plan,done,after){
   const start=after==null?0:plan.indexOf(after)+1;
@@ -1853,7 +1853,7 @@ function renderBar(){
   if(ex.status==='ready'){label='';acts=`<button class="go" data-act="go">Старт</button>`;}
   else if(ex.status==='run'){label='';acts=`<button class="chip" data-act="plus">+30 с</button><button class="go alt" data-act="pause">Пауза</button>`;}
   else if(ex.status==='pause'){label='';acts=`<button class="chip" data-act="finishNow">Готово</button><button class="go" data-act="go" aria-label="Продолжить">${ICON_PLAY.replace('<svg','<svg style="width:28px;height:28px"')}</button>`;}
-  else{fin=true;const d=todayPlan(),nx=ex.mode==='plan'&&d?nextUndone(d.plan,d.done,ex.id):null;
+  else{fin=true;const d=todayPlan(),nx=ex.mode==='plan'&&d?curOf(d):null;
     label=ex.mode!=='plan'?'упражнение выполнено':nx?'дальше: '+EX[nx].t:'последнее упражнение дня';
     acts=`<button class="go" data-act="next">${ex.mode!=='plan'?'Выйти':nx?'Дальше':'Финиш'}</button>`;}
   $('tbar').innerHTML=`<div class="cap ${fin?'fin':''}"><i class="fill" id="tFill" style="width:${fin?100:Math.min(100,el/dur*100)}%"></i><div class="time"><b id="tTime" class="${fin?'':'big'}">${fin?'Готово':fmt(rem)}</b>${label?`<span>${esc(label)}</span>`:''}</div><div class="acts">${acts}</div></div>`;
@@ -1904,8 +1904,8 @@ function complete(withSound){
   if(withSound)chimeEnd();
   countTime();
   const k=dkey(),d=getDay(k);
-  if(d.plan&&d.plan.includes(ex.id)&&!d.done.includes(ex.id)){d.done.push(ex.id);}
-  if(d.plan&&d.at===ex.id){d.at=nextUndone(d.plan,d.done,ex.id);d.atAcc=0;d.atExtra=0;}
+  if(ex.mode==='plan'&&d.plan&&d.plan.includes(ex.id)&&!d.done.includes(ex.id)){d.done.push(ex.id);}
+  if(d.plan&&d.at===ex.id){d.at=curOf(d);d.atAcc=0;d.atExtra=0;}
   saveDay(k);
   if(HAS_FORM){stopListening();logExercise();}
   const bc=$('bigClock');if(bc)bc.textContent='0:00';const cl=$('clockLbl');if(cl)cl.textContent='готово';
@@ -1915,7 +1915,7 @@ function complete(withSound){
 function nextEx(){
   const d=todayPlan();
   if(ex.mode!=='plan'||!d){closeEx();return;}
-  const nx=nextUndone(d.plan,d.done,ex.id);
+  const nx=curOf(d);
   if(nx){countTime();openEx(nx,'plan');}else showDayDone();
 }
 /* leaving in the middle: ask first; the timer waits */
@@ -2019,7 +2019,7 @@ document.addEventListener('click',ev=>{
     case 'openday':openDay(v);break;
     case 'cancelChoose':state.choosing=false;render();break;
     case 'ex':openEx(v,'plan');break;
-    case 'single':openEx(v,todayPlan()&&todayPlan().plan.includes(v)?'plan':'single');break;
+    case 'single':openEx(v,'single');break;
     case 'close':if(ex.status==='run'||ex.status==='pause')askClose();else closeEx();break;
     case 'closeyes':closeSheet();closeEx();break;
     case 'closeno':closeSheet();if(ex.paused4ask){ex.paused4ask=false;go();}break;
