@@ -210,7 +210,7 @@ p{margin:0}
 .ex{position:fixed;inset:0;z-index:20;background:var(--paper);overflow-y:auto;-webkit-overflow-scrolling:touch}
 .ex-head{background:var(--c);color:var(--cf);border-radius:0 0 34px 34px}
 .ex-head .in,.ex-body{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
-.ex-head .in{padding-block:calc(env(safe-area-inset-top,0px) + 12px) 24px;display:flex;flex-direction:column;gap:16px}
+.ex-head .in{padding-block:calc(env(safe-area-inset-top,0px) + 16px) 26px;display:flex;flex-direction:column;gap:16px}
 .ex-top{display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center}
 .icon-btn{width:40px;height:40px;border-radius:50%;background:var(--cbox);display:flex;align-items:center;justify-content:center}
 .icon-btn svg{width:20px;height:20px}
@@ -285,7 +285,7 @@ p{margin:0}
 
 /* day complete */
 .ex.win{background:var(--lime)}
-.win-in{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:calc(env(safe-area-inset-top,0px) + 28px) calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:24px}
+.win-in{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:calc(env(safe-area-inset-top,0px) + 18px) calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .win-in .huge{font-weight:800;font-size:clamp(64px,20vw,92px);line-height:.85;letter-spacing:-.06em}
 .win-in .mins{display:flex;align-items:flex-end;gap:12px}
 .win-in .mins b{font-weight:300;font-size:120px;line-height:.78;letter-spacing:-.07em}
@@ -325,7 +325,7 @@ button.cal-d:active{transform:scale(.94)}
 .ex-chart{width:100%;height:170px;display:block;margin-top:8px}
 .b-measure{--c:var(--signal)}
 .scrim{position:fixed;inset:0;z-index:40;background:rgba(25,37,36,.45);display:flex;align-items:flex-end;justify-content:center}
-.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--paper);border-radius:30px 30px 0 0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--paper);border-radius:30px 30px 0 0;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
 .sheet h3{font-size:26px;line-height:1.05}
 .sheet-acts{display:flex;flex-direction:column;gap:10px;margin-top:4px}
 .sheet .primary{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:99px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px}
@@ -335,7 +335,73 @@ button.cal-d:active{transform:scale(.94)}
 .gif-ico svg{width:22px;height:22px}
 .gif-ico.wait{opacity:.35;pointer-events:none}
 .gif-ico.ready{background:var(--signal);border-color:var(--signal);color:#fff}
-.sheet .day-stage{margin-left:calc(-1 * max(20px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(20px,env(safe-area-inset-right,0px)))}
+.sheet .day-stage{margin-left:calc(-1 * max(18px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(18px,env(safe-area-inset-right,0px)))}
+/* account */
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border-radius:99px;background:#FFFFFF;color:#1F1F1F;font-weight:600;font-size:16px;border:1px solid rgba(25,37,36,.16)}
+.gbtn svg{width:20px;height:20px}
+.pr-acct{display:flex;flex-direction:column;gap:12px}
+.pr-acct .ghost{align-self:center}
+.nudge{display:flex;flex-direction:column;gap:10px;border:1px solid var(--ink);border-radius:26px;padding:18px}
+.nudge b{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.nudge p{margin:0;font-size:15px}
+/* profile */
+.pr-top{height:36px}
+.pr-gear{width:44px;height:44px;display:grid;place-items:center;margin:-4px -11px -4px 0;background:none;color:var(--ink)}
+.pr-gear svg{width:22px;height:22px}
+.pr-hello{display:flex;flex-direction:column;gap:12px}
+.pr-greet{position:relative}
+.pr-greet h1{margin:0;font-weight:800;letter-spacing:-.05em;line-height:.9;font-size:64px;position:relative}
+.pr-greet h1 span{display:block;overflow-wrap:anywhere;hyphens:auto}
+.pr-notebtn{position:absolute;z-index:2;border-radius:50%}
+#prCv{position:absolute;pointer-events:none;z-index:1}
+.pr-streak{display:flex;flex-direction:column;gap:14px}
+.pr-big{display:flex;align-items:last baseline;gap:12px}
+.pr-big b{font-size:120px;font-weight:300;letter-spacing:-.07em;line-height:.78}
+.pr-big span{font-size:15px;line-height:1.2}
+.pr-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.pr-day{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px}
+.pr-day canvas{width:100%;aspect-ratio:1;display:block}
+.pr-day span{opacity:.6}
+.pr-day span.t{opacity:1;font-weight:700}
+.pr-day.off i{width:100%;aspect-ratio:1;display:grid;place-items:center}
+.pr-day.off i::after{content:"";width:34%;aspect-ratio:1;border-radius:50%;border:1px dashed #3A4744}
+.pr-note{border:1px solid var(--ink);border-radius:32px;padding:20px 8px 20px 20px;display:grid;grid-template-columns:minmax(0,1fr) 150px;align-items:center}
+.pr-note>div:first-child{display:flex;flex-direction:column;gap:4px}
+.pr-note b{font-size:64px;font-weight:800;letter-spacing:-.05em;line-height:.95}
+.pr-note b.pr-none{font-size:30px;line-height:1;letter-spacing:-.03em}
+.pr-note span{font-size:14px}
+.pr-again{align-self:flex-start;margin-top:14px;font-size:14px;font-weight:400;color:var(--muted);text-underline-offset:4px;text-decoration-color:rgba(154,167,163,.5)}
+.pr-form{width:150px;height:150px;animation:prBreath 4s ease-in-out infinite}
+.pr-form canvas{width:150px;height:150px;display:block;animation:prOrbit 40s linear infinite}
+@keyframes prOrbit{to{transform:rotate(360deg)}}
+@keyframes prBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@media (prefers-reduced-motion:reduce){.pr-form,.pr-form canvas{animation:none}}
+.pr-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pr-tile{background:var(--c);color:var(--ebony);border-radius:26px;padding:16px;display:flex;flex-direction:column;gap:6px;min-height:140px}
+.pr-tile>span:first-child{font-size:13px;opacity:.75}
+.pr-tile b{font-size:48px;font-weight:300;letter-spacing:-.05em;line-height:.9}
+.pr-tile b small{font-size:16px;letter-spacing:0;margin-left:4px}
+.pr-tile>span:last-child{font-size:13px;margin-top:auto}
+.pr-tile.dark{background:var(--paper-2);color:var(--ink)}
+.pr-tile.dark>span{color:var(--muted);opacity:1}
+.pr-sec{display:flex;flex-direction:column;gap:12px}
+.pr-h{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--ink);padding-top:14px}
+.pr-h h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.03em}
+.pr-map{max-width:none;width:calc(100% + 36px);margin:0 -18px}
+.pr-hist{list-style:none;margin:0;padding:0}
+.pr-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;width:100%;padding:13px 0;border-bottom:1px solid var(--rule);font-size:15px;text-align:left}
+.pr-hist li:last-child .pr-row{border-bottom:0}
+.pr-row .m{color:var(--muted);text-align:right}
+.pr-title{margin:0;font-size:56px;font-weight:800;letter-spacing:-.05em;line-height:.9}
+.pr-set{display:flex;flex-direction:column}
+.pr-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--rule);font-size:15px}
+.pr-line small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.pr-name input{font:inherit;font-size:16px;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--rule);padding:6px 0;width:150px;text-align:right}
+.pr-name input:focus{outline:none;border-bottom-color:var(--ink)}
+.pr-sw{width:52px;height:32px;border-radius:99px;background:var(--soft);position:relative;flex:none;transition:background .2s}
+.pr-sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--ink);transition:left .2s}
+.pr-sw[aria-pressed="true"]{background:var(--lime)}
+.pr-sw[aria-pressed="true"]::after{left:23px;background:var(--ebony)}
 .ghost.wide{align-self:stretch;text-align:center;padding:14px}
 .icon-btn.plain{background:var(--paper-2);flex:none}
 /* v3 overlays: exhale counter, together labels, «С кем-то» */
@@ -391,7 +457,7 @@ button.cal-d:active{transform:scale(.94)}
 <section class="ex" id="ex" hidden></section>
 <div class="tbar" id="tbar" hidden></div>
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
-<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script>
+<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script><script src="supabase.js"></script>
 <script>
 /* ---------- blocks and exercises (from the guide) ---------- */
 const BLOCKS=[
@@ -1336,6 +1402,283 @@ async function clipsClear(k){
 }
 window.clipsClear=clipsClear;
 
+/* ---------- profile (design: «woisee · профиль») ----------
+   Greeting with a living note-avatar: the dots of her comfortable note flow around the letters of «Привет, <имя>»,
+   bounce off them, burst every few seconds and gather again; a finger stirs them. Below: streak and the week of
+   day pictures, the comfortable note, four numbers, the voice map and the history. Settings live one level deeper. */
+const PR_GREET='Привет,',PR_MAX=96,PR_MIN=44,PR_GAP=12,PR_AMAX=124,PR_DOTS=2600,PR_MARG=3;
+const OCT_NAME=['контроктавы','большой октавы','малой октавы','первой октавы','второй октавы','третьей октавы'];
+const OCT_SHORT=['контр.','большой','малой','первой','второй','третьей'];
+const noteName=m=>Voice3.NAMES[((Math.round(m)%12)+12)%12];
+const octIdx=m=>Math.max(0,Math.min(5,Math.floor(Math.round(m)/12)-2));   // midi 24–35 контроктава, 36 большая, 48 малая, 60 первая, 72 вторая
+const hzOf=m=>Math.round(440*Math.pow(2,(m-69)/12));
+function prApproxEm(s){let w=0;for(const ch of s){if('ЖШЩМЮФЫжшщмюфыWMmw'.includes(ch))w+=.78;else if('ІіIl1.,\'’-:;!|'.includes(ch))w+=.28;else if(ch===' ')w+=.25;else if(ch!==ch.toLowerCase())w+=.64;else w+=.56;}return w-.05*s.length;}
+
+const pr={raf:0,sim:null,measure:null,fontRev:0,last:0};
+function profName(){return (data.profile.name||'').trim()||'друг';}
+function profNote(){const ref=data.profile.ref;return ref!=null?Math.round(ref):null;}
+
+/* the avatar's field: the comfortable note's own form (rays by note, rings by octave, a twist for sharps) */
+function prField(){
+  const ref=profNote(),u=ref!=null?uOfMidi(ref):19,P=Voice3.params(u);
+  const rain=data.profile.rain!==false,base=rain?Voice3.toHex(Voice3.noteColor(u)):'#E04FB4';
+  return {P,colA:base,colB:Voice3.mix(base,'#FFFFFF',.62)};
+}
+function prZ(P,x,y){const r=Math.hypot(x,y),th=Math.atan2(y,x)+Math.PI/2,rr=P.k*Math.PI*r*1.15;return Math.cos(P.m*(th+P.tw*r*1.7))*Math.cos(rr)+.18*Math.cos(rr);}
+function prDots(n){
+  let seed=7;const r=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296,gs=()=>Math.sqrt(-2*Math.log(1-r()))*Math.cos(2*Math.PI*r());
+  const D={n,X0:new Float32Array(n),Y0:new Float32Array(n),X:new Float32Array(n),Y:new Float32Array(n),VX:new Float32Array(n),VY:new Float32Array(n),C:new Float32Array(n),J:new Float32Array(2*n),Z:new Float32Array(n),A:new Float32Array(n)};
+  for(let i=0;i<n;i++){D.X0[i]=gs()*.42;D.Y0[i]=gs()*.4;D.C[i]=Math.pow(r(),.18);D.J[2*i]=gs();D.J[2*i+1]=gs();D.Z[i]=.8+r()*r()*1.5;D.A[i]=.4+.6*r();}
+  return D;
+}
+/* letters as a mask on the canvas grid, and for every pixel inside a letter the nearest pixel outside */
+function prMask(g){
+  const W=g.cw,H=g.cvH,off=document.createElement('canvas');off.width=W;off.height=H;
+  const c=off.getContext('2d'),fs=g.fs,lh=fs*.9;
+  c.font='800 '+fs+'px "Inter Tight", "Helvetica Neue", Arial, sans-serif';c.fillStyle='#000';c.strokeStyle='#000';c.lineWidth=2*PR_MARG;c.lineJoin='round';
+  const mt=c.measureText('Пр'),asc=mt.fontBoundingBoxAscent||.97*fs,desc=mt.fontBoundingBoxDescent||.24*fs;
+  g.rows.forEach((t,i)=>{const by=i*lh+(lh-asc-desc)/2+asc-g.cvTop;let x=g.px;for(const ch of t){c.fillText(ch,x,by);c.strokeText(ch,x,by);x+=c.measureText(ch).width-.05*fs;}});
+  const a=c.getImageData(0,0,W,H).data,IN=new Uint8Array(W*H),NX=new Int16Array(W*H),NY=new Int16Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=y*W+x;IN[p]=a[4*p+3]>100?1:0;if(IN[p]){NX[p]=-9999;NY[p]=-9999;}else{NX[p]=x;NY[p]=y;}}
+  const rel=(p,x,y,q)=>{const dx=NX[q]-x,dy=NY[q]-y,ex=NX[p]-x,ey=NY[p]-y;if(dx*dx+dy*dy<ex*ex+ey*ey){NX[p]=NX[q];NY[p]=NY[q];}};
+  for(let y=0;y<H;y++){for(let x=0;x<W;x++){const p=y*W+x;if(!IN[p])continue;if(x>0)rel(p,x,y,p-1);if(y>0){rel(p,x,y,p-W);if(x>0)rel(p,x,y,p-W-1);if(x<W-1)rel(p,x,y,p-W+1);}}
+    for(let x=W-1;x>=0;x--){const p=y*W+x;if(IN[p]&&x<W-1)rel(p,x,y,p+1);}}
+  for(let y=H-1;y>=0;y--){for(let x=W-1;x>=0;x--){const p=y*W+x;if(!IN[p])continue;if(x<W-1)rel(p,x,y,p+1);if(y<H-1){rel(p,x,y,p+W);if(x<W-1)rel(p,x,y,p+W+1);if(x>0)rel(p,x,y,p+W-1);}}
+    for(let x=0;x<W;x++){const p=y*W+x;if(IN[p]&&x>0)rel(p,x,y,p-1);}}
+  return {W,H,IN,NX,NY};
+}
+/* where the greeting breaks and where the note sits: after the shortest line, never more than 20 px past the edge */
+function prFit(name,AV,px){
+  const em=s=>pr.measure?pr.measure(s):prApproxEm(s);
+  let lines=[name],fs=Math.min(PR_MAX,AV/Math.max(em(PR_GREET),em(name)));
+  if(fs<PR_MIN&&/[\s-]/.test(name)){lines=name.replace(/-/g,'-\u0001').split(/\u0001|\s+/).filter(Boolean);fs=Math.min(PR_MAX,AV/Math.max(em(PR_GREET),...lines.map(em)));}
+  const rows=[PR_GREET].concat(lines);let bi=0;rows.forEach((t,i)=>{if(em(t)<em(rows[bi]))bi=i;});
+  const shortEm=em(rows[bi]);fs=Math.max(PR_MIN,Math.floor(fs));
+  const size=Math.round(1.5*Math.min(fs*1.3,PR_AMAX)),cx=Math.min(shortEm*fs+PR_GAP+size*.3,AV+20-size/2);
+  const ay=Math.round(bi*fs*.9+fs*.48-size/2),rowsH=rows.length*fs*.9;
+  const cvTop=Math.round(Math.min(-10,ay-16)),cvH=Math.round(Math.max(rowsH+10,ay+size+16)-cvTop);
+  return {fs,lines,rows,as:size,ax:Math.round(cx-size/2),ay,cvTop,cvH,px,cw:AV+2*px};
+}
+function prStep(S,dt,still){
+  const D=S.dots,g=S.geom,M=S.mask,P=S.field.P;
+  if(!still){S.rot+=dt*.3;S.t+=dt;}
+  const R=g.as/2,cx=g.ax+R+g.px,cy=g.ay+R-g.cvTop;
+  if(!S.placed){for(let j=0;j<D.n;j++){D.X[j]=cx;D.Y[j]=cy;D.VX[j]=D.X0[j]*R*9;D.VY[j]=D.Y0[j]*R*9;}S.placed=true;S.next=3;}
+  let pulse=0;if(!still&&S.t>=S.next){pulse=.6+Math.random()*.9;S.next=S.t+2.5+Math.random()*2.5;}
+  const c=Math.cos(S.rot),sn=Math.sin(S.rot),env=1+.08*Math.sin(S.t*Math.PI/2),e=.004,t=S.t,K=55,damp=Math.exp(-5.5*dt),Pt=!still&&S.ptr?S.ptr:null;
+  for(let i=0;i<D.n;i++){
+    const x=(D.X0[i]*c-D.Y0[i]*sn)*env,y=(D.X0[i]*sn+D.Y0[i]*c)*env;
+    const z=prZ(P,x,y),zx=(prZ(P,x+e,y)-z)/e,zy=(prZ(P,x,y+e)-z)/e,g2=zx*zx+zy*zy+1e-4;
+    let dx=-z*zx/g2,dy=-z*zy/g2;const dl=Math.hypot(dx,dy);if(dl>.16){dx*=.16/dl;dy*=.16/dl;}
+    const jit=.004*(.4+Math.sin(t*6+i)*.5+.5),tx=cx+(x+dx*D.C[i]+D.J[2*i]*jit)*R,ty=cy+(y+dy*D.C[i]+D.J[2*i+1]*jit)*R;
+    let ax=(tx-D.X[i])*K,ay=(ty-D.Y[i])*K;
+    if(Pt){const qx=D.X[i]-Pt.x,qy=D.Y[i]-Pt.y,qd=Math.hypot(qx,qy)||1;if(qd<90){const f=1-qd/90;ax+=(qx/qd*2600-qy/qd*1700)*f;ay+=(qy/qd*2600+qx/qd*1700)*f;}}
+    if(pulse){const rx=D.X[i]-cx,ry=D.Y[i]-cy,rl=Math.hypot(rx,ry)||1,imp=380*pulse*(.4+D.A[i]);D.VX[i]+=rx/rl*imp;D.VY[i]+=ry/rl*imp;}
+    if(M){const gx=Math.round(D.X[i]),gy=Math.round(D.Y[i]);
+      if(gx>=0&&gy>=0&&gx<M.W&&gy<M.H){const q=gy*M.W+gx;
+        if(M.IN[q]&&M.NX[q]>-9999){let ox=M.NX[q]-D.X[i],oy=M.NY[q]-D.Y[i];const ol=Math.hypot(ox,oy)||1;ox/=ol;oy/=ol;
+          const tg=(D.VX[i]*-oy+D.VY[i]*ox)>=0?1:-1,push=900+Math.min(ol,14)*140;ax+=ox*push-oy*tg*1400;ay+=oy*push+ox*tg*1400;}}}
+    let vx=D.VX[i]*damp+ax*dt,vy=D.VY[i]*damp+ay*dt;const sp=Math.hypot(vx,vy);if(sp>900){vx*=900/sp;vy*=900/sp;}
+    D.VX[i]=vx;D.VY[i]=vy;D.X[i]+=vx*dt;D.Y[i]+=vy*dt;
+  }
+}
+function prDraw(S){
+  const cv=S.cv,g=S.geom,D=S.dots,dpr=Math.min(devicePixelRatio||1,2),W=Math.round(g.cw*dpr),H=Math.round(g.cvH*dpr);
+  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,g.cw,g.cvH);
+  for(let pass=0;pass<2;pass++){ctx.fillStyle=pass?S.field.colB:S.field.colA;
+    for(let i=pass;i<D.n;i+=2){const z=D.Z[i]*(pass?.8:1),vx=D.VX[i],vy=D.VY[i];ctx.globalAlpha=D.A[i];ctx.fillRect(D.X[i]-z/2,D.Y[i]-z/2,z,z);
+      if(vx*vx+vy*vy>22500){ctx.globalAlpha=D.A[i]*.45;ctx.fillRect(D.X[i]-vx*.014-z/2,D.Y[i]-vy*.014-z/2,z,z);ctx.fillRect(D.X[i]-vx*.028-z/2,D.Y[i]-vy*.028-z/2,z*.8,z*.8);}}}
+  ctx.globalAlpha=1;
+}
+function prFrame(now){
+  const S=pr.sim;if(!S||!S.cv||!S.cv.isConnected||state.tab!=='profile'){pr.raf=0;return;}
+  const dt=Math.min(.033,((now-(pr.last||now))/1000)||.016);pr.last=now;
+  const still=REDUCED(),g=S.geom,key=g.fs+'|'+g.rows.join('/')+'|'+g.cvTop+'|'+g.cvH+'|'+g.cw+'|'+pr.fontRev;
+  if(key!==S.maskKey){try{S.mask=prMask(g);}catch(e){S.mask=null;}S.maskKey=key;}
+  const steps=still?(S.settled===key?0:240):1;
+  for(let k=0;k<steps;k++)prStep(S,still?1/60:dt,still);
+  if(still)S.settled=key;
+  if(steps)prDraw(S);
+  pr.raf=requestAnimationFrame(prFrame);
+}
+/* lay out the greeting for this screen width and start the avatar */
+function profLayout(){
+  const box=$('prGreet');if(!box)return;
+  const AV=box.clientWidth,px=parseFloat(getComputedStyle($('view')).paddingLeft)||18;
+  const g=prFit(profName(),AV,px),h=$('prH');
+  h.style.fontSize=g.fs+'px';h.innerHTML=`<span>${PR_GREET}</span>`+g.lines.map(t=>`<span>${esc(t)}</span>`).join('');
+  const cv=$('prCv');cv.style.left=(-px)+'px';cv.style.top=g.cvTop+'px';cv.style.width=g.cw+'px';cv.style.height=g.cvH+'px';
+  const b=$('prNoteBtn');b.style.left=g.ax+'px';b.style.top=g.ay+'px';b.style.width=b.style.height=g.as+'px';
+  if(!pr.sim)pr.sim={};const S=pr.sim;
+  if(S.cv!==cv){S.cv=cv;S.placed=false;S.dots=S.dots||prDots(PR_DOTS);S.rot=S.rot||0;S.t=S.t||0;}
+  S.geom=g;S.field=prField();
+  box.onpointermove=e=>{const r=box.getBoundingClientRect();S.ptr={x:e.clientX-r.left+px,y:e.clientY-r.top-g.cvTop};};
+  box.onpointerleave=()=>{S.ptr=null;};
+  if(!pr.raf){pr.last=performance.now();pr.raf=requestAnimationFrame(prFrame);}
+}
+function profileStart(){
+  if(!HAS_FORM)return;
+  if(!pr.measure){
+    const go=()=>{try{let el=$('prMeasure');if(!el){el=document.createElement('span');el.id='prMeasure';el.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;font:800 100px "Inter Tight","Helvetica Neue",Arial,sans-serif;letter-spacing:-5px';document.body.appendChild(el);}
+      pr.measure=s=>{el.textContent=s;return el.getBoundingClientRect().width/100;};pr.fontRev++;profLayout();}catch(e){}};
+    if(document.fonts&&document.fonts.load)document.fonts.load('800 100px "Inter Tight"').then(go,go);else go();
+    setTimeout(go,700);
+  }
+  profLayout();
+  /* the comfortable note, drawn once and turned slowly by CSS */
+  const nc=$('prNoteCv');
+  if(nc){const s=nc.clientWidth,ctx=fitCv(nc,s),ref=profNote(),u=ref!=null?uOfMidi(ref):19,rain=data.profile.rain!==false;ctx.clearRect(0,0,s,s);
+    Voice3.renderForm(ctx,s/2,s/2,s*.42,u,900,11,rain?Voice3.noteColor(u):FC.dot,ref!=null?1:.35,1.1,0,data.profile.lace!==true);}
+}
+
+/* ---------- numbers ---------- */
+function profStats(){
+  const all=Object.keys(data.days).sort(),days=all.filter(ok),now=dkey();
+  const mins=Math.round(days.reduce((a,k)=>a+(data.days[k].seconds||0),0)/60);
+  const duo=days.filter(k=>(data.days[k].log||[]).some(L=>(L.voices||1)>1)).length;
+  const midis=[];all.forEach(k=>(data.days[k].log||[]).forEach(L=>(L.notes||[]).forEach(n=>{if(n.midi!=null&&(n.sec||0)>=.5)midis.push(n.midi);})));
+  const lo=midis.length?Math.round(Math.min(...midis)):null,hi=midis.length?Math.round(Math.max(...midis)):null;
+  const b=data.profile.bests||{},bestS=Object.keys(SOUNDS).filter(s=>b[s]).sort((x,y)=>b[y]-b[x])[0];
+  return {days,first:days[0]||null,mins,avg:days.length?Math.round(mins/days.length):0,duo,lo,hi,best:bestS?{s:bestS,v:Math.round(b[bestS])}:null};
+}
+const fmtOct=n=>(Math.round(n*10)/10).toString().replace('.',',');
+function viewProfile(){
+  const st=streak(),S=profStats(),ref=profNote(),today=new Date();
+  const since=S.first?`${S.days.length} ${plural(S.days.length,'день','дня','дней')} с голосом · с ${esc(dateLong(parseKey(S.first)))}`:'Первое занятие впереди';
+  const week=[];for(let i=6;i>=0;i--){const k=dkey(addDays(today,-i)),d=parseKey(k),has=ok(k)||(data.days[k]&&(data.days[k].log||[]).length);week.push({k,has,w:['вс','пн','вт','ср','чт','пт','сб'][d.getDay()],t:i===0});}
+  const range=S.lo!=null&&S.hi>S.lo?{v:fmtOct((S.hi-S.lo)/12),t:`${noteName(S.lo)} ${OCT_SHORT[octIdx(S.lo)]} — ${noteName(S.hi)} ${OCT_SHORT[octIdx(S.hi)]}`}:null;
+  const hist=Object.keys(data.days).filter(k=>ok(k)||(data.days[k].log||[]).length).sort().reverse().slice(0,10).map(k=>{
+    const d=data.days[k],f=FOCI.find(x=>x.id===d.focus),bits=[Math.round((d.seconds||0)/60)+' мин'];
+    const ex_=d.exhale?Math.max(0,...Object.values(d.exhale)):0;if(ex_)bits.push('выдох '+Math.round(ex_)+' с');
+    const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel];if(feel)bits.push(feel);
+    return `<li><button class="pr-row" data-act="day" data-v="${k}"><span>${esc(dateLong(parseKey(k)))}${f?' · '+esc(f.name):''}</span><span class="m">${bits.join(' · ')}</span></button></li>`;}).join('');
+  return `<header class="top pr-top"><button class="back" data-act="tab" data-v="${state.from||'path'}">${ICON_BACK}Назад</button>
+    <button class="pr-gear" data-act="settings" aria-label="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></header>
+  <section class="pr-hello">
+    <div class="pr-greet" id="prGreet"><h1 id="prH"><span>${PR_GREET}</span><span>${esc(profName())}</span></h1>
+      <button class="pr-notebtn" id="prNoteBtn" data-act="prnote" aria-label="Моя нота${ref!=null?': '+noteName(ref):''}"></button>
+      <canvas id="prCv" aria-hidden="true"></canvas></div>
+    <p class="note">${since}</p>
+  </section>
+  <section class="pr-streak">
+    <div class="pr-big"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<br>подряд</span></div>
+    <div class="pr-week">${week.map(w=>w.has?`<button class="pr-day" data-act="day" data-v="${w.k}" aria-label="${esc(dateLong(parseKey(w.k)))}"><canvas data-plate="${w.k}" data-dot="1" data-r=".44"></canvas><span class="${w.t?'t':''}">${w.w}</span></button>`:`<span class="pr-day off"><i></i><span class="${w.t?'t':''}">${w.w}</span></span>`).join('')}</div>
+  </section>
+  <section class="pr-note" id="prNoteCard">
+    <div><span class="note">Комфортная нота</span>
+      ${ref!=null?`<b>${noteName(ref)}</b><span>${OCT_NAME[octIdx(ref)]} · ${hzOf(ref)} Гц</span><button class="lnk pr-again" data-act="resetref">Найти заново</button>`:`<b class="pr-none">ещё не найдена</b><span class="note">Найдётся сама в первом голосовом упражнении.</span>`}</div>
+    <div class="pr-form"><canvas id="prNoteCv" aria-label="Форма комфортной ноты из точек"></canvas></div>
+  </section>
+  <section class="pr-tiles">
+    <div class="pr-tile b-body"><span>Диапазон</span>${range?`<b class="num">${range.v}<small>октавы</small></b><span>${range.t}</span>`:`<b>—</b><span>появится после голосовых упражнений</span>`}</div>
+    <div class="pr-tile b-breath"><span>Рекорд выдоха</span>${S.best?`<b class="num">${S.best.v}<small>с</small></b><span>на звук «${SOUNDS[S.best.s]}»</span>`:`<b>—</b><span>во вкладке «Голос»</span>`}</div>
+    <div class="pr-tile dark"><span>Минут всего</span><b class="num">${S.mins}</b><span>${S.avg} мин в среднем</span></div>
+    <div class="pr-tile dark"><span>Занятий</span><b class="num">${S.days.length}</b><span>${S.duo?'из них '+S.duo+' вдвоём':'пока без совместных'}</span></div>
+  </section>
+  <section class="pr-sec"><div class="pr-h"><h2>Карта голоса</h2><span class="note">4 недели</span></div>
+    <canvas class="vmap pr-map" data-vmap="1" aria-label="Карта голоса: 12 нот по кругу, октава — расстояние от центра"></canvas>
+    <p class="note">${esc(mapSummary())}</p></section>
+  ${hist?`<section class="pr-sec"><div class="pr-h"><h2>История</h2></div><ul class="pr-hist">${hist}</ul></section>`:''}`;
+}
+document.addEventListener('change',ev=>{if(ev.target&&ev.target.id==='prNameIn'){data.profile.name=ev.target.value.trim().slice(0,40);saveProfile();}});
+window.addEventListener('resize',()=>{if(state.tab==='profile')profLayout();});
+
+/* ---------- account: sign in with Google (Supabase), progress synced to one row per person ----------
+   Everything still lives on the phone first. After sign-in the local copy and the saved copy are merged
+   (nothing done on either side is lost), then every change is sent a few seconds later. */
+const SB_URL='https://oluhdvdquxqhayefkgnd.supabase.co',SB_KEY='sb_publishable_gy0OZBpam9Trzd-c--A9ag_n2w04P7J';
+const acct={sb:null,user:null,ready:false,timer:0,busy:false,err:''};
+function acctInit(){
+  if(!window.supabase||!window.supabase.createClient)return;
+  try{
+    acct.sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  }catch(e){acct.sb=null;return;}
+  acct.sb.auth.onAuthStateChange((ev,session)=>{
+    const was=acct.user&&acct.user.id,u=session?session.user:null;
+    acct.user=u;acct.ready=true;
+    if(u&&u.id!==was)setTimeout(acctPull,0);
+    if(!u&&was)render();
+  });
+  acct.sb.auth.getSession().then(({data:s})=>{acct.ready=true;acct.user=s&&s.session?s.session.user:null;if(acct.user)acctPull();else rerenderAcct();}).catch(()=>{acct.ready=true;});
+}
+function rerenderAcct(){if(!ex.open&&['settings','profile','path'].includes(state.tab))render();}
+async function acctSignIn(){
+  if(!acct.sb){acct.err='Вход недоступен: нет связи с сервером.';rerenderAcct();return;}
+  acct.err='';
+  const back=location.origin+location.pathname;
+  try{const {error}=await acct.sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:back,queryParams:{prompt:'select_account'}}});if(error)throw error;}
+  catch(e){acct.err='Не получилось открыть вход через Google. Попробуйте ещё раз.';rerenderAcct();}
+}
+async function acctSignOut(){
+  if(!acct.sb)return;
+  await acctPush();
+  try{await acct.sb.auth.signOut();}catch(e){}
+  acct.user=null;render();
+}
+/* merge: a day keeps whichever copy has more practice, and the done lists are joined; records keep the best */
+function mergeData(L,R){
+  const out={days:Object.assign({},R.days||{}),profile:Object.assign({},R.profile||{},L.profile||{})};
+  for(const k in (L.days||{})){
+    const a=L.days[k],b=out.days[k];
+    if(!b){out.days[k]=a;continue;}
+    const main=(a.seconds||0)>=(b.seconds||0)?a:b,other=main===a?b:a,m=Object.assign({},other,main);
+    m.done=[...new Set([...(main.done||[]),...(other.done||[])])];
+    if((other.log||[]).length>(main.log||[]).length)m.log=other.log;
+    if(other.exhale||main.exhale){m.exhale=Object.assign({},other.exhale||{});for(const s in (main.exhale||{}))m.exhale[s]=Math.max(m.exhale[s]||0,main.exhale[s]);}
+    out.days[k]=m;
+  }
+  const bl=(L.profile||{}).bests||{},br=(R.profile||{}).bests||{},bests=Object.assign({},br);
+  for(const s in bl)bests[s]=Math.max(bests[s]||0,bl[s]);
+  out.profile.bests=bests;
+  for(const key of ['name','ref']){const lv=(L.profile||{})[key],rv=(R.profile||{})[key];out.profile[key]=lv!=null&&lv!==''?lv:rv;}
+  return out;
+}
+async function acctPull(){
+  if(!acct.sb||!acct.user||acct.busy)return;
+  acct.busy=true;
+  try{
+    const {data:row,error}=await acct.sb.from('progress').select('data').eq('user_id',acct.user.id).maybeSingle();
+    if(error)throw error;
+    const merged=row&&row.data&&row.data.days?mergeData(data,row.data):data;
+    if(ex.open){const k=dkey();if(data.days[k])merged.days[k]=data.days[k];}
+    data.days=merged.days;data.profile=Object.assign({},data.profile,merged.profile);
+    if(!data.profile.name){const md=acct.user.user_metadata||{},n=(md.given_name||md.full_name||md.name||'').trim().split(/\s+/)[0];if(n)data.profile.name=n;}
+    saveLocal(true);acct.err='';
+    await acctPush();
+  }catch(e){acct.err='Прогресс пока не сохранился в аккаунте. Он есть на телефоне, попробуем ещё раз позже.';}
+  acct.busy=false;rerenderAcct();
+}
+async function acctPush(){
+  clearTimeout(acct.timer);acct.timer=0;
+  if(!acct.sb||!acct.user)return;
+  try{const {error}=await acct.sb.from('progress').upsert({user_id:acct.user.id,data:{days:data.days,profile:data.profile},updated_at:new Date().toISOString()});if(error)throw error;acct.err='';}
+  catch(e){acct.err='Прогресс пока не сохранился в аккаунте. Он есть на телефоне, попробуем ещё раз позже.';}
+}
+/* every local save schedules one upload a few seconds later */
+function acctDirty(){if(acct.user&&!acct.busy){clearTimeout(acct.timer);acct.timer=setTimeout(acctPush,4000);}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&acct.timer)acctPush();});
+
+/* the block in Settings, and the reminder after the first day */
+function acctBlock(){
+  if(!acct.sb)return '';
+  if(acct.user){
+    const md=acct.user.user_metadata||{},mail=acct.user.email||md.email||'';
+    return `<section class="pr-acct"><div class="pr-h"><h2>Аккаунт</h2></div>
+      <div class="pr-line"><span>${esc(mail)}<small>Прогресс сохраняется в аккаунте и восстановится на любом устройстве.</small></span><button class="ghost" data-act="signout">Выйти</button></div>
+      ${acct.err?`<p class="note">${esc(acct.err)}</p>`:''}</section>`;
+  }
+  return `<section class="pr-acct"><div class="pr-h"><h2>Аккаунт</h2></div>
+    <p class="note">Войдите, чтобы прогресс не потерялся и восстановился на другом телефоне. Всё, что уже сделано, перенесётся в аккаунт.</p>
+    <button class="gbtn" data-act="signin">${ICON_G}Войти через Google</button>
+    ${acct.err?`<p class="note">${esc(acct.err)}</p>`:''}</section>`;
+}
+function acctNudge(){
+  if(!acct.sb||!acct.ready||acct.user)return '';
+  return `<div class="nudge"><b>Сохраните прогресс</b><p>Войдите через Google — и ваши дни, рекорды и нота не потеряются, даже если сменить телефон.</p><button class="gbtn" data-act="signin">${ICON_G}Войти через Google</button></div>`;
+}
+const ICON_G='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>';
+
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -1361,7 +1704,7 @@ const weekday=d=>{const w=d.toLocaleDateString('ru-RU',{weekday:'long'});return 
 const LS='svobodny-golos-v1';
 let data={days:{},profile:{sound:true,bests:{}}};
 function loadLocal(){try{const raw=localStorage.getItem(LS);if(raw){const d=JSON.parse(raw);if(d&&d.days){data.days=d.days;data.profile=Object.assign({},data.profile,d.profile||{});}}}catch(e){}}
-function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(data));}catch(e){}}
+function saveLocal(fromAcct){try{localStorage.setItem(LS,JSON.stringify(data));}catch(e){}if(!fromAcct&&typeof acctDirty==='function')acctDirty();}
 let db=null,uid=null,cloud=false;
 const queues={};
 function writeDoc(name,obj){
@@ -1410,11 +1753,11 @@ function buildPlan(min,focus){
   return items.map((id,i)=>({id,i})).sort((a,b)=>BI(a.id)-BI(b.id)||a.i-b.i).map(o=>o.id);
 }
 function todayPlan(){const d=data.days[dkey()];return d&&d.plan?d:null;}
-/* where the day stands: the exercise she was on (even after a skip), else the next undone one */
+/* where the day stands: a strict path — always the first exercise not yet done, in plan order.
+   (d.at only remembers the second she stopped at inside that exercise.) */
 function curOf(d){
   if(!d||!d.plan)return null;
-  if(d.at&&d.plan.includes(d.at)&&!d.done.includes(d.at))return d.at;
-  return nextUndone(d.plan,d.done,d.at&&d.plan.includes(d.at)?d.at:null);
+  return d.plan.find(id=>!d.done.includes(id))||null;
 }
 function nextUndone(plan,done,after){
   const start=after==null?0:plan.indexOf(after)+1;
@@ -1427,14 +1770,15 @@ function nextUndone(plan,done,after){
 const state={tab:'path',choosing:false,sound:'s'};
 function render(){
   for(const t of ['path','measure','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
-  $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():state.tab==='measure'?viewMeasure():viewLibrary();
+  $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='profile'?(HAS_FORM?viewProfile():viewSettings()):state.tab==='settings'?viewSettings():state.tab==='measure'?viewMeasure():viewLibrary();
   paintPlates($('view'));
   if(HAS_FORM&&state.tab==='path'){tlStart();pathStart();}
   if(HAS_FORM&&state.tab==='measure')freeStart();
+  if(HAS_FORM&&state.tab==='profile')profileStart();
 }
 function topbar(){
   const st=streak();
-  return `<header class="top"><button class="logo" data-act="home" aria-label="На главную">woisee</button><button class="streak num" data-act="streak" aria-label="Открыть прогресс"><i></i>${st} ${plural(st,'день','дня','дней')} подряд<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></header>`;
+  return `<header class="top"><button class="logo" data-act="home" aria-label="На главную">woisee</button><button class="streak num" data-act="streak" aria-label="Открыть профиль"><i></i>${st} ${plural(st,'день','дня','дней')} подряд<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></header>`;
 }
 function viewChoose(){
   const k=dkey(),f=focusFor(k),d=data.days[k],t=new Date();
@@ -1476,43 +1820,24 @@ function viewPath(){
     <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<span class="plate-hit" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"><canvas class="plate-sm" data-liveday="${dkey()}" aria-hidden="true"></canvas></span>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
   </section>
-  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
+  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}${typeof acctNudge==='function'?acctNudge():''}</section>`:''}
   <section class="stack">${stack}</section>${HAS_FORM?'<canvas id="pathCv" aria-hidden="true"></canvas>':''}</div>`;
 }
 const FEEL_NOTE={easy:'Отлично. Завтра можно взять 20 или 30 минут.',ok:'Хороший рабочий темп. Главное — регулярность.',tired:'Дайте голосу отдохнуть: меньше говорить громко, пить тёплую воду. Завтра хватит 15 минут, особенно гудения и соломинки.'};
 function feelBlock(cur){
   return `<div style="display:flex;flex-direction:column;gap:10px"><p class="note" style="color:var(--ink);font-weight:600">Как голос после занятия?</p><div class="feel">${[['easy','Легко'],['ok','Нормально'],['tired','Устал']].map(([v,l])=>`<button data-act="feel" data-v="${v}" aria-pressed="${cur===v}">${l}</button>`).join('')}</div><p class="note" id="feelNote">${cur?FEEL_NOTE[cur]:''}</p></div>`;
 }
-function viewProgress(){
-  const keys=Object.keys(data.days).filter(ok).sort();
-  const totalMin=Math.round(keys.reduce((a,k)=>a+data.days[k].seconds,0)/60);
-  const st=streak(),today=new Date(),k=dkey(),todayIdx=(today.getDay()+6)%7,mon=addDays(today,-todayIdx-28);
-  let dots=['П','В','С','Ч','П','С','В'].map((h,i)=>`<span class="h ${i===todayIdx?'t':''}">${h}</span>`).join('');
-  const first=Object.keys(data.days).filter(ok).sort()[0]||k;
-  for(let i=0;i<35;i++){const kk=dkey(addDays(mon,i));
-    if(HAS_FORM){const has=ok(kk)||(data.days[kk]&&(data.days[kk].log||[]).length);
-      dots+=has?`<button class="cal-d" data-act="day" data-v="${kk}" aria-label="${esc(dateLong(parseKey(kk)))}: след голоса"><canvas data-day="${kk}"></canvas></button>`:`<span class="cal-d"><canvas data-day="${kk}" aria-hidden="true"></canvas></span>`;}
-    else dots+=`<i class="${kk===k?'now':kk>k?'fut':ok(kk)?'on':''}" title="${kk}"></i>`;}
-  const hist=Object.keys(data.days).filter(kk=>ok(kk)||(data.days[kk].exhale&&Object.keys(data.days[kk].exhale).length)).sort().reverse().slice(0,8).map(kk=>{
-    const d=data.days[kk],f=FOCI.find(x=>x.id===d.focus),ex_=d.exhale&&d.exhale.s?` · выдох ${Math.round(d.exhale.s)} с`:'';
-    const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel]||'';
-    return `<li><span>${esc(dateLong(parseKey(kk)))}${f?' · '+esc(f.name):''}</span><span class="m num">${Math.round((d.seconds||0)/60)} мин${ex_}${feel?'<br>'+feel:''}</span></li>`;}).join('');
-  return `<header class="top"><button class="back" data-act="tab" data-v="${state.from||'path'}">${ICON_BACK}Назад</button><span class="logo">woisee</span></header>
-  <div class="p-hero"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<small>подряд</small></span></div>
-  <div class="${HAS_FORM?'cal':'dots'}">${dots}</div>
-  ${HAS_FORM?'<p class="note">Точки в круге — сколько голоса было в этот день. Нажмите на день, чтобы увидеть его след.</p>':''}
-  <div class="trio">
-    <div><b class="num">${keys.length}</b><span>${plural(keys.length,'день','дня','дней')} практики</span></div>
-    <div><b class="num">${totalMin}</b><span>минут всего</span></div>
-    <div><b class="num">${keys.length?Math.round(totalMin/keys.length):0}</b><span>мин в среднем</span></div>
-  </div>
-  ${HAS_FORM?`<section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>Карта голоса</h3><span class="note">4 недели</span></div><canvas class="vmap" data-vmap="1" aria-label="Карта голоса: 12 нот по кругу, октава — расстояние от центра"></canvas><p class="note">${esc(mapSummary())}</p></section>`:''}
-  ${hist?`<section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>История</h3></div><ul class="hist">${hist}</ul></section>`:''}
-  <div class="toggle"><span>Звуковой сигнал в конце таймера</span><button class="sw" data-act="sound" aria-pressed="${data.profile.sound!==false}" aria-label="Звуковой сигнал"></button></div>
-  ${HAS_FORM?`<div class="toggle" style="border-top:0;margin-top:-1px"><span>Микрофон в упражнениях<br><small class="note">Голос собирает форму. Звук не записывается.</small></span><button class="sw" data-act="mic" aria-pressed="${data.profile.micOff!==true}" aria-label="Микрофон в упражнениях"></button></div>
-  <div class="toggle" style="border-top:0;margin-top:-1px"><span>Радуга нот<br><small class="note">Цвет точек — нота. Выключено — один цвет.</small></span><button class="sw" data-act="rain" aria-pressed="${data.profile.rain!==false}" aria-label="Радуга нот"></button></div>
-  <div class="toggle" style="border-top:0;margin-top:-1px"><span>Кружево вместо чётких форм<br><small class="note">Вид v2: узор без лучей и колец.</small></span><button class="sw" data-act="lace" aria-pressed="${data.profile.lace===true}" aria-label="Кружево вместо чётких форм"></button></div>
-  ${data.profile.ref?`<button class="lnk" data-act="resetref" style="align-self:flex-start">Заново определить мою комфортную ноту</button>`:''}`:''}
+function viewSettings(){
+  const sw=(act,on,label)=>`<button class="pr-sw" data-act="${act}" aria-pressed="${on}" aria-label="${label}"></button>`;
+  return `<header class="top pr-top"><button class="back" data-act="profile">${ICON_BACK}Профиль</button></header>
+  <h1 class="pr-title">Настройки</h1>
+  <section class="pr-set">
+    <label class="pr-line pr-name"><span>Как к вам обращаться</span><input id="prNameIn" type="text" maxlength="40" autocomplete="given-name" placeholder="Имя" value="${esc(data.profile.name||'')}"></label>
+    <div class="pr-line"><span>Звуковой сигнал в конце таймера</span>${sw('sound',data.profile.sound!==false,'Звуковой сигнал')}</div>
+    ${HAS_FORM?`<div class="pr-line"><span>Микрофон в упражнениях<small>Голос собирает форму. Звук не записывается.</small></span>${sw('mic',data.profile.micOff!==true,'Микрофон в упражнениях')}</div>
+    <div class="pr-line"><span>Радуга нот<small>Цвет точек — нота. Выключено — один цвет.</small></span>${sw('rain',data.profile.rain!==false,'Радуга нот')}</div>`:''}
+  </section>
+  ${typeof acctBlock==='function'?acctBlock():''}
   <section style="display:flex;flex-direction:column;gap:10px"><div class="sec-h"><h3>Резервная копия</h3></div>
     <p class="note">Прогресс хранится на этом телефоне. Раз в месяц сохраняйте копию в «Файлы» — с ней можно восстановить всё на новом телефоне.</p>
     <div class="backup"><button class="ghost" data-act="export">Сохранить копию</button><button class="ghost" data-act="import">Загрузить копию</button></div>
@@ -1632,7 +1957,7 @@ function renderBar(){
   if(ex.status==='ready'){label='';acts=`<button class="go" data-act="go">Старт</button>`;}
   else if(ex.status==='run'){label='';acts=`<button class="chip" data-act="plus">+30 с</button><button class="go alt" data-act="pause">Пауза</button>`;}
   else if(ex.status==='pause'){label='';acts=`<button class="chip" data-act="finishNow">Готово</button><button class="go" data-act="go" aria-label="Продолжить">${ICON_PLAY.replace('<svg','<svg style="width:28px;height:28px"')}</button>`;}
-  else{fin=true;const d=todayPlan(),nx=ex.mode==='plan'&&d?nextUndone(d.plan,d.done,ex.id):null;
+  else{fin=true;const d=todayPlan(),nx=ex.mode==='plan'&&d?curOf(d):null;
     label=ex.mode!=='plan'?'упражнение выполнено':nx?'дальше: '+EX[nx].t:'последнее упражнение дня';
     acts=`<button class="go" data-act="next">${ex.mode!=='plan'?'Выйти':nx?'Дальше':'Финиш'}</button>`;}
   $('tbar').innerHTML=`<div class="cap ${fin?'fin':''}"><i class="fill" id="tFill" style="width:${fin?100:Math.min(100,el/dur*100)}%"></i><div class="time"><b id="tTime" class="${fin?'':'big'}">${fin?'Готово':fmt(rem)}</b>${label?`<span>${esc(label)}</span>`:''}</div><div class="acts">${acts}</div></div>`;
@@ -1683,8 +2008,8 @@ function complete(withSound){
   if(withSound)chimeEnd();
   countTime();
   const k=dkey(),d=getDay(k);
-  if(d.plan&&d.plan.includes(ex.id)&&!d.done.includes(ex.id)){d.done.push(ex.id);}
-  if(d.plan&&d.at===ex.id){d.at=nextUndone(d.plan,d.done,ex.id);d.atAcc=0;d.atExtra=0;}
+  if(ex.mode==='plan'&&d.plan&&d.plan.includes(ex.id)&&!d.done.includes(ex.id)){d.done.push(ex.id);}
+  if(d.plan&&d.at===ex.id){d.at=curOf(d);d.atAcc=0;d.atExtra=0;}
   saveDay(k);
   if(HAS_FORM){stopListening();logExercise();}
   const bc=$('bigClock');if(bc)bc.textContent='0:00';const cl=$('clockLbl');if(cl)cl.textContent='готово';
@@ -1694,7 +2019,7 @@ function complete(withSound){
 function nextEx(){
   const d=todayPlan();
   if(ex.mode!=='plan'||!d){closeEx();return;}
-  const nx=nextUndone(d.plan,d.done,ex.id);
+  const nx=curOf(d);
   if(nx){countTime();openEx(nx,'plan');}else showDayDone();
 }
 /* leaving in the middle: ask first; the timer waits */
@@ -1721,6 +2046,7 @@ function showDayDone(){
     ${st?`<p style="font-size:18px">${st} ${plural(st,'день','дня','дней')} подряд. Все четыре блока пройдены.</p>`:''}
     ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня. Её рисуют только ваши занятия: каждый сектор — упражнение, по часовой стрелке от 12.</p><button class="blackbtn" data-act="gifday" data-v="${k}">Сохранить гифку дня ${ICON_ARROW}</button>`:''}
     ${feelBlock(d.feel)}
+    ${typeof acctNudge==='function'?acctNudge():''}
     <button class="blackbtn" data-act="close">На главную ${ICON_ARROW}</button></div>`;
   $('ex').scrollTop=0;
   if(HAS_FORM){revealPlate($('winPlate'),k,PAL.lime);setTimeout(()=>dayGif(k).catch(()=>{}),2600);}
@@ -1778,9 +2104,14 @@ document.addEventListener('click',ev=>{
     case 'msnd':if(!ms.running){ms.sound=v;ms.last=null;ms.rec='';render();}break;
     case 'msw':msToggle();break;
     case 'freemic':freeMic();break;
-    case 'rain':data.profile.rain=data.profile.rain===false;saveProfile();if(vf.solo)formOpts(vf.solo.opt);if(fm.solo)formOpts(fm.solo.opt);render();break;
-    case 'lace':data.profile.lace=data.profile.lace!==true;saveProfile();if(vf.solo)formOpts(vf.solo.opt);if(fm.solo)formOpts(fm.solo.opt);render();break;
-    case 'streak':state.from=state.tab==='progress'?state.from:state.tab;state.tab='progress';state.choosing=false;render();window.scrollTo(0,0);break;
+    case 'rain':data.profile.rain=data.profile.rain===false;saveProfile();if(HAS_FORM&&vf.live)vf.live.setOpts(formOpts({}));render();break;
+    case 'lace':data.profile.lace=data.profile.lace!==true;saveProfile();if(HAS_FORM&&vf.live)vf.live.setOpts(formOpts({}));render();break;
+    case 'streak':state.from=['profile','settings'].includes(state.tab)?state.from:state.tab;state.tab='profile';state.choosing=false;render();window.scrollTo(0,0);break;
+    case 'profile':state.tab='profile';render();window.scrollTo(0,0);break;
+    case 'settings':state.tab='settings';render();window.scrollTo(0,0);break;
+    case 'signin':acctSignIn();break;
+    case 'signout':acctSignOut();break;
+    case 'prnote':{const c=$('prNoteCard');if(c)c.scrollIntoView({behavior:REDUCED()?'auto':'smooth',block:'center'});break;}
     case 'dur':{const k=dkey(),d=getDay(k),f=focusFor(k),np=buildPlan(+v,f);
       (d.done||[]).forEach(id=>{if(!np.includes(id))np.push(id);});
       d.dur=+v;d.focus=f.id;d.plan=np.map((id,i)=>({id,i})).sort((a,b)=>BI(a.id)-BI(b.id)||a.i-b.i).map(o=>o.id);saveDay(k);
@@ -1795,7 +2126,7 @@ document.addEventListener('click',ev=>{
     case 'openday':openDay(v);break;
     case 'cancelChoose':state.choosing=false;render();break;
     case 'ex':openEx(v,'plan');break;
-    case 'single':openEx(v,todayPlan()&&todayPlan().plan.includes(v)?'plan':'single');break;
+    case 'single':openEx(v,'single');break;
     case 'close':if(ex.status==='run'||ex.status==='pause')askClose();else closeEx();break;
     case 'closeyes':closeSheet();closeEx();break;
     case 'closeno':closeSheet();if(ex.paused4ask){ex.paused4ask=false;go();}break;
@@ -1818,7 +2149,7 @@ document.addEventListener('click',ev=>{
     case 'micyes':data.profile.mic='asked';saveProfile();closeSheet();go();break;
     case 'micno':data.profile.micOff=true;saveProfile();closeSheet();go();break;
     case 'mic':data.profile.micOff=!(data.profile.micOff===true);saveProfile();render();break;
-    case 'resetref':data.profile.ref=null;if(vf.voice)vf.voice.recalibrate();saveProfile();render();break;
+    case 'resetref':data.profile.ref=null;if(HAS_FORM&&vf.live&&vf.live.voice.recalibrate){vf.live.voice.ref=null;vf.live.voice.recalibrate();}saveProfile();render();break;
     case 'tw':ex.tw=(ex.tw+1)%TWISTERS.length;$('twText').textContent=TWISTERS[ex.tw];break;
     case 'ph':ex.ph=(ex.ph+1)%PHRASES.length;$('phText').textContent=PHRASES[ex.ph];break;
     case 'wd':ex.word=(ex.word+1)%WORDS.length;$('wdText').textContent='«'+WORDS[ex.word]+'»';break;
@@ -1832,6 +2163,7 @@ document.addEventListener('click',ev=>{
 loadLocal();render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+if(typeof acctInit==='function')acctInit();
 </script>
 </body>
 </html>
