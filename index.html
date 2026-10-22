@@ -115,42 +115,38 @@ p{margin:0}
 
 /* stack of block cards */
 .stack{display:flex;flex-direction:column}
-.blk{background:var(--c);color:var(--cf);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;box-shadow:0 -1px 0 rgba(25,37,36,.08)}
+.wrapS{position:relative;display:flex;flex-direction:column;gap:12px}
+#pathCv{position:absolute;left:0;top:0;pointer-events:none;z-index:2}
+.b-body,.b-phon{--cdot:#FFFEFC} .b-breath,.b-artic,.b-stage{--cdot:#192524}
+.blk{background:var(--c);color:var(--cf);border-radius:30px;padding:20px 20px 46px;margin-top:-28px;position:relative;box-shadow:0 -1px 0 rgba(25,37,36,.08)}
 .blk:first-child{margin-top:0}
 .blk:last-child{padding-bottom:20px}
-.blk.folded{padding:16px 20px 42px}
-.blk.folded:last-child{padding-bottom:16px}
-.blk.folded h3{font-size:24px}
-.blk.folded .cnt{font-size:30px}
-.blk.folded .cnt small{font-size:14px}
-.blk.folded + .blk.folded{margin-top:-30px}
-.blk-h{display:block;width:100%;text-align:left}
-.blk.ahead{cursor:default}
-.blk .row.cur{background:var(--ebony);color:var(--c);border-radius:20px;padding:14px 12px 14px 16px;margin:8px -10px;border-bottom:0;grid-template-columns:1fr auto 40px;box-shadow:0 0 0 0 rgba(240,71,44,.0);animation:curglow 2.4s ease-in-out infinite}
-.blk .row.cur .t{font-weight:700}
-.blk .row.cur .d{opacity:.8}
-.blk .row.cur .box{width:40px;height:40px;background:var(--signal);color:#FFFEFC;border-radius:50%;display:grid;place-items:center}
-.blk .row.cur .box svg{width:18px;height:18px}
-@keyframes curglow{0%,100%{box-shadow:0 0 0 0 rgba(25,37,36,.0)}50%{box-shadow:0 0 0 6px rgba(25,37,36,.14)}}
-@media (prefers-reduced-motion:reduce){.blk .row.cur{animation:none}}
 .blk header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:12px}
 .blk .idx{font-size:13px;font-weight:500;opacity:.7}
 .blk h3{font-size:34px;line-height:1}
 .blk .sub{font-size:14px;opacity:.75;margin-top:6px}
 .blk .cnt{font-weight:300;font-size:44px;line-height:.9;letter-spacing:-.05em}
 .blk .cnt small{font-size:18px}
+.blk.closed h3{font-size:28px}
+.blk.closed .cnt{font-size:34px}
+.blk.closed .sub{display:none}
 .blk ul{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--cl)}
-.blk .row{display:grid;grid-template-columns:1fr auto 30px;gap:12px;align-items:center;width:100%;padding:13px 0;border-bottom:1px solid var(--cl)}
-.blk li:last-child .row{border-bottom:0}
+.blk ul.nofirst{border-top-color:transparent}
+.blk .row{display:grid;grid-template-columns:1fr auto 34px;gap:12px;align-items:center;width:100%;padding:13px 0;border-bottom:1px solid var(--cl)}
+.blk li:last-child .row,.blk .row.before{border-bottom-color:transparent}
 .blk .row .t{font-size:17px;font-weight:500;line-height:1.25;min-width:0}
 .blk .row .d{font-size:14px;opacity:.7}
-.box{width:28px;height:28px;border-radius:9px;background:var(--cbox);display:flex;align-items:center;justify-content:center}
-.box svg{width:18px;height:18px}
-.row.dn .box{background:var(--ca);color:var(--cai)}
-.row.dn .t{text-decoration:line-through;text-decoration-thickness:1px;opacity:.6}
-.row.cur .box{background:var(--ca);color:var(--cai);border-radius:50%}
-.row.cur .t{font-weight:700}
-.donecard{background:var(--lime);border-radius:30px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.box{width:30px;height:30px;border-radius:9px;background:var(--cbox);display:grid;place-items:center;justify-self:end}
+.box svg{width:16px;height:16px}
+.row.dn .t{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.55}
+.row.dn .d{opacity:.4}
+.row.dn .box{background:var(--ca);color:var(--cai);border-radius:50%}
+.blk .row.lk{opacity:.42;cursor:default}
+.blk .row.cur{margin:10px -8px;width:calc(100% + 16px);padding:18px 10px 18px 20px;border-bottom-color:transparent;grid-template-columns:1fr auto 50px}
+.blk .row.cur .t{font-size:18px;font-weight:700}
+.blk .row.cur .box{width:50px;height:50px;border-radius:50%;background:var(--ca);color:var(--cai)}
+.blk .row.cur .box svg{width:20px;height:20px}
+.donecard{background:var(--lime);border-radius:30px;padding:22px 20px;display:flex;flex-direction:column;gap:14px;--cdot:#192524}
 .donecard h3{font-size:32px;line-height:1}
 
 /* feel rows */
@@ -875,6 +871,56 @@ function tlStart(){
   tl.raf=requestAnimationFrame(frame);
 }
 
+/* ---------- the current exercise on «Сегодня»: a contour of dots flowing around it (identity/lab/list.html) ---------- */
+const pc={raf:0,P:null,flow:0,t:0,last:0,W:0,H:0};
+function pathStart(){
+  cancelAnimationFrame(pc.raf);pc.raf=0;
+  const cv=$('pathCv');if(!cv)return;
+  if(!pc.P){const gs=()=>{let u=0;while(!u)u=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.283*Math.random());};
+    pc.P=[];for(let i=0;i<1100;i++)pc.P.push({s:Math.random(),sp:.6+Math.random()*.8,n:gs(),x:NaN,y:NaN,z:.9+Math.random()*1.3,a:.45+Math.random()*.55});pc.gs=gs;}
+  if(state.follow){state.follow=false;setTimeout(()=>{const el=document.querySelector('.blk .row.cur')||$('doneCard');if(!el)return;
+    const r=el.getBoundingClientRect(),top=scrollY+r.top-(innerHeight-r.height)/2;window.scrollTo({top:Math.max(0,top),behavior:REDUCED()?'auto':'smooth'});},380);}
+  pc.last=performance.now();pc.raf=requestAnimationFrame(pathFrame);
+}
+/* a point on a rounded rectangle, s ∈ [0,1) clockwise; o = [x, y, nx, ny] */
+function rrAt(g,s,o){
+  const R=Math.min(24,g.h/2,g.w/2),a=g.w-2*R,b=g.h-2*R,q=Math.PI*R/2,L=2*a+2*b+4*q;let d=((s%1)+1)%1*L;
+  const seg=[[a,0],[q,1],[b,2],[q,3],[a,4],[q,5],[b,6],[q,7]];
+  for(const [len,k] of seg){
+    if(d<=len||k===7){const f=len?d/len:0;
+      switch(k){case 0:o[0]=g.x+R+a*f;o[1]=g.y;o[2]=0;o[3]=-1;return;
+        case 2:o[0]=g.x+g.w;o[1]=g.y+R+b*f;o[2]=1;o[3]=0;return;
+        case 4:o[0]=g.x+g.w-R-a*f;o[1]=g.y+g.h;o[2]=0;o[3]=1;return;
+        case 6:o[0]=g.x;o[1]=g.y+g.h-R-b*f;o[2]=-1;o[3]=0;return;
+        default:{const cx=[0,g.x+g.w-R,0,g.x+g.w-R,0,g.x+R,0,g.x+R][k],cy=[0,g.y+R,0,g.y+g.h-R,0,g.y+g.h-R,0,g.y+R][k],a0=[0,-Math.PI/2,0,0,0,Math.PI/2,0,Math.PI][k],an=a0+f*Math.PI/2;
+          o[2]=Math.cos(an);o[3]=Math.sin(an);o[0]=cx+o[2]*R;o[1]=cy+o[3]*R;return;}}}
+    d-=len;}
+}
+function pathFrame(now){
+  const cv=$('pathCv'),wrap=$('wrapS');
+  if(!cv||!wrap||state.tab!=='path'){pc.raf=0;return;}
+  if(ex.open){pc.raf=requestAnimationFrame(pathFrame);return;}
+  const dt=Math.min(.05,(now-pc.last)/1000);pc.last=now;pc.t+=dt;
+  const w=wrap.offsetWidth,h=wrap.offsetHeight,D=Math.min(devicePixelRatio||1,2);
+  if(cv.width!==Math.round(w*D)||cv.height!==Math.round(h*D)){cv.width=Math.round(w*D);cv.height=Math.round(h*D);cv.style.width=w+'px';cv.style.height=h+'px';}
+  const ctx=cv.getContext('2d');ctx.setTransform(D,0,0,D,0,0);ctx.clearRect(0,0,w,h);
+  const el=document.querySelector('.blk .row.cur')||$('doneCard');
+  if(el){
+    const b=wrap.getBoundingClientRect(),r=el.getBoundingClientRect();
+    if(r.height>4){
+      const g={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height},host=el.closest('.blk')||el;
+      ctx.fillStyle=getComputedStyle(host).getPropertyValue('--cdot').trim()||FC.dot;
+      const still=REDUCED();pc.flow+=still?0:dt*.018;
+      const k=still?1:1-Math.pow(1-.16,dt*60),o=[0,0,0,0];
+      for(const p of pc.P){rrAt(g,p.s+pc.flow*p.sp,o);const off=p.n*2.4+(still?0:Math.sin(pc.t*2.2+p.s*40)*1.2),tx=o[0]+o[2]*off,ty=o[1]+o[3]*off;
+        if(isNaN(p.x)){p.x=tx;p.y=ty;}
+        p.x+=(tx-p.x)*k;p.y+=(ty-p.y)*k;ctx.globalAlpha=p.a;ctx.fillRect(p.x-p.z/2,p.y-p.z/2,p.z,p.z);}
+      ctx.globalAlpha=1;
+    }
+  }
+  pc.raf=requestAnimationFrame(pathFrame);
+}
+
 /* ---------- long exhale by day (elastic height up to 40 s, then the scale squeezes): thin columns of drifting dust, like the timeline on «Сегодня»; the latest day is red ---------- */
 function exPoints(s){return Object.keys(data.days).sort().filter(k=>data.days[k].exhale&&data.days[k].exhale[s]).slice(-10).map(k=>({k,v:data.days[k].exhale[s]}));}
 const exA={raf:0,list:[]};
@@ -1306,6 +1352,7 @@ const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ICON_ARROW='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 const ICON_PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 6.5v11l9-5.5z"/></svg>';
 const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+const ICON_LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const ICON_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const dateLong=d=>d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 const weekday=d=>{const w=d.toLocaleDateString('ru-RU',{weekday:'long'});return w.charAt(0).toUpperCase()+w.slice(1);};
@@ -1382,7 +1429,7 @@ function render(){
   for(const t of ['path','measure','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
   $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='progress'?viewProgress():state.tab==='measure'?viewMeasure():viewLibrary();
   paintPlates($('view'));
-  if(HAS_FORM&&state.tab==='path')tlStart();
+  if(HAS_FORM&&state.tab==='path'){tlStart();pathStart();}
   if(HAS_FORM&&state.tab==='measure')freeStart();
 }
 function topbar(){
@@ -1408,19 +1455,20 @@ function viewPath(){
   const tl=plan.map(id=>`<span class="s ${done.includes(id)?'dn':''} ${id===cur?'cur':''}" style="flex-grow:${EX[id].d}">${id===cur?'<span class="redpill">сейчас</span>':''}</span>`).join('');
   const bs=(data.profile.bests||{}).s,te=(data.days[dkey()]||{}).exhale||{};
   let stack='';
-  /* a path, not a menu: the block she is in is open with the current exercise lit; the rest are folded into a stack.
-     Blocks behind can be unfolded to look; blocks ahead stay shut. When the day is done, everything opens. */
+  /* a path, not a menu (see identity/lab/list.html): folders behind and the folder she is in are open,
+     folders ahead are folded to their header and shut. Only the current exercise can be pressed — it is
+     ringed by a contour of flowing dots. When the day is done, everything opens and can be repeated. */
   const allDone=!cur,curB=cur?EX[cur].b:null,curBi=curB?BLOCKS.findIndex(b=>b.id===curB):BLOCKS.length;
   BLOCKS.forEach((b,bi)=>{
     const ids=plan.filter(id=>EX[id].b===b.id);if(!ids.length)return;
-    const bn=ids.filter(id=>done.includes(id)).length,ahead=!allDone&&bi>curBi,isCurB=b.id===curB;
-    const open=allDone||isCurB||state.openBlk===b.id,canFold=!isCurB&&!ahead;
-    const head=`<header><div><span class="idx">0${bi+1}</span><h3>${esc(b.name)}</h3>${open?`<p class="sub">${esc(b.sub)}</p>`:''}</div><span class="cnt num">${bn}<small>/${ids.length}</small></span></header>`;
-    stack+=`<article class="blk b-${b.id} ${open?'open':'folded'} ${ahead?'ahead':''}">${canFold&&!allDone?`<button class="blk-h" data-act="blk" data-v="${b.id}" aria-expanded="${open}">${head}</button>`:head}
-      ${open?`<ul>${ids.map(id=>{const isD=done.includes(id),isC=id===cur;
-        if(isC)return `<li><button class="row cur" data-act="start" data-v="${id}"><span class="t">${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span><span class="box">${ICON_PLAY}</span></button></li>`;
-        if(allDone)return `<li><button class="row dn" data-act="single" data-v="${id}"><span class="t">${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span><span class="box">${ICON_CHECK}</span></button></li>`;
-        return `<li><div class="row ${isD?'dn':''}"><span class="t">${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span><span class="box">${isD?ICON_CHECK:''}</span></div></li>`;}).join('')}</ul>`:''}</article>`;
+    const bn=ids.filter(id=>done.includes(id)).length,open=allDone||bi<=curBi,ci=ids.indexOf(cur);
+    const rows=ids.map((id,ei)=>{const isD=done.includes(id),isC=id===cur,before=ci>0&&ei===ci-1?' before':'';
+      const inner=`<span class="t">${esc(EX[id].t)}</span><span class="d num">${fmt(EX[id].d)}</span>`;
+      if(isC)return `<li><button class="row cur" data-act="start" data-v="${id}">${inner}<span class="box">${ICON_PLAY}</span></button></li>`;
+      if(allDone)return `<li><button class="row dn" data-act="single" data-v="${id}">${inner}<span class="box">${ICON_CHECK}</span></button></li>`;
+      return `<li><div class="row ${isD?'dn':'lk'}${before}" aria-disabled="${!isD}">${inner}<span class="box">${isD?ICON_CHECK:ICON_LOCK}</span></div></li>`;}).join('');
+    stack+=`<article class="blk b-${b.id} ${open?'':'closed'}"><header><div><span class="idx">0${bi+1}</span><h3>${esc(b.name)}</h3><p class="sub">${esc(b.sub)}</p></div><span class="cnt num">${bn}<small>/${ids.length}</small></span></header>
+      ${open?`<ul class="${ci===0?'nofirst':''}">${rows}</ul>`:''}</article>`;
   });
   return topbar()+`
   <section class="hero">
@@ -1428,9 +1476,8 @@ function viewPath(){
     <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<span class="plate-hit" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"><canvas class="plate-sm" data-liveday="${dkey()}" aria-hidden="true"></canvas></span>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
   </section>
-  ${!cur?`<section class="donecard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
-  <section class="stack">${stack}</section>
-  <p class="note">Ни одно упражнение не должно вызывать боль. Лёгкое растяжение — нормально, резкая боль — сигнал остановиться.</p>`;
+  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}</section>`:''}
+  <section class="stack">${stack}</section>${HAS_FORM?'<canvas id="pathCv" aria-hidden="true"></canvas>':''}</div>`;
 }
 const FEEL_NOTE={easy:'Отлично. Завтра можно взять 20 или 30 минут.',ok:'Хороший рабочий темп. Главное — регулярность.',tired:'Дайте голосу отдохнуть: меньше говорить громко, пить тёплую воду. Завтра хватит 15 минут, особенно гудения и соломинки.'};
 function feelBlock(cur){
@@ -1536,7 +1583,7 @@ function closeEx(){
   countTime();
   ex.open=false;clearInterval(ex.timer);unlockScreen();
   $('ex').hidden=true;$('tbar').hidden=true;document.body.style.overflow='';
-  render();window.scrollTo(0,0);
+  state.follow=true;render();window.scrollTo(0,0);
 }
 function exhaleHist(s){
   if(!exPoints(s).length)return '';
@@ -1567,7 +1614,7 @@ function renderCard(){
   $('ex').className='ex b-'+e.b;
   $('ex').innerHTML=`
   <div class="ex-head"><div class="in">
-    <div class="ex-top"><button class="icon-btn" data-act="close" aria-label="Закрыть">${ICON_X}</button><div class="segs">${segs}</div>${inPlan?'<button class="skip" data-act="skip">Пропустить</button>':'<span></span>'}</div>
+    <div class="ex-top"><button class="icon-btn" data-act="close" aria-label="Закрыть">${ICON_X}</button><div class="segs">${segs}</div><span></span></div>
     <span class="pill" style="align-self:flex-start">${bi>=0?'0'+(bi+1)+' · ':''}${esc(BNAME[e.b])}</span>
     <h2 class="ex-title">${esc(e.t)}</h2>
   </div></div>
@@ -1621,6 +1668,7 @@ function tick(){
 function go(){
   audioInit();
   if(HAS_FORM&&ex.status==='ready'&&needMicAsk()){askMic();return;}
+  if(needWarn()){askWarn();return;}
   if(ex.status==='ready'||ex.status==='pause'){
     const first=ex.status==='ready';
     ex.since=now();ex.status='run';lockScreen();renderBar();
@@ -1649,21 +1697,17 @@ function nextEx(){
   const nx=nextUndone(d.plan,d.done,ex.id);
   if(nx){countTime();openEx(nx,'plan');}else showDayDone();
 }
-function skipEx(){
-  const d=todayPlan();if(!d){closeEx();return;}
-  countTime();
-  const i=d.plan.indexOf(ex.id);let nx=null;
-  for(let j=i+1;j<d.plan.length;j++)if(!d.done.includes(d.plan[j])){nx=d.plan[j];break;}
-  const was=ex.id;
-  if(ex.status==='run'){ex.acc=elapsed();ex.since=null;ex.status='pause';}
-  savePos();ex.lastSkip={id:was,acc:ex.acc,extra:ex.extra};
-  if(!nx)nx=nextUndone(d.plan,d.done,was);
-  if(nx&&nx!==was){openEx(nx,'plan');skipToast(was);}else closeEx();
+/* leaving in the middle: ask first; the timer waits */
+function askClose(){
+  ex.paused4ask=ex.status==='run';if(ex.paused4ask)pause();
+  openSheet(`<h3>Точно закончить упражнение?</h3><p>Прогресс сохранится: в следующий раз продолжите с того же места.</p>
+    <div class="sheet-acts"><button class="primary" data-act="closeno">Продолжить упражнение</button><button class="ghost wide" data-act="closeyes">Выйти</button></div>`);
 }
-function skipToast(id){
-  const old=document.querySelector('.toast');if(old)old.remove();
-  $('ex').insertAdjacentHTML('beforeend',`<div class="toast" role="status"><span>Пропущено: ${esc(EX[id].t)}</span><button data-act="unskip" data-v="${id}">Вернуть</button></div>`);
-  const t=document.querySelector('.toast');setTimeout(()=>{if(t&&t.isConnected){t.classList.add('out');setTimeout(()=>t.remove(),400);}},6000);
+/* the safety note appears once a day, when the first exercise starts */
+function needWarn(){const d=todayPlan();return ex.mode==='plan'&&ex.status==='ready'&&d&&!d.warned&&!(d.done||[]).length;}
+function askWarn(){
+  openSheet(`<h3>Перед началом</h3><p>Ни одно упражнение не должно вызывать боль. Лёгкое растяжение — нормально, резкая боль — сигнал остановиться.</p>
+    <div class="sheet-acts"><button class="primary" data-act="warnok">Понятно, начинаем</button></div>`);
 }
 function showDayDone(){
   logExercise();if(HAS_FORM)formClose();
@@ -1745,19 +1789,17 @@ document.addEventListener('click',ev=>{
     case 'restart':{const k=dkey(),d=getDay(k);d.done=[];d.log=[];d.seconds=0;d.at=null;d.atAcc=0;delete d.feel;saveDay(k);
       if(HAS_FORM&&window.clipsClear)clipsClear(k);
       state.choosing=false;render();window.scrollTo(0,0);const c=curOf(d);if(c)openEx(c,'plan');break;}
-    case 'blk':state.openBlk=state.openBlk===v?null:v;render();break;
     case 'home':if(ex.open)closeEx();closeSheet();state.tab='path';state.choosing=false;render();window.scrollTo(0,0);break;
     case 'start':openEx(v,'plan');go();break;
-    case 'unskip':{const ls=ex.lastSkip;countTime();openEx(v,'plan');
-      if(ls&&ls.id===v&&ls.acc>1){ex.acc=ls.acc;ex.extra=ls.extra||0;ex.counted=Math.round(ls.acc);ex.status='pause';savePos();renderBar();tick();}
-      const t=document.querySelector('.toast');if(t)t.remove();break;}
     case 'choose':state.choosing=true;render();window.scrollTo(0,0);break;
     case 'openday':openDay(v);break;
     case 'cancelChoose':state.choosing=false;render();break;
     case 'ex':openEx(v,'plan');break;
     case 'single':openEx(v,todayPlan()&&todayPlan().plan.includes(v)?'plan':'single');break;
-    case 'close':closeEx();break;
-    case 'skip':skipEx();break;
+    case 'close':if(ex.status==='run'||ex.status==='pause')askClose();else closeEx();break;
+    case 'closeyes':closeSheet();closeEx();break;
+    case 'closeno':closeSheet();if(ex.paused4ask){ex.paused4ask=false;go();}break;
+    case 'warnok':{const d=getDay(dkey());d.warned=true;saveDay(dkey());closeSheet();go();break;}
     case 'go':go();break;
     case 'pause':pause();break;
     case 'plus':ex.extra+=30;tick();break;
