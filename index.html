@@ -210,7 +210,7 @@ p{margin:0}
 .ex{position:fixed;inset:0;z-index:20;background:var(--paper);overflow-y:auto;-webkit-overflow-scrolling:touch}
 .ex-head{background:var(--c);color:var(--cf);border-radius:0 0 34px 34px}
 .ex-head .in,.ex-body{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
-.ex-head .in{padding-block:calc(env(safe-area-inset-top,0px) + 12px) 24px;display:flex;flex-direction:column;gap:16px}
+.ex-head .in{padding-block:calc(env(safe-area-inset-top,0px) + 16px) 26px;display:flex;flex-direction:column;gap:16px}
 .ex-top{display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center}
 .icon-btn{width:40px;height:40px;border-radius:50%;background:var(--cbox);display:flex;align-items:center;justify-content:center}
 .icon-btn svg{width:20px;height:20px}
@@ -285,7 +285,7 @@ p{margin:0}
 
 /* day complete */
 .ex.win{background:var(--lime)}
-.win-in{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:calc(env(safe-area-inset-top,0px) + 28px) calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:24px}
+.win-in{max-width:520px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:calc(env(safe-area-inset-top,0px) + 18px) calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:26px}
 .win-in .huge{font-weight:800;font-size:clamp(64px,20vw,92px);line-height:.85;letter-spacing:-.06em}
 .win-in .mins{display:flex;align-items:flex-end;gap:12px}
 .win-in .mins b{font-weight:300;font-size:120px;line-height:.78;letter-spacing:-.07em}
@@ -325,7 +325,7 @@ button.cal-d:active{transform:scale(.94)}
 .ex-chart{width:100%;height:170px;display:block;margin-top:8px}
 .b-measure{--c:var(--signal)}
 .scrim{position:fixed;inset:0;z-index:40;background:rgba(25,37,36,.45);display:flex;align-items:flex-end;justify-content:center}
-.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--paper);border-radius:30px 30px 0 0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheet{width:100%;max-width:520px;max-height:88vh;overflow-y:auto;background:var(--paper);border-radius:30px 30px 0 0;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
 .sheet h3{font-size:26px;line-height:1.05}
 .sheet-acts{display:flex;flex-direction:column;gap:10px;margin-top:4px}
 .sheet .primary{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:99px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px}
@@ -335,12 +335,12 @@ button.cal-d:active{transform:scale(.94)}
 .gif-ico svg{width:22px;height:22px}
 .gif-ico.wait{opacity:.35;pointer-events:none}
 .gif-ico.ready{background:var(--signal);border-color:var(--signal);color:#fff}
-.sheet .day-stage{margin-left:calc(-1 * max(20px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(20px,env(safe-area-inset-right,0px)))}
+.sheet .day-stage{margin-left:calc(-1 * max(18px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(18px,env(safe-area-inset-right,0px)))}
 /* profile */
-.pr-top{height:52px}
-.pr-gear{width:44px;height:44px;display:grid;place-items:center;margin-right:-10px}
+.pr-top{height:36px}
+.pr-gear{width:44px;height:44px;display:grid;place-items:center;margin:-4px -11px -4px 0;background:none;color:var(--ink)}
 .pr-gear svg{width:22px;height:22px}
-.pr-hello{display:flex;flex-direction:column;gap:12px;margin-top:-6px}
+.pr-hello{display:flex;flex-direction:column;gap:12px}
 .pr-greet{position:relative}
 .pr-greet h1{margin:0;font-weight:800;letter-spacing:-.05em;line-height:.9;font-size:64px;position:relative}
 .pr-greet h1 span{display:block;overflow-wrap:anywhere;hyphens:auto}
@@ -384,7 +384,7 @@ button.cal-d:active{transform:scale(.94)}
 .pr-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;width:100%;padding:13px 0;border-bottom:1px solid var(--rule);font-size:15px;text-align:left}
 .pr-hist li:last-child .pr-row{border-bottom:0}
 .pr-row .m{color:var(--muted);text-align:right}
-.pr-title{margin:-8px 0 0;font-size:56px;font-weight:800;letter-spacing:-.05em;line-height:.9}
+.pr-title{margin:0;font-size:56px;font-weight:800;letter-spacing:-.05em;line-height:.9}
 .pr-set{display:flex;flex-direction:column}
 .pr-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--rule);font-size:15px}
 .pr-line small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
@@ -1546,7 +1546,7 @@ function viewProfile(){
     const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel];if(feel)bits.push(feel);
     return `<li><button class="pr-row" data-act="day" data-v="${k}"><span>${esc(dateLong(parseKey(k)))}${f?' · '+esc(f.name):''}</span><span class="m">${bits.join(' · ')}</span></button></li>`;}).join('');
   return `<header class="top pr-top"><button class="back" data-act="tab" data-v="${state.from||'path'}">${ICON_BACK}Назад</button>
-    <button class="icon-btn plain pr-gear" data-act="settings" aria-label="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></header>
+    <button class="pr-gear" data-act="settings" aria-label="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></header>
   <section class="pr-hello">
     <div class="pr-greet" id="prGreet"><h1 id="prH"><span>${PR_GREET}</span><span>${esc(profName())}</span></h1>
       <button class="pr-notebtn" id="prNoteBtn" data-act="prnote" aria-label="Моя нота${ref!=null?': '+noteName(ref):''}"></button>
