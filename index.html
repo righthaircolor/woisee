@@ -278,7 +278,7 @@ p{margin:0}
 .vf-over b{font-size:22px;font-weight:600;letter-spacing:-.02em}
 .vf-over span{font-size:40px;font-weight:300;line-height:1}
 .hero-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
-.plate-sm{--ph:calc(clamp(84px,26vw,112px) * .74);width:calc(var(--ph) * 1.5);height:calc(var(--ph) * 1.5);display:block;margin:calc(var(--ph) * -.25) calc(var(--ph) * -.2) calc(var(--ph) * -.25 + 1px) 0}
+.plate-sm{--ph:calc(clamp(84px,26vw,112px) * .74);width:calc(var(--ph) * 2);height:calc(var(--ph) * 2);display:block;margin:calc(var(--ph) * -.5) calc(var(--ph) * -.2) calc(var(--ph) * -.5 + 1px) calc(var(--ph) * -.5);pointer-events:none}
 .tlw{position:relative;height:40px;margin:2px -4px 37px}
 .tlw canvas{width:100%;height:40px;display:block}
 .tlw .redpill{position:absolute;top:42px;left:0}
@@ -1246,8 +1246,8 @@ function miniFrame(now){
     if(i===e.last)continue;e.last=i;
     const s=e.cv.clientWidth;if(!s)continue;
     const ctx=fitCv(e.cv,s);ctx.clearRect(0,0,s,s);
-    if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*.32,.75);
-    else{const en=dayEntries(e.k);drawDay(ctx,s,en,en.length,seedOf(e.k),PAL.dark,{dot:2.4,r:.27,ph:(i%48)/48});}
+    if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*.3,.8);
+    else{const en=dayEntries(e.k);drawDay(ctx,s,en,en.length,seedOf(e.k),PAL.dark,{dot:2.4,r:.26,ph:(i%48)/48});}
   }
   mini.raf=REDUCED()?0:requestAnimationFrame(miniFrame);
 }
