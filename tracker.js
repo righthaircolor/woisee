@@ -44,7 +44,9 @@ const LABELS = {
   chakra: [['Манипура','солнечное сплетение'], ['Анахата','сердце'], ['Вишудха','горло'], ['Аджна','третий глаз'], ['Сахасрара','макушка']]
 };
 const ZIN = { body:['в низу груди','в груди','в шее','в маске','в голове'], chakra:['в манипуре','в анахате','в вишудхе','в аджне','в сахасраре'] };
-const labSet = () => (typeof data !== 'undefined' && data.profile && data.profile.zoneLabels === 'chakra') ? 'chakra' : 'body';
+/* body parts by default; chakras only when chosen in the settings. The profile can switch its own view without changing that. */
+let labView = null;
+const labSet = () => labView || ((typeof data !== 'undefined' && data.profile && data.profile.zoneLabels === 'chakra') ? 'chakra' : 'body');
 const zName = i => LABELS[labSet()][i][0], zSub = i => LABELS[labSet()][i][1], zIn = i => ZIN[labSet()][i];
 const BAND = [[.64, .90], [.415, .64], [.28, .415], [.165, .28], [.05, .165]];
 function pOf(midi, cent){
@@ -402,64 +404,72 @@ function setLabels(v){
 
 /* =========================== picture of the day =========================== */
 /* The haze of the day stays as it is — every exercise's clip laid over the others, moving, chaotic.
-   Out of it the note of the day gathers: its dots fly in from the cloud, hold the note's pattern for a moment
-   and fall apart again. With prints before and after, the earlier note gathers first, then the later one.
-   One loop is 96 frames (8 s at 12 fps). */
-const LOOP = 96;
-const formCache = new Map();
-function formPts(midi, N){
-  const u = Math.round(uOfM(midi)), key = u + ':' + N + ':' + (data.profile.lace === true); if (formCache.has(key)) return formCache.get(key);
-  const Q = V3.makeP(N, 31 + u), st = { u, amp:.4, stab:.95, e:1, hold:1, crisp: data.profile.lace !== true, noise:0, cent:.5, vo:1, bx:1 }, o = [0, 0];
-  const X = new Float32Array(N), Y = new Float32Array(N), A = new Float32Array(N), D = new Float32Array(N), X0 = new Float32Array(N), Y0 = new Float32Array(N);
-  const r = FL.rng(97 + u);
-  for (let i = 0; i < N; i++){ V3.targetOf(Q, st, i, 0, null, o); X[i] = o[0]; Y[i] = o[1]; A[i] = .35 + .65*((i*7919 % 100)/100); D[i] = r(); X0[i] = FL.gs(r)*.55; Y0[i] = FL.gs(r)*.5; }
-  const P = { X, Y, A, D, X0, Y0, Z: Q.Z, N }; formCache.set(key, P); return P;
+   Inside it the dots of the note never stop changing: the form flows from the morning note along the recorded siren
+   to the note after practice and back, through every pattern in between, while the dots keep drifting
+   between haze and pattern. Nothing switches on or off — it is one continuous flow.
+   One loop is 96 frames (8 s at 12 fps) and closes on itself, so the GIF has no seam; live views pass a
+   fractional frame and move at full frame rate. */
+const LOOP = 96, T2 = Math.PI*2;
+const cloudCache = new Map();
+function cloud(N){
+  if (cloudCache.has(N)) return cloudCache.get(N);
+  const Q = V3.makeP(N, 31), r = FL.rng(97), D = new Float32Array(N), A = new Float32Array(N), PH = new Float32Array(N);
+  for (let i = 0; i < N; i++){ D[i] = r(); A[i] = .35 + .65*((i*7919 % 100)/100); PH[i] = r()*T2; }
+  const c = { Q, D, A, PH, N }; cloudCache.set(N, c); return c;
 }
-/* how much the n-th note is gathered at phase ph: 0 = haze, 1 = pattern */
-function gather(ph, n, count){
-  const span = 1/count, x = (ph - n*span)/span;
-  if (x < 0 || x > 1) return 0;
-  return x < .15 ? 0 : x < .42 ? sm((x - .15)/.27) : x < .68 ? 1 : x < .95 ? 1 - sm((x - .68)/.27) : 0;
+/* the notes the form travels through, as points on a loop: morning note → up the siren → note after → down the siren */
+function noteKeys(k){
+  const P = prints(k), lerp = (a, b, t) => a + (b - a)*t;
+  if (P.length){
+    const A = P[0].comfort, B = P[P.length - 1].comfort, ct = (P[P.length - 1].contour && P[P.length - 1].contour.length > 6 ? P[P.length - 1].contour : P[0].contour) || [];
+    const at = q => ct.length > 6 ? ct[Math.round(q*(ct.length - 1))] : null, hi = at(.5), lo = at(.9);
+    return [A, hi != null ? lerp(A, at(.3), .5) : A + 2, hi != null ? lerp(A, hi, .45) : A + 4, B, lo != null ? lerp(B, lo, .5) : B - 2].map(uOfM);
+  }
+  const E = exNotes(k); if (!E.length) return [];
+  const ns = E.slice(0, 4).map(n => n.midi); while (ns.length < 3) ns.push(ns[0] + (ns.length === 1 ? 3 : -2));
+  return ns.map(uOfM);
+}
+/* a smooth closed path through the keys (Catmull–Rom, cyclic) */
+function pathU(K, ph){
+  const n = K.length, q = ph*n, i = Math.floor(q) % n, t = q - Math.floor(q);
+  const p0 = K[(i - 1 + n) % n], p1 = K[i], p2 = K[(i + 1) % n], p3 = K[(i + 2) % n], t2 = t*t, t3 = t2*t;
+  return .5*((2*p1) + (-p0 + p2)*t + (2*p0 - 5*p1 + 4*p2 - p3)*t2 + (-p0 + 3*p1 - 3*p2 + p3)*t3);
 }
 function hazeOf(k, clips, i, ctx, cx, cy, R, mul, mono){
-  if (clips && clips.length) paintAt(ctx, dayLayers(clips, i), layerMul(clips.length)*mul, cx, cy, R*1.18, .8, mono);
-  else { ctx.save(); ctx.globalAlpha = 1; paintSynth(ctx, k, cx, cy, R*1.05, .07*Math.sin(2*Math.PI*(i % LOOP)/LOOP), mono); ctx.restore(); }
+  const fi = Math.floor(i);
+  if (clips && clips.length) paintAt(ctx, dayLayers(clips, fi), layerMul(clips.length)*mul, cx, cy, R*1.18, .8, mono);
+  else { ctx.save(); paintSynth(ctx, k, cx, cy, R*1.05, .07*Math.sin(T2*(i % LOOP)/LOOP), mono); ctx.restore(); }
 }
 /* returns false when the day has no note: then the caller paints it as before */
 function paintDay(ctx, k, clips, i, cx, cy, R, mono){
-  const notes = dayNotes(k); if (!notes.length) return false;
+  const K = noteKeys(k); if (!K.length) return false;
   const ph = (((i % LOOP) + LOOP) % LOOP)/LOOP, still = reduced();
-  const ws = notes.map((m, n) => still ? (n === notes.length - 1 ? 1 : 0) : gather(ph, n, notes.length)), w = Math.max(...ws);
-  hazeOf(k, clips, i, ctx, cx, cy, R, 1 - .6*w, mono);
-  const N = Math.round(clamp(R*R*.08, 600, 3000)), dot = Math.max(1, R/115), T2 = Math.PI*2;
-  notes.forEach((m, n) => {
-    const wn = ws[n]; if (wn < .01) return;
-    const P = formPts(m, N), rot = still ? 0 : .25*Math.sin(T2*ph), c = Math.cos(rot), s = Math.sin(rot), Rf = R*.78;
-    ctx.fillStyle = mono || nCol(m);
-    for (let j = 0; j < P.N; j++){
-      const e = sm((wn - P.D[j]*.35)/.65); if (e <= 0) continue;
-      const fx = P.X[j]*c - P.Y[j]*s, fy = P.X[j]*s + P.Y[j]*c;
-      const hx = P.X0[j] + (still ? 0 : .06*Math.sin(T2*ph*2 + j)), hy = P.Y0[j] + (still ? 0 : .06*Math.cos(T2*ph*3 + j*.7));
-      const x = cx + (hx + (fx - hx)*e)*Rf, y = cy + (hy + (fy - hy)*e)*Rf, z = P.Z[j]*dot;
-      ctx.globalAlpha = P.A[j]*e; ctx.fillRect(x - z/2, y - z/2, z, z);
-    }
-  });
+  const u = clamp(still ? K[K.length >= 4 ? 3 : 0] : pathU(K, ph), 0, 47);
+  const order = still ? .85 : .8 + .12*Math.sin(T2*ph*2);   // breathes between haze and pattern, never all the way
+  hazeOf(k, clips, i, ctx, cx, cy, R, 1 - .45*order, mono);
+  const N = Math.round(clamp(R*R*.08, 600, 3000)), dot = Math.max(1, R/115), Cl = cloud(N), Q = Cl.Q, o = [0, 0];
+  const st = { u, amp:.4, stab:.95, e:1, hold:1, crisp: data.profile.lace !== true, noise:0, cent:.5, vo:1, bx:1 };
+  const rot = still ? 0 : .35*Math.sin(T2*ph), Rf = R*.78;
+  ctx.fillStyle = mono || (data.profile.rain !== false ? V3.noteColor(u) : C.ink);
+  for (let j = 0; j < N; j++){
+    V3.targetOf(Q, st, j, rot, null, o);
+    const e = sm((order - Cl.D[j]*.45)/.55);
+    const w = still ? 0 : .07, hx = Q.X0[j]*1.35 + w*Math.sin(T2*ph + Cl.PH[j]), hy = Q.Y0[j]*1.35 + w*Math.cos(T2*ph*2 + Cl.PH[j]);
+    const x = cx + (hx + (o[0] - hx)*e)*Rf, y = cy + (hy + (o[1] - hy)*e)*Rf, z = Q.Z[j]*dot;
+    ctx.globalAlpha = Cl.A[j]*(.25 + .75*e); ctx.fillRect(x - z/2, y - z/2, z, z);
+  }
   ctx.globalAlpha = 1;
   return true;
 }
-/* GIF 9:16 with the Reels / TikTok safety zones: picture pinned to the top of the safe area, captions inside it */
+/* GIF 9:16 with the Reels / TikTok safety zones: «woisee» and the date pinned to the top of the safe area,
+   the picture right under them, everything inside the zone */
 const SAFE = { top:.114, left:.08, right:.058, rightLow:.18, bottom:.71 };
-function gifLayout(W, H){ const side = W*(1 - SAFE.left - SAFE.right), top = H*SAFE.top; return { cx: W*SAFE.left + side/2, cy: top + side/2, R: side*.42, textY: top + side + 30 }; }
+function gifLayout(W, H){ const side = W*(1 - SAFE.left - SAFE.right), textY = H*SAFE.top + 22, top = textY + 14; return { cx: W*SAFE.left + side/2, cy: top + side/2, R: side*.42, textY }; }
 function gifText(ctx, k, W, H){
-  const G = gifLayout(W, H), x0 = W*SAFE.left, x1 = W*(1 - SAFE.rightLow);
+  const G = gifLayout(W, H);
   ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.font = '800 22px "Inter Tight", sans-serif'; ctx.fillText('woisee', x0, G.textY);
-  ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.font = '400 15px "Inter Tight", sans-serif'; ctx.fillText(dateLong(parseKey(k)), x1, G.textY - 2);
-  const P = k ? prints(k) : [];
-  if (P.length){
-    const a = P[0], b = P[P.length - 1], txt = P.length > 1 && nShort(a.comfort) !== nShort(b.comfort) ? nName(a.comfort) + ' → ' + nName(b.comfort) : nName(b.comfort);
-    ctx.textAlign = 'left'; ctx.fillText(txt + ' · ' + zIn(b.actual), x0, G.textY + 24);
-  }
+  ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.font = '800 22px "Inter Tight", sans-serif'; ctx.fillText('woisee', W*SAFE.left, G.textY);
+  ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.font = '400 15px "Inter Tight", sans-serif'; ctx.fillText(dateLong(parseKey(k)), W*(1 - SAFE.right), G.textY - 2);
   ctx.textAlign = 'left';
 }
 
@@ -549,7 +559,7 @@ function dayRows(k){
 }
 
 /* =========================== profile =========================== */
-const H = { per:'w', off:0, sample:false };
+const H = { per:'w', off:0, sample:false, lab:null };
 let SAMPLE = null;
 /* a stand-in history to see the profile filled: never stored, never mixed with hers */
 function sampleData(){
@@ -623,6 +633,10 @@ function mountProfile(){
 function renderProfile(){
   const root = $('pf'); if (!root) return;
   cancelAnimationFrame(map.raf); map.raf = 0;
+  labView = H.lab;
+  try { renderProfileIn(root); } finally { labView = null; }
+}
+function renderProfileIn(root){
   const S = src(), P = period(S), keys = S.keys.filter(k => inR(k, P.s, P.e));
   root.querySelectorAll('[data-pfper]').forEach(b => b.setAttribute('aria-selected', b.dataset.pfper === H.per));
   $('pfLabel').textContent = P.label;
@@ -656,7 +670,7 @@ function renderProfile(){
     </div>
     ${a.P.length ? `<div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
     <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>` : ''}`;
-  $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { setLabels(x.dataset.lab); renderProfile(); });
+  $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { H.lab = x.dataset.lab; renderProfile(); });
   $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
   drawBodyShare($('pfBodyCv'), zones);
   if (H.per === 'all') drawMap($('pfMap'), S); else drawCal($('pfCal'), S, P);
@@ -788,5 +802,5 @@ function drawLine(cv, tip, D, val, yr, fmt){
   hover(cv, tip, D, () => F, d => `<b>${dShort(d.date)}</b> · ${val(d) != null ? fmt(val(d)) : '—'}`, i => vals[i] != null ? yOf(vals[i]) : F.t, draw);
 }
 
-g.WT = { open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, setLabels, SAFE };
+g.WT = { hasNote: k => noteKeys(k).length > 0, open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, setLabels, SAFE };
 })(window);

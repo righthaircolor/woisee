@@ -981,7 +981,7 @@ function openDay(k){
   const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel];
   const exs=d.exhale&&Object.keys(d.exhale).length?Object.keys(SOUNDS).filter(s=>d.exhale[s]).map(s=>`[${SOUNDS[s]}] ${Math.round(d.exhale[s])} с`).join(' · '):'';
   openSheet(`<div class="sec-h"><h3>${esc(weekday(parseKey(k)))}, ${esc(dateLong(parseKey(k)))}</h3><button class="icon-btn plain" data-act="closesheet" aria-label="Закрыть">${ICON_X}</button></div>
-    ${HAS_FORM?`<div class="vf-stage free day-stage"><canvas id="dayCv" aria-label="Все упражнения дня, наложенные друг на друга"></canvas>${list.some(x=>x.done)?`<button class="gif-ico wait" id="dayGifBtn" data-act="gifday" data-v="${k}" aria-label="Сохранить гифку дня">${ICON_SHARE}</button>`:''}</div>`:''}
+    ${HAS_FORM?`<div class="vf-stage free day-stage"><canvas id="dayCv" aria-label="Все упражнения дня, наложенные друг на друга"></canvas>${list.some(x=>x.done)||(window.WT&&WT.hasNote(k))?`<button class="gif-ico wait" id="dayGifBtn" data-act="gifday" data-v="${k}" aria-label="Сохранить гифку дня">${ICON_SHARE}</button>`:''}</div>`:''}
     <ul class="hist">
       ${window.WT?WT.dayRows(k):''}<li><span>Практика</span><span class="m num">${Math.round((d.seconds||0)/60)} мин</span></li>
       <li><span>Упражнения</span><span class="m num">${doneN}${d.plan?' из '+d.plan.length:''}${voiced?' · с голосом '+voiced:''}</span></li>
@@ -1440,7 +1440,7 @@ async function dayGif(k){
   const key='d:'+k;
   if(mom.cache.has(key))return mom.cache.get(key);
   const clips=await dayClips(k);let blob;
-  if(window.WT&&WT.dayNotes(k).length){const G=WT.gifLayout(GIF_W,GIF_H);blob=await encodeGif(WT.LOOP,(ctx,i)=>WT.paintDay(ctx,k,clips,i,G.cx,G.cy,G.R),k);}
+  if(window.WT&&WT.hasNote(k)){const G=WT.gifLayout(GIF_W,GIF_H);blob=await encodeGif(WT.LOOP,(ctx,i)=>WT.paintDay(ctx,k,clips,i,G.cx,G.cy,G.R),k);}
   else if(clips.length){const L=Math.max(...clips.map(c=>c.frames.length)),N=2*L-2,mul=layerMul(clips.length);blob=await encodeGif(N,(ctx,i)=>paintFrames(ctx,dayLayers(clips,i),mul),k);}
   else{const N=48;blob=await encodeGif(N,(ctx,i)=>paintPlateFrame(ctx,k,i/N),k);}
   mom.cache.set(key,blob);return blob;
@@ -1457,7 +1457,7 @@ async function dayStage(k){
     const {ctx,w,h}=fitLive(c),i=Math.floor((now-t0)/1000*GIF_FPS),sc=w/GIF_W;
     ctx.save();ctx.scale(sc,sc);
     const H=h/sc;
-    if(window.WT&&WT.paintDay(ctx,k,clips,i,GIF_W/2,H*.5,GIF_W*.42)){}
+    if(window.WT&&WT.paintDay(ctx,k,clips,(now-t0)/1000*GIF_FPS,GIF_W/2,H*.5,GIF_W*.42)){}
     else if(clips.length)paintFrames(ctx,dayLayers(clips,i),mul,GIF_W,H,true);else paintPlateFrame(ctx,k,(i%96)/96,GIF_W,H,true);
     ctx.restore();
     mom.dayRaf=REDUCED()?0:requestAnimationFrame(frame);
@@ -1514,10 +1514,11 @@ function miniFrame(now){
   if(!mini.list.length){mini.raf=0;return;}
   const i=Math.floor(now/1000*GIF_FPS);
   for(const e of mini.list){
-    if(i===e.last)continue;e.last=i;
+    const live=window.WT&&WT.hasNote(e.k);
+    if(!live&&i===e.last)continue;e.last=i;
     const s=e.cv.clientWidth;if(!s)continue;
     const ctx=fitCv(e.cv,s);ctx.clearRect(0,0,s,s);
-    if(window.WT&&WT.paintDay(ctx,e.k,e.clips,i,s/2,s/2,s*e.r,e.mono)){}
+    if(live&&WT.paintDay(ctx,e.k,e.clips,now/1000*GIF_FPS,s/2,s/2,s*e.r,e.mono)){}
     else if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*e.r,.8,e.mono);
     else paintSynth(ctx,e.k,s/2,s/2,s*e.r*.95,.07*Math.sin(2*Math.PI*(i%96)/96),e.mono);
   }
@@ -1952,6 +1953,7 @@ function viewSettings(){
   <section class="pr-set">
     <label class="pr-line pr-name"><span>Как к вам обращаться</span><input id="prNameIn" type="text" maxlength="40" autocomplete="given-name" placeholder="Имя" value="${esc(data.profile.name||'')}"></label>
     <div class="pr-line"><span>Звуковой сигнал в конце таймера</span>${sw('sound',data.profile.sound!==false,'Звуковой сигнал')}</div>
+    ${window.WT?`<div class="pr-line"><span>Чакры вместо частей тела<small>Подписи зон в отпечатке голоса и в профиле.</small></span>${sw('zonelab',data.profile.zoneLabels==='chakra','Чакры вместо частей тела')}</div>`:''}
     ${HAS_FORM?`<div class="pr-line"><span>Микрофон в упражнениях<small>Голос собирает форму. Звук не записывается.</small></span>${sw('mic',data.profile.micOff!==true,'Микрофон в упражнениях')}</div>
     <div class="pr-line"><span>Радуга нот<small>Цвет точек — нота. Выключено — один цвет.</small></span>${sw('rain',data.profile.rain!==false,'Радуга нот')}</div>`:''}
   </section>
@@ -2259,6 +2261,7 @@ document.addEventListener('click',ev=>{
     case 'finishNow':complete(false);break;
     case 'next':nextEx();break;
     case 'sound':data.profile.sound=data.profile.sound===false;saveProfile();audioInit();render();break;
+    case 'zonelab':data.profile.zl2=1;data.profile.zoneLabels=data.profile.zoneLabels==='chakra'?'body':'chakra';saveProfile();render();break;
     case 'psnd':state.sound=v;render();break;
     case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swHist').innerHTML=exhaleHist(v);paintPlates($('swHist'));tick();}break;
     case 'sw':swToggle();break;
@@ -2282,7 +2285,10 @@ document.addEventListener('click',ev=>{
   }
 });
 
-loadLocal();render();
+loadLocal();
+/* earlier builds saved the profile's Тело/Чакры switch as the default: back to body parts once, chakras only from the settings */
+if(!data.profile.zl2){delete data.profile.zoneLabels;data.profile.zl2=1;saveLocal(true);}
+render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
 if(typeof acctInit==='function')acctInit();
