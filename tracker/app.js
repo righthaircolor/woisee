@@ -87,14 +87,31 @@ function streak(){
 }
 $('#histBtn').addEventListener('click', () => { hist = !hist; try { localStorage.setItem('woisee-tracker-hist', hist ? 'on' : 'off'); } catch (e) {} refresh(); renderToday(); });
 function weekProgress(){ const mon = T.monday(new Date()); let n = 0; for (let i = 0; i < 7; i++) if (byDate.get(T.dkey(T.addDays(mon, i)))) n++; return n/7; }
+/* the ring is the same flowing dust as the outline of the current exercise in the app (index.html: pathFrame / rrAt):
+   grains spread along the line with a gaussian offset, drift slowly clockwise and wobble a little.
+   The part of the week already measured is bright, the rest is a faint trace. */
+const ring = { P:null, flow:0, t:0 };
+function dustRing(ctx, c, R, wp, dt){
+  if (!ring.P){ const gs = () => { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.283*Math.random()); };
+    ring.P = []; for (let i = 0; i < 1300; i++) ring.P.push({ s:Math.random(), sp:.6 + Math.random()*.8, n:gs(), x:NaN, y:NaN, z:.9 + Math.random()*1.3, a:.45 + Math.random()*.55 }); }
+  const still = T.reduced(); ring.flow += still ? 0 : dt*.018; ring.t += dt;
+  const k = still ? 1 : 1 - Math.pow(1 - .16, dt*60);
+  ctx.fillStyle = '#F4F2EC';
+  for (const p of ring.P){
+    const u = ((p.s + ring.flow*p.sp) % 1 + 1) % 1, an = -Math.PI/2 + u*Math.PI*2, nx = Math.cos(an), ny = Math.sin(an);
+    const off = p.n*2.4 + (still ? 0 : Math.sin(ring.t*2.2 + p.s*40)*1.2), tx = c + nx*(R + off), ty = c + ny*(R + off);
+    if (isNaN(p.x)){ p.x = tx; p.y = ty; }
+    p.x += (tx - p.x)*k; p.y += (ty - p.y)*k;
+    ctx.globalAlpha = p.a*(u < wp ? 1 : .18);
+    ctx.fillRect(p.x - p.z/2, p.y - p.z/2, p.z, p.z);
+  }
+  ctx.globalAlpha = 1;
+}
 function drawRing(dt){
   const cv = $('#ringCv'), s = cv.clientWidth; if (!s) return;
   const ctx = T.fit(cv, s, s); ctx.clearRect(0, 0, s, s);
   const c = s/2, R = s*.44, lw = s*.07;
-  ctx.lineCap = 'round'; ctx.lineWidth = lw;
-  ctx.strokeStyle = 'rgba(255,254,252,.06)'; ctx.beginPath(); ctx.arc(c, c, R, 0, Math.PI*2); ctx.stroke();
-  const wp = weekProgress();
-  if (wp > 0){ const gr = ctx.createLinearGradient(0, 0, s, s); gr.addColorStop(0, 'rgba(244,242,236,.42)'); gr.addColorStop(1, 'rgba(244,242,236,.16)'); ctx.strokeStyle = gr; ctx.beginPath(); ctx.arc(c, c, R, -Math.PI/2, -Math.PI/2 + Math.PI*2*wp*.999); ctx.stroke(); }
+  dustRing(ctx, c, R, weekProgress(), dt);
   const td = byDate.get(todayKey());
   if (td){
     if (!todayCache){ todayCache = document.createElement('canvas'); const ic = T.fit(todayCache, s, s); V3.renderForm(ic, c, c, R*.78, uOf(td.comfort), Math.round(900 + s*4), 31, T.noteCol(td.comfort), .95, Math.max(.8, s/320), 0, true); }
