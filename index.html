@@ -1985,7 +1985,6 @@ function viewSettings(){
   <section class="pr-set">
     <label class="pr-line pr-name"><span>Как к вам обращаться</span><input id="prNameIn" type="text" maxlength="40" autocomplete="given-name" placeholder="Имя" value="${esc(data.profile.name||'')}"></label>
     <div class="pr-line"><span>Звуковой сигнал в конце таймера</span>${sw('sound',data.profile.sound!==false,'Звуковой сигнал')}</div>
-    ${window.WT?`<div class="pr-line"><span>Чакры вместо частей тела<small>Подписи зон в отпечатке голоса и в профиле.</small></span>${sw('zonelab',data.profile.zoneLabels==='chakra','Чакры вместо частей тела')}</div>`:''}
     ${HAS_FORM?`<div class="pr-line"><span>Микрофон в упражнениях<small>Голос собирает форму. Звук не записывается.</small></span>${sw('mic',data.profile.micOff!==true,'Микрофон в упражнениях')}</div>
     <div class="pr-line"><span>Радуга нот<small>Цвет точек — нота. Выключено — один цвет.</small></span>${sw('rain',data.profile.rain!==false,'Радуга нот')}</div>`:''}
   </section>
@@ -2293,7 +2292,6 @@ document.addEventListener('click',ev=>{
     case 'finishNow':complete(false);break;
     case 'next':nextEx();break;
     case 'sound':data.profile.sound=data.profile.sound===false;saveProfile();audioInit();render();break;
-    case 'zonelab':data.profile.zl2=1;data.profile.zoneLabels=data.profile.zoneLabels==='chakra'?'body':'chakra';saveProfile();render();break;
     case 'psnd':state.sound=v;render();break;
     case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swHist').innerHTML=exhaleHist(v);paintPlates($('swHist'));tick();}break;
     case 'sw':swToggle();break;
@@ -2318,8 +2316,8 @@ document.addEventListener('click',ev=>{
 });
 
 loadLocal();
-/* earlier builds saved the profile's Тело/Чакры switch as the default: back to body parts once, chakras only from the settings */
-if(!data.profile.zl2){delete data.profile.zoneLabels;data.profile.zl2=1;saveLocal(true);}
+/* zones are named by body parts only: an old chakra setting is dropped */
+if('zoneLabels' in data.profile||'zl2' in data.profile){delete data.profile.zoneLabels;delete data.profile.zl2;saveLocal(true);}
 render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
