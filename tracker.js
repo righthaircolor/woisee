@@ -524,6 +524,7 @@ function cloud(N){
 /* the notes the form travels through, as points on a loop: morning note → up the siren → note after → down the siren */
 function noteKeys(k){
   const P = prints(k), lerp = (a, b, t) => a + (b - a)*t;
+  if (P.length > 2){ const sel = P.length <= 8 ? P : Array.from({ length:8 }, (_, i) => P[Math.round(i*(P.length - 1)/7)]); return sel.map(c => uOfM(c.comfort)); }
   if (P.length){
     const A = P[0].comfort, B = P[P.length - 1].comfort, ct = (P[P.length - 1].contour && P[P.length - 1].contour.length > 6 ? P[P.length - 1].contour : P[0].contour) || [];
     const at = q => ct.length > 6 ? ct[Math.round(q*(ct.length - 1))] : null, hi = at(.5), lo = at(.9);
@@ -575,7 +576,7 @@ function paintDay(ctx, k, clips, i, cx, cy, R, mono){
 /* GIF 9:16 with the Reels / TikTok safety zones: «woisee» and the date pinned to the top of the safe area,
    the picture right under them, everything inside the zone */
 const SAFE = { top:.114, left:.08, right:.058, rightLow:.18, bottom:.71 };
-function gifLayout(W, H){ const side = W*(1 - SAFE.left - SAFE.right), textY = H*SAFE.top + 22, top = textY + 14; return { cx: W*SAFE.left + side/2, cy: top + side/2, R: side*.42, textY }; }
+function gifLayout(W, H){ return { cx: W/2, cy: H*.47, R: W*.48, textY: H*SAFE.top + 22 }; }
 function gifText(ctx, k, W, H){
   const G = gifLayout(W, H);
   ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
@@ -593,7 +594,8 @@ function paintDayCell(cv, k){
   const s = cv.clientWidth; if (!s) return;
   const ctx = fit(cv, s, s); ctx.clearRect(0, 0, s, s);
   const n = dayNotes(k), P = prints(k);
-  if (n.length){ const m = n[n.length - 1], st = P.length ? P[P.length - 1].stab : .8; V3.renderForm(ctx, s/2, s/2, s*.5, Math.round(uOfM(m)), Math.round(120 + s*5), 700 + parseInt(k.slice(8), 10), nCol(m), .55 + .45*(st || .6), Math.max(.7, s/60), 0, data.profile.lace !== true); }
+  if (P.length > 1) paintLayers(ctx, P, s/2, s/2, s*.5, data.profile.rain !== false, data.profile.lace !== true, Math.max(.7, s/60));
+  else if (n.length){ const m = n[n.length - 1], st = P.length ? P[P.length - 1].stab : .8; V3.renderForm(ctx, s/2, s/2, s*.5, Math.round(uOfM(m)), Math.round(120 + s*5), 700 + parseInt(k.slice(8), 10), nCol(m), .55 + .45*(st || .6), Math.max(.7, s/60), 0, data.profile.lace !== true); }
   else paintSynth(ctx, k, s/2, s/2, s*.42, 0);
 }
 function weekHTML(start){
@@ -651,6 +653,22 @@ function stir(dt){
     X[i] += ring.VX[i]*dt; Y[i] += ring.VY[i]*dt;
   }
 }
+/* every print of the day stays in the ring: the earlier ones lie under the live form, each in its note's colour,
+   turned a little against each other so the layers read as layers. Drawn once per change, then only turned slowly. */
+const layerCache = { key:'', cv:null };
+function printLayers(P, s, R){
+  const rain = data.profile.rain !== false, crisp = data.profile.lace !== true;
+  const key = P.map(c => c.at + ':' + c.comfort).join('|') + '/' + s + rain + crisp;
+  if (layerCache.key === key) return layerCache.cv;
+  const dpr = Math.min(2, window.devicePixelRatio || 1), cv = document.createElement('canvas'); cv.width = cv.height = Math.round(s*dpr);
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr); paintLayers(ctx, P, s/2, s/2, R, rain, crisp, 1.25);
+  layerCache.key = key; layerCache.cv = cv; return cv;
+}
+function paintLayers(ctx, P, cx, cy, R, rain, crisp, dot, total){
+  const n = P.length, all = total || n, N = Math.round(clamp(2600/Math.sqrt(all), 700, 2000)*clamp(R/190, .25, 1.2));
+  P.forEach((c, i) => { const m = Math.round(c.comfort), u = clamp(m - 12*(Math.floor(m/12) - 1), 0, 47);
+    V3.renderForm(ctx, cx, cy, R, u, N, 300 + i*17, rain ? nCol(c.comfort) : C.ink, (.5 + .45*(i + 1)/all)*(.7 + .3*(c.stab || .7))*clamp(2.6/Math.sqrt(all), .6, 1), dot, i*.55, crisp); });
+}
 function ringFrame(now){
   const cv = $('trRing'); if (!cv || !cv.isConnected){ ring.raf = 0; return; }
   const dt = Math.min(.05, (now - ring.last)/1000); ring.last = now; ring.t += dt;
@@ -670,9 +688,11 @@ function ringFrame(now){
     ctx.globalAlpha = p.a*(u < wp ? 1 : .18); ctx.fillRect(p.x - p.z/2, p.y - p.z/2, p.z, p.z);
   }
   ctx.globalAlpha = 1;
-  const so = ring.solo, has = prints(dkey()).length > 0;
+  const so = ring.solo, PP = prints(dkey()), has = PP.length > 0;
   so.ease(dt); so.step(dt); if (!still) stir(dt);
-  ctx.save(); ctx.beginPath(); ctx.arc(c, c, R - 6, 0, Math.PI*2); ctx.clip(); so.draw(ctx, s, s, SOLO_SC, has ? 1 : .55); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.arc(c, c, R - 6, 0, Math.PI*2); ctx.clip();
+  if (PP.length > 1){ const L = printLayers(PP.slice(0, -1), s, s*SOLO_SC); ctx.save(); ctx.translate(c, c); ctx.rotate(still ? 0 : ring.t*.035); ctx.drawImage(L, -c, -c, s, s); ctx.restore(); }
+  so.draw(ctx, s, s, SOLO_SC, has ? 1 : .55); ctx.restore();
   ring.raf = still ? 0 : requestAnimationFrame(ringFrame);
 }
 
