@@ -801,7 +801,7 @@ function renderProfileIn(root){
       ${tile('dark', 'Минут практики', `${a.mins}`, b ? 'было ' + b.mins + ' мин' : a.prac ? a.prac + ' ' + pl(a.prac, 'занятие', 'занятия', 'занятий') : 'пока без практики')}
     </div>
     <div class="pr-h"><h2>Карта голоса</h2><span class="note">${escH(P.short)}</span></div>
-    <p class="note">Угол — нота, расстояние от центра — высота. Кольца — зоны, где ты её чувствуешь. Яркое — недавнее, бледное — раньше.</p>
+    <p class="note">12 нот по кругу. Ниже нота — ближе к центру. Яркие — последняя неделя периода.</p>
     <canvas class="pf-vmap" id="pfVmap" role="img" aria-label="Карта голоса: 12 нот по кругу, высота — расстояние от центра"></canvas>
     <div class="pf-read" id="pfRead"></div>
     <div class="pr-h"><h2>Слепок голоса</h2><span class="note">${escH(P.short)}</span></div>
@@ -809,7 +809,8 @@ function renderProfileIn(root){
     <canvas class="pf-cast" id="pfCast" role="img" aria-label="Слепок голоса"></canvas>
     <p class="note" id="pfCastCap"></p>
     ${a.P.length ? `<div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
-    <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>` : ''}`;
+    <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>
+    <div class="pr-h"><h2>Долгий выдох</h2><span class="note">цель — 30 секунд</span></div><div class="pf-fig"><canvas id="pfExh" role="img" aria-label="Долгий выдох по дням"></canvas><div class="pf-tip" id="pfTipE"></div></div>` : ''}`;
   $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { H.lab = x.dataset.lab; renderProfile(); });
   $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
   drawBodyShare($('pfBodyCv'), zones);
@@ -821,6 +822,8 @@ function renderProfileIn(root){
     const D = keys.filter(k => S.P(k).length).map(k => { const L = S.P(k); return { date:k, m:L[L.length - 1] }; });
     drawRange($('pfRange'), $('pfTipR'), D);
     drawLine($('pfStab'), $('pfTipS'), D, d => d.m.stab == null ? null : d.m.stab*100, [40, 100], v => Math.round(v) + ' %');
+    const ex = k => Math.max(0, ...S.P(k).map(c => c.exhale || 0), ...Object.values(S.ex(k)));
+    drawLine($('pfExh'), $('pfTipE'), D, d => ex(d.date) || null, [0, 40], v => Math.round(v) + ' с', 30);
   }
 }
 function drawBodyShare(cv, z){
@@ -940,35 +943,21 @@ const vm = { raf:0 };
 function voiceMap(cv, S, keys, prevKeys, readEl){
   if (!cv) return;
   cancelAnimationFrame(vm.raf);
-  const s = cv.clientWidth, ctx = fit(cv, s, s), c = s/2, items = vmItems(S, keys), raw = items.slice();
-  const base = () => {
-    ctx.clearRect(0, 0, s, s); ctx.lineWidth = 1;
-    for (let z = 1; z < 5; z++){ const r = vmR(ZB[z], s); ctx.strokeStyle = 'rgba(255,254,252,.12)'; ctx.setLineDash(z % 2 ? [2, 4] : []); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI*2); ctx.stroke(); }
-    ctx.setLineDash([]);
-    ctx.font = '500 10px "Inter Tight",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    /* zone names along the top, alternating sides of the axis so thin bands do not collide */
-    ctx.font = '500 ' + Math.max(9, s/40) + 'px "Inter Tight",sans-serif';
-    for (let z = 0; z < 5; z++){ const r = (vmR(Math.max(VM.lo, ZB[z]), s) + vmR(Math.min(VM.hi, ZB[z + 1]), s))/2, a = -Math.PI/2 + (z % 2 ? .2 : -.2);
-      ctx.fillStyle = 'rgba(154,167,163,.8)'; ctx.textAlign = 'center'; ctx.fillText(zName(z), c + Math.cos(a)*r, c + Math.sin(a)*r); }
-    ctx.font = '600 ' + Math.max(11, s/30) + 'px "Inter Tight",sans-serif'; ctx.textAlign = 'center';
-    V3.NAMES.forEach((nm, pc) => { const a = -Math.PI/2 + pc/12*Math.PI*2; ctx.fillStyle = 'rgba(244,242,236,.55)'; ctx.fillText(nm, c + Math.cos(a)*s*.475, c + Math.sin(a)*s*.475); });
+  /* as the map was in the app: 12 notes around, each sounded note as its own small form in the colour of its note,
+     the lower the note the closer to the centre; the last week bright, earlier pale */
+  const s = cv.clientWidth, ctx = fit(cv, s, s), c = s/2, raw = vmItems(S, keys); ctx.clearRect(0, 0, s, s);
+  ctx.font = '600 ' + Math.max(10, s/34) + 'px "Inter Tight",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,254,252,.55)';
+  V3.NAMES.forEach((nm, pc) => { const a = -Math.PI/2 + pc/12*Math.PI*2; ctx.fillText(nm, c + Math.cos(a)*s*.46, c + Math.sin(a)*s*.46); });
+  const last = keys[keys.length - 1], recent = last ? dkey(addDays(parseKey(last), -6)) : '';
+  const notes = []; raw.forEach((it, q) => { if (it.t === 'f' || q % 6 === 0) notes.push(it); });
+  const list = notes.slice(-90), r = FL.rng(91), rain = data.profile.rain !== false, crisp = data.profile.lace !== true;
+  const uOf = typeof uOfMidi === 'function' ? uOfMidi : refU(list.map(x => ({ comfort:x.m })));
+  const draw = (it, q) => {
+    const u = uOf(it.m), pc = pcOf(it.m), a = -Math.PI/2 + (pc + (r() - .5)*.4)/12*Math.PI*2, rad = s*(.08 + (u/47)*.32);
+    V3.renderForm(ctx, c + Math.cos(a)*rad, c + Math.sin(a)*rad, s*.07, Math.round(u), Math.round(90 + s*.2), 900 + q, rain ? V3.HUE[pc] : C.ink, it.k >= recent ? 1 : .4, Math.max(.6, s/700), 0, crisp);
   };
-  base();
-  const r = FL.rng(91), rain = data.profile.rain !== false, crisp = data.profile.lace !== true, uOf = refU(items.filter(x => x.t === 'f').map(x => ({ comfort:x.m })));
-  const draw = it => {
-    const pc = pcOf(it.m), a = -Math.PI/2 + (pc + (r() - .5)*.45)/12*Math.PI*2, rad = vmR(it.m, s) + (r() - .5)*s*.012, x = c + Math.cos(a)*rad, y = c + Math.sin(a)*rad;
-    const col = rain ? V3.HUE[pc] : C.ink, al = .28 + .72*Math.pow(it.age, 1.4);
-    if (it.t === 'f') V3.renderForm(ctx, x, y, s*it.size, uOf(it.m), Math.round(90 + s*.5*it.size/.06), 900 + Math.round(it.m*7) % 97, col, Math.min(1, al + .15), Math.max(.6, s/650), 0, crisp);
-    else { ctx.fillStyle = col; ctx.globalAlpha = al*.8; const z = .9 + r()*1.3; ctx.fillRect(x - z/2, y - z/2, z, z); ctx.globalAlpha = 1; }
-  };
-  /* grains first, in the order of the days; then one form per note, sized by how often she sat on it */
-  const grains = items.filter(i => i.t === 'g'), byNote = new Map();
-  items.filter(i => i.t === 'f').forEach(i => { const q = Math.round(i.m), e = byNote.get(q) || { t:'f', m:q, n:0, age:0, stab:0 }; e.n++; e.age = Math.max(e.age, i.age); e.stab += i.stab || .7; byNote.set(q, e); });
-  const mx = Math.max(1, ...[...byNote.values()].map(e => e.n));
-  const forms = [...byNote.values()].map(e => Object.assign(e, { size: .045 + .04*Math.sqrt(e.n/mx) })).sort((a, b) => a.age - b.age);
-  items.length = 0; items.push(...grains, ...forms);
-  if (reduced() || !items.length) items.forEach(draw);
-  else { let i = 0; const per = Math.max(2, Math.ceil(items.length/70)); const step = () => { if (!cv.isConnected) return; for (let q = 0; q < per && i < items.length; q++, i++) draw(items[i]); if (i < items.length) vm.raf = requestAnimationFrame(step); }; vm.raf = requestAnimationFrame(step); }
+  if (reduced() || !list.length) list.forEach(draw);
+  else { let i = 0; const per = Math.max(1, Math.ceil(list.length/60)); const step = () => { if (!cv.isConnected) return; for (let q = 0; q < per && i < list.length; q++, i++) draw(list[i], i); if (i < list.length) vm.raf = requestAnimationFrame(step); }; vm.raf = requestAnimationFrame(step); }
   if (readEl) readEl.innerHTML = vmRead(raw, prevKeys ? vmItems(S, prevKeys) : null);
 }
 /* what the map says, in plain words */
@@ -1053,13 +1042,14 @@ function drawRange(cv, tip, D){
   draw(-1);
   hover(cv, tip, D, () => F, d => `<b>${dShort(d.date)}</b><br>комфортная: ${escH(nName(d.m.comfort))}<br>${d.m.low != null ? 'сирена: ' + nShort(d.m.low) + ' — ' + nShort(d.m.high) : 'без сирены'}`, i => yOf(M[i].high != null ? M[i].high : M[i].comfort), draw);
 }
-function drawLine(cv, tip, D, val, yr, fmt){
+function drawLine(cv, tip, D, val, yr, fmt, goal){
   let F; const vals = D.map(val), okv = vals.filter(v => v != null), lo = Math.min(yr[0], ...okv), hi = Math.max(yr[1], ...okv);
   const yOf = v => F.t + (1 - (v - lo)/(hi - lo))*(F.h - F.t - F.b);
   const draw = s => {
     F = chartFrame(cv, 150); const ctx = F.ctx;
     ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'middle';
     [lo, (lo + hi)/2, hi].forEach(v => { const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(fmt(v), 0, y); });
+    if (goal != null){ const y = yOf(goal); ctx.strokeStyle = 'rgba(236,241,118,.6)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.setLineDash([]); }
     if (s >= 0){ const x = xOf(F, D, s); ctx.strokeStyle = 'rgba(255,254,252,.25)'; ctx.beginPath(); ctx.moveTo(x, F.t); ctx.lineTo(x, F.h - F.b); ctx.stroke(); }
     ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath(); let st = false;
     vals.forEach((v, i) => { if (v == null) return; const x = xOf(F, D, i), y = yOf(v); if (st) ctx.lineTo(x, y); else ctx.moveTo(x, y); st = true; }); ctx.stroke();
