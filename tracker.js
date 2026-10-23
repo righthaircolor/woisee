@@ -824,7 +824,7 @@ function renderProfileIn(root){
     ${cal}
     <div class="pf-voice" id="prNoteCard">
       <div class="pf-vtop${cm != null ? '' : ' empty'}"><span class="note">Как звучит голос</span>
-        ${cm != null ? `<div class="pf-vtxt"><b class="pf-note">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц${top != null ? `<br>чаще всего ${zIn(top)}` : ''}</span></div>`
+        ${cm != null ? `<div class="pf-vtxt"><b class="pf-note" style="color:${nCol(cm)}">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц${top != null ? `<br>чаще всего ${zIn(top)}` : ''}</span></div>`
           : `<div class="pf-vtxt"><b class="pf-note none">ещё не слышно</b><span class="note">Появится после первого отпечатка или голосового упражнения.</span></div>`}</div>
       <canvas id="pfBodyCv" role="img" aria-label="Силуэт: доля времени, когда голос звучал в каждой зоне"></canvas>
     </div>
