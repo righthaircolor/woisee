@@ -823,11 +823,10 @@ function renderProfileIn(root){
   $('pfBody').innerHTML = `
     ${cal}
     <div class="pf-voice" id="prNoteCard">
-      <div class="pf-vtop"><div class="pf-vtxt"><span class="note">Как звучит голос</span>
-        ${cm != null ? `<b class="pf-note">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц</span>${top != null ? `<span>чаще всего ${zIn(top)}</span>` : ''}`
-          : `<b class="pf-note none">ещё не слышно</b><span class="note">Появится после первого отпечатка или голосового упражнения.</span>`}</div></div>
+      <div class="pf-vtop${cm != null ? '' : ' empty'}"><span class="note">Как звучит голос</span>
+        ${cm != null ? `<div class="pf-vtxt"><b class="pf-note">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц${top != null ? `<br>чаще всего ${zIn(top)}` : ''}</span></div>`
+          : `<div class="pf-vtxt"><b class="pf-note none">ещё не слышно</b><span class="note">Появится после первого отпечатка или голосового упражнения.</span></div>`}</div>
       <canvas id="pfBodyCv" role="img" aria-label="Силуэт: доля времени, когда голос звучал в каждой зоне"></canvas>
-      ${H.sample ? `<p class="note">Пример, не твои данные · <button class="lnk" data-pfs="0">мои данные</button></p>` : realFew ? `<p class="note"><button class="lnk" data-pfs="1">Показать пример</button>, как это выглядит через несколько месяцев.</p>` : ''}
     </div>
     <div class="pf-tiles">
       ${tile('b-breath', 'Слышишь себя', a.guessed ? `${a.hits}<small>из ${a.guessed}</small>` : '—', b && b.guessed ? 'было ' + b.hits + ' из ' + b.guessed : a.guessed ? 'догадка совпала с отпечатком' : 'появится после отпечатка')}
@@ -877,10 +876,10 @@ function renderProfileIn(root){
   else drawEmpty($('pfExh'), 150, 'появится после «с-с-с» на выдохе', { yr:[0, 40], ticks:[[0, '0 с'], [20, '20 с'], [40, '40 с']], goal:30, D:PD });
 }
 function drawBodyShare(cv, z){
-  const w = cv.clientWidth, h = Math.round(Math.min(w*1.45, 580)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
-  setBody(w, h, 1.62);
+  const w = cv.clientWidth, h = Math.round(Math.min(w*1.6, 660)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
+  setBody(w, h, 1.72);
   const mx = z ? Math.max(...z) : 1;
-  drawBody(ctx, body(w < 420 ? 2600 : 3400, 11), w, h, .64, z ? z.map(v => Math.pow(v/mx, .8)) : [0,0,0,0,0], C.kale, 0);
+  drawBody(ctx, body(w < 420 ? 2600 : 3400, 11), w, h, .625, z ? z.map(v => Math.pow(v/mx, .8)) : [0,0,0,0,0], C.kale, 0);
   ctx.textBaseline = 'middle';
   for (let i = 0; i < 5; i++){
     const y = h*bandMid(i), share = z ? Math.round(z[i]*100) : null;
