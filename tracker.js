@@ -522,15 +522,15 @@ function cloud(N){
   const c = { Q, D, A, PH, N }; cloudCache.set(N, c); return c;
 }
 /* the notes the form travels through, as points on a loop: morning note → up the siren → note after → down the siren */
-function noteKeys(k){
-  const P = prints(k), lerp = (a, b, t) => a + (b - a)*t;
+function noteKeys(k, PV){
+  const P = PV || prints(k), lerp = (a, b, t) => a + (b - a)*t;
   if (P.length > 2){ const sel = P.length <= 8 ? P : Array.from({ length:8 }, (_, i) => P[Math.round(i*(P.length - 1)/7)]); return sel.map(c => uOfM(c.comfort)); }
   if (P.length){
     const A = P[0].comfort, B = P[P.length - 1].comfort, ct = (P[P.length - 1].contour && P[P.length - 1].contour.length > 6 ? P[P.length - 1].contour : P[0].contour) || [];
     const at = q => ct.length > 6 ? ct[Math.round(q*(ct.length - 1))] : null, hi = at(.5), lo = at(.9);
     return [A, hi != null ? lerp(A, hi, .4) : A + 3, B, lo != null ? lerp(B, lo, .45) : B - 2].map(uOfM);
   }
-  const E = exNotes(k); if (!E.length) return [];
+  const E = PV ? [] : exNotes(k); if (!E.length) return [];
   const ns = E.slice(0, 4).map(n => n.midi); while (ns.length < 3) ns.push(ns[0] + (ns.length === 1 ? 3 : -2));
   return ns.map(uOfM);
 }
@@ -542,24 +542,24 @@ function pathU(K, ph){
 }
 /* the haze: every clip of the day — exercises and the prints' own «а», siren and «с-с-с».
    A print made before its clips were kept still brings its «с-с-с» as a running noise field. */
-function hazeOf(k, clips, i, ctx, cx, cy, R, mul, mono){
-  const fi = Math.floor(i), ph = (((i % LOOP) + LOOP) % LOOP)/LOOP;
+function hazeOf(k, clips, i, ctx, cx, cy, R, mul, mono, PV){
+  const fi = Math.floor(i), ph = (((i % LOOP) + LOOP) % LOOP)/LOOP, small = R < 40;
   const hasSss = (clips || []).some(c => c.id === 'print-sss');
-  if (!hasSss && prints(k).some(c => c.exhale)){
-    const N = Math.round(clamp(R*R*.05, 400, 1800));
+  if (!hasSss && (PV || prints(k)).some(c => c.exhale)){
+    const N = small ? 140 : Math.round(clamp(R*R*.05, 400, 1800));
     V3.renderState(ctx, cx, cy, R*1.15, { noise:1, cent:.85, vo:0, stab:.2, hold:0, e:1, amp:.5 }, N, 53, mono || C.ink, .55*mul, Math.max(.8, R/170), 1.3 + 1.2*Math.sin(T2*ph));
   }
-  if (clips && clips.length) paintAt(ctx, dayLayers(clips, fi), layerMul(clips.length)*mul, cx, cy, R*1.18, .8, mono);
+  if (clips && clips.length) paintAt(ctx, dayLayers(clips, fi), layerMul(clips.length)*mul*(small ? 1.5 : 1), cx, cy, R*1.18, small ? .6 : .8, mono, small ? 4 : 1);
   else { ctx.save(); paintSynth(ctx, k, cx, cy, R*1.05, .07*Math.sin(T2*ph), mono); ctx.restore(); }
 }
 /* returns false when the day has no note: then the caller paints it as before */
-function paintDay(ctx, k, clips, i, cx, cy, R, mono){
-  const K = noteKeys(k); if (!K.length) return false;
+function paintDay(ctx, k, clips, i, cx, cy, R, mono, PV){
+  const K = noteKeys(k, PV); if (!K.length) return false;
   const ph = (((i % LOOP) + LOOP) % LOOP)/LOOP, still = reduced();
   const u = clamp(still ? K[K.length >= 4 ? 3 : 0] : pathU(K, ph), 0, 47);
   const order = still ? .85 : .76 + .12*Math.sin(T2*ph);   // breathes between haze and pattern, never all the way
-  hazeOf(k, clips, i, ctx, cx, cy, R, 1 - .45*order, mono);
-  const N = Math.round(clamp(R*R*.08, 600, 3000)), dot = Math.max(1, R/115), Cl = cloud(N), Q = Cl.Q, o = [0, 0];
+  hazeOf(k, clips, i, ctx, cx, cy, R, 1 - .45*order, mono, PV);
+  const N = R < 40 ? Math.round(clamp(R*R*.6, 110, 500)) : Math.round(clamp(R*R*.08, 600, 3000)), dot = Math.max(1, R/115), Cl = cloud(N), Q = Cl.Q, o = [0, 0];
   const st = { u, amp:.4, stab:.95, e:1, hold:1, crisp: data.profile.lace !== true, noise:0, cent:.5, vo:1, bx:1 };
   const rot = still ? 0 : .35*Math.sin(T2*ph), Rf = R*.78;
   ctx.fillStyle = mono || (data.profile.rain !== false ? V3.noteColor(u) : C.ink);
@@ -598,6 +598,32 @@ function paintDayCell(cv, k){
   else if (n.length){ const m = n[n.length - 1], st = P.length ? P[P.length - 1].stab : .8; V3.renderForm(ctx, s/2, s/2, s*.5, Math.round(uOfM(m)), Math.round(120 + s*5), 700 + parseInt(k.slice(8), 10), nCol(m), .55 + .45*(st || .6), Math.max(.7, s/60), 0, data.profile.lace !== true); }
   else paintSynth(ctx, k, s/2, s/2, s*.42, 0);
 }
+/* every day picture is alive — the same picture as in «Практика»: the haze of the day's clips and the note flowing
+   through all its prints. One loop draws them all; small ones at 15 fps, ones off screen are skipped. */
+const cells = { list:[], raf:0 };
+function liveCell(cv, k, PV){
+  cells.list = cells.list.filter(e => e.cv !== cv && e.cv.isConnected);
+  const e = { cv, k, PV, clips:[], last:-1, ph:Math.random() }; cells.list.push(e);
+  if (!PV && typeof dayClips === 'function') dayClips(k).then(c => { e.clips = c || []; e.last = -1; });
+  if (!cells.raf) cells.raf = requestAnimationFrame(cellsFrame);
+}
+function cellsFrame(now){
+  cells.list = cells.list.filter(e => e.cv.isConnected);
+  if (!cells.list.length){ cells.raf = 0; return; }
+  if (document.hidden){ cells.raf = requestAnimationFrame(cellsFrame); return; }
+  const vh = window.innerHeight || 900, f = now/1000*GIF_FPS, still = reduced();
+  for (const e of cells.list){
+    const s = e.cv.clientWidth; if (!s) continue;
+    const tick = Math.floor(now/1000*(s < 120 ? 9 : 60) + e.ph); if (tick === e.last) continue;
+    if (e.last >= 0){ const b = e.cv.getBoundingClientRect(); if (b.bottom < 0 || b.top > vh) continue; }
+    e.last = still ? Infinity : tick;
+    const ctx = fit(e.cv, s, s); ctx.clearRect(0, 0, s, s);
+    if (paintDay(ctx, e.k, e.clips, f, s/2, s/2, s*.42, null, e.PV)) continue;
+    if (e.clips.length) paintAt(ctx, dayLayers(e.clips, Math.floor(f)), layerMul(e.clips.length)*1.3, s/2, s/2, s*.5, .6, null, s < 120 ? 4 : 1);
+    else paintSynth(ctx, e.k, s/2, s/2, s*.42, .07*Math.sin(T2*f/96));
+  }
+  cells.raf = requestAnimationFrame(cellsFrame);
+}
 function weekHTML(start){
   const tk = dkey(); let h = '';
   for (let i = 0; i < 7; i++){
@@ -626,7 +652,8 @@ function viewTrack(){
 const ring = { P:null, flow:0, t:0, raf:0, last:0, solo:null, VX:null, VY:null, ptr:null, s:0, key:'' };
 const SOLO_N = 3000, SOLO_SC = .45;
 function mountTrack(){
-  document.querySelectorAll('canvas[data-trday]').forEach(cv => paintDayCell(cv, cv.dataset.trday));
+  document.querySelectorAll('canvas[data-trday]').forEach(cv => liveCell(cv, cv.dataset.trday));
+  ring.clips = []; const tk = dkey(); if (typeof dayClips === 'function') dayClips(tk).then(c => { if (tk === dkey()) ring.clips = c || []; });
   const cv = $('trRing'); if (!cv) return;
   if (!ring.P){ ring.P = []; for (let i = 0; i < 1300; i++){ let u = 0; while (!u) u = Math.random(); ring.P.push({ s:Math.random(), sp:.6 + Math.random()*.8, n:Math.sqrt(-2*Math.log(u))*Math.cos(6.283*Math.random()), x:NaN, y:NaN, z:.9 + Math.random()*1.3, a:.45 + Math.random()*.55 }); } }
   if (!ring.solo){ ring.solo = new V3.Solo(SOLO_N, 9); ring.VX = new Float32Array(SOLO_N); ring.VY = new Float32Array(SOLO_N); }
@@ -675,6 +702,9 @@ function ringFrame(now){
   const s = cv.clientWidth; if (!s){ ring.raf = requestAnimationFrame(ringFrame); return; }
   ring.s = s;
   const ctx = fit(cv, s, s), c = s/2, R = s*.44, still = reduced(); ctx.clearRect(0, 0, s, s);
+  const PT = prints(dkey());
+  if (PT.length){ const L = printLayers(PT, s, s*.36); ctx.save(); ctx.globalAlpha = .5; ctx.translate(c, c); ctx.rotate(still ? 0 : ring.t*.035); ctx.drawImage(L, -c, -c, s, s); ctx.restore(); }
+  if (PT.length && paintDay(ctx, dkey(), ring.clips || [], now/1000*GIF_FPS, c, c, s*.42)){ ring.raf = still ? 0 : requestAnimationFrame(ringFrame); return; }
   const mon = monday(new Date()); let n = 0; for (let i = 0; i < 7; i++) if (voiced(dkey(addDays(mon, i)))) n++;
   const wp = n/7;
   ring.flow += still ? 0 : dt*.018;
@@ -783,7 +813,6 @@ function mountProfile(){
 }
 function renderProfile(){
   const root = $('pf'); if (!root) return;
-  cancelAnimationFrame(map.raf); map.raf = 0;
   labView = H.lab;
   try { renderProfileIn(root); } finally { labView = null; }
 }
@@ -800,8 +829,7 @@ function renderProfileIn(root){
   const zones = zonesOf(S, keys), cm = comfortOf(S, keys), top = zones ? zones.indexOf(Math.max(...zones)) : null;
   const realFew = !H.sample && Object.keys(data.days).filter(k => prints(k).length).length < 3;
   const cmpTxt = (has, txt, def) => b && has ? P.cmp + ': ' + txt : def;
-  const cal = H.per === 'w' ? `<div class="pf-cal w" id="pfCal"></div>`
-    : `<div class="pf-maphead">${WD.map(w => `<span>${w}</span>`).join('')}</div><canvas class="pf-map" id="pfMap" role="img" aria-label="Дни кольцами: цвета — ноты дня; нажатие открывает день"></canvas>${H.per === 'all' ? `<p class="note">Каждый день — кольцо, окрашенное нотами, на которых звучал голос. Нажми на кольцо, чтобы открыть день.</p>` : ''}`;
+  const cal = `<div class="pf-cal ${H.per}" id="pfCal"></div>`;
   $('pfBody').innerHTML = `
     ${cal}
     <div class="pf-voice" id="prNoteCard">
@@ -837,7 +865,7 @@ function renderProfileIn(root){
   voiceMap($('pfVmap'), S, keys, prevKeys, $('pfRead'));
   const CP = []; keys.forEach(k => S.P(k).forEach(c => CP.push(c)));
   drawCast($('pfCast'), CP); castCap($('pfCastCap'), CP);
-  if (H.per === 'w') drawCal($('pfCal'), S, P); else drawMap($('pfMap'), S, H.per === 'm' ? P : null);
+  drawCal($('pfCal'), S, P);
   /* charts are always there: a day's point comes from its last print, or — on a day with only practice —
      from the notes of its exercises (comfortable = the middle held note, range = lowest to highest) */
   const exm = k => Math.max(0, ...S.P(k).map(c => c.exhale || 0), ...Object.values(S.ex(k)));
@@ -877,65 +905,14 @@ function drawCal(el, S, P){
   const tk = dkey(), keys = [];
   for (let d = new Date(P.s); dkey(d) <= dkey(P.e); d = addDays(d, 1)) keys.push(dkey(d));
   let h = H.per === 'w' ? '' : WD.map(w => `<span class="pf-wh">${w}</span>`).join('');
-  if (H.per === 'm') for (let i = 0; i < (P.s.getDay() + 6) % 7; i++) h += '<span></span>';
+  if (H.per !== 'w') for (let i = 0; i < (P.s.getDay() + 6) % 7; i++) h += '<span></span>';
   keys.forEach((k, i) => {
     const has = S.voiced(k) || S.P(k).length || S.notes(k).length, fut = k > tk;
-    h += `<div class="pf-cd ${k === tk ? 't' : ''}">${has ? `<button class="pf-dc" data-pfday="${k}" aria-label="${escH(dateLong(parseKey(k)))}"><canvas data-pfk="${k}"></canvas></button>` : `<span class="pf-dc ${fut ? 'fut' : 'off'}"><i></i></span>`}<small class="num">${H.per === 'w' ? WD[i] : parseKey(k).getDate()}</small></div>`;
+    h += `<div class="pf-cd ${k === tk ? 't' : ''}">${has ? `<button class="pf-dc" data-pfday="${k}" aria-label="${escH(dateLong(parseKey(k)))}"><canvas data-pfk="${k}"></canvas></button>` : `<span class="pf-dc ${fut ? 'fut' : 'off'}"><i></i></span>`}<small class="num">${H.per === 'w' ? WD[i] : H.per === 'all' && parseKey(k).getDate() === 1 ? MONS[parseKey(k).getMonth()] : parseKey(k).getDate()}</small></div>`;
   });
   el.innerHTML = h;
   el.querySelectorAll('[data-pfday]').forEach(b => b.onclick = () => dayCard(b.dataset.pfday, S));
-  el.querySelectorAll('canvas[data-pfk]').forEach(cv => {
-    const k = cv.dataset.pfk;
-    if (!H.sample){ paintDayCell(cv, k); return; }
-    const s = cv.clientWidth; if (!s) return; const ctx = fit(cv, s, s), L = S.P(k), m = L[L.length - 1];
-    ctx.clearRect(0, 0, s, s); V3.renderForm(ctx, s/2, s/2, s*.5, Math.round(uOfM(m.comfort)), Math.round(120 + s*5), 700 + parseInt(k.slice(8), 10), nCol(m.comfort), .55 + .45*m.stab, Math.max(.7, s/60), 0, true);
-  });
-}
-/* the map of days (∞): one dust ring per day in a Mon–Sun grid, the rings overlap and interlock;
-   a ring is split into arcs by the notes the day sounded on, coloured by note; a day without voice is a faint trace.
-   The rings appear one after another, oldest first, and the dust keeps flowing around them. */
-const map = { raf:0, t0:0, rings:[], cv:null, last:0, flow:0 };
-function drawMap(cv, S, P){
-  if (!cv) return;
-  const keys = S.keys, today = new Date(), tk = dkey(today);
-  if (!P && !keys.length){ fit(cv, cv.clientWidth, 40); return; }
-  const from = P ? P.s : parseKey(keys[0]), to = P ? (dkey(P.e) < tk ? P.e : today) : today;
-  const first = monday(from), weeks = Math.max(1, Math.round((monday(to) - first)/(7*864e5)) + 1);
-  const W = cv.clientWidth, cw = W/7, rr = cw*.6, Hh = Math.round(weeks*cw + cw*.3), lo = dkey(from), hi = dkey(to);
-  fit(cv, W, Hh);
-  const rings = [];
-  for (let w = 0; w < weeks; w++) for (let d = 0; d < 7; d++){
-    const dt = addDays(first, w*7 + d), k = dkey(dt); if (k < lo || k > hi) continue;
-    const notes = []; S.P(k).forEach(c => notes.push(c.comfort)); S.notes(k).slice(0, 6).forEach(n => notes.push(n.midi));
-    const pcs = []; notes.forEach(m => { const p = pcOf(m); if (!pcs.includes(p)) pcs.push(p); });
-    const has = S.voiced(k) || pcs.length > 0, r = FL.rng(parseInt(k.replace(/-/g, ''), 10) % 2147483647), G = [];
-    for (let i = 0, n = has ? 120 : 50; i < n; i++) G.push({ s:r(), sp:.6 + r()*.8, o:FL.gs(r), z:.8 + r()*1.2, a:.45 + r()*.55 });
-    rings.push({ k, num: P ? dt.getDate() : null, x:d*cw + cw/2, y:w*cw + cw/2 + cw*.15, has, cols: pcs.length ? pcs.slice(0, 6).map(p => data.profile.rain !== false ? V3.HUE[p] : C.ink) : [C.ink], G, idx:rings.length });
-  }
-  Object.assign(map, { rings, cv, t0:performance.now(), last:performance.now(), rr, W, Hh, hover:null, S });
-  const hit = ev => { const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top; let best = null, bd = 1e9; rings.forEach(R => { const q = Math.hypot(R.x - x, R.y - y); if (q < bd){ bd = q; best = R; } }); return best && bd < rr*.95 && best.has ? best : null; };
-  cv.onclick = ev => { const R = hit(ev); if (R) dayCard(R.k, S); };
-  cv.onpointermove = ev => { const R = hit(ev); map.hover = R ? R.k : null; cv.style.cursor = R ? 'pointer' : 'default'; };
-  cv.onpointerleave = () => { map.hover = null; };
-  cancelAnimationFrame(map.raf); map.raf = requestAnimationFrame(mapFrame);
-}
-function mapFrame(now){
-  const cv = map.cv; if (!cv || !cv.isConnected){ map.raf = 0; return; }
-  const dt = Math.min(.05, (now - map.last)/1000); map.last = now; map.flow += reduced() ? 0 : dt*.03;
-  const ctx = cv.getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, map.W, map.Hh);
-  const n = map.rings.length, el = (now - map.t0)/1000, dur = Math.min(2.4, .4 + n*.02), tk = dkey();
-  for (const R of map.rings){
-    const appear = reduced() ? 1 : clamp((el - dur*R.idx/n)/.5, 0, 1); if (appear <= 0) continue;
-    const nc = R.cols.length, on = map.hover === R.k, base = R.has ? (on ? 1.4 : 1) : .14, grow = on ? 1.08 : 1;
-    for (const p of R.G){
-      const u = ((p.s + map.flow*p.sp*(on ? 3 : 1)) % 1 + 1) % 1, an = -Math.PI/2 + u*Math.PI*2, rad = map.rr*grow*(1 + p.o*.035);
-      ctx.fillStyle = R.cols[Math.min(nc - 1, Math.floor(p.s*nc))];
-      ctx.globalAlpha = Math.min(1, p.a*base)*appear; ctx.fillRect(R.x + Math.cos(an)*rad - p.z/2, R.y + Math.sin(an)*rad - p.z/2, p.z, p.z);
-    }
-    if (R.num != null){ ctx.globalAlpha = appear; ctx.fillStyle = R.k === tk ? C.ink : C.muted; ctx.font = (R.k === tk ? '700 ' : '500 ') + '11px "Inter Tight",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(R.num, R.x, R.y); }
-  }
-  ctx.globalAlpha = 1; ctx.textAlign = 'left';
-  map.raf = reduced() && el > dur + .6 ? 0 : requestAnimationFrame(mapFrame);
+  el.querySelectorAll('canvas[data-pfk]').forEach(cv => liveCell(cv, cv.dataset.pfk, H.sample ? S.P(cv.dataset.pfk) : null));
 }
 /* the card of a day: hers opens the app's day sheet; a day of the sample opens a sheet built from the sample */
 function dayCard(k, S){
@@ -1108,5 +1085,5 @@ function drawLine(cv, tip, D, val, yr, fmt, goal){
   hover(cv, tip, D, () => F, d => `<b>${dShort(d.date)}</b> · ${val(d) != null ? fmt(val(d)) : '—'}`, i => vals[i] != null ? yOf(vals[i]) : F.t, draw);
 }
 
-g.WT = { hasNote: k => noteKeys(k).length > 0, open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, setLabels, SAFE };
+g.WT = { hasNote: k => noteKeys(k).length > 0, open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, liveCell, setLabels, SAFE };
 })(window);
