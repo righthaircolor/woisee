@@ -49,6 +49,10 @@ let labView = null;
 const labSet = () => labView || ((typeof data !== 'undefined' && data.profile && data.profile.zoneLabels === 'chakra') ? 'chakra' : 'body');
 const zName = i => LABELS[labSet()][i][0], zSub = i => LABELS[labSet()][i][1], zIn = i => ZIN[labSet()][i];
 const BAND = [[.64, .90], [.415, .64], [.28, .415], [.165, .28], [.05, .165]];
+/* the silhouette is drawn 14 % larger than its own coordinates; the hips run out under the frame */
+const BK = 1.14, BY = y => .035 + (y - .05)*BK, BYinv = v => .05 + (v - .035)/BK;
+const bandMid = z => BY((BAND[z][0] + BAND[z][1])/2);
+const PINK = '#E780C0';
 function pOf(midi, cent){
   let p;
   if (midi <= ZB[0]) p = 0; else if (midi >= ZB[5]) p = 1;
@@ -74,14 +78,30 @@ function body(n, seed){
   while (X.length < n){ const x = (r() - .5)*.46, y = .05 + r()*.93; if (r() < shape(x, y)){ byZ[zoneOfY(y)].push(X.length); X.push(x); Y.push(y); S.push(.6 + r()*r()*1.3); A.push(r()); } }
   const B = { X, Y, S, A, byZ }; bodies.set(key, B); return B;
 }
-function drawBody(ctx, B, W, H, cxF, hl, tint, t){
-  const cx = W*cxF, sh = reduced() ? 0 : 1;
+/* wash: 0..1 — how much the whole silhouette takes the tint (the note's colour while the voice sounds) */
+/* a soft mask of the silhouette: the voice's form is drawn only inside the body, so face and shoulders show through it */
+const masks = new Map();
+function bodyMask(W, H, cxF){
+  const key = W + 'x' + H + ':' + cxF; if (masks.has(key)) return masks.get(key);
+  const m = document.createElement('canvas'), d = DPR(); m.width = Math.round(W*d); m.height = Math.round(H*d);
+  const c = m.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.filter = 'blur(' + Math.round(H*.012) + 'px)'; c.fillStyle = '#fff';
+  const cx = W*cxF, X = x => cx + x*H*BK, Y = y => BY(y)*H;
+  c.beginPath(); c.ellipse(X(0), Y(.168), .088*H*BK, .104*H*BK, 0, 0, Math.PI*2); c.fill();
+  c.fillRect(X(-.046), Y(.25), .092*H*BK, (BY(.37) - BY(.25))*H);
+  c.beginPath(); c.moveTo(X(-.046), Y(.335));
+  for (let y = .335; y <= 1.0; y += .005){ const hw = .046 + (.215 - .046)*sm((y - .335)/.1); c.lineTo(X(-hw), Y(y)); }
+  for (let y = 1.0; y >= .335; y -= .005){ const hw = .046 + (.215 - .046)*sm((y - .335)/.1); c.lineTo(X(hw), Y(y)); }
+  c.closePath(); c.fill();
+  masks.set(key, m); return m;
+}
+function drawBody(ctx, B, W, H, cxF, hl, tint, t, wash){
+  const cx = W*cxF, sh = reduced() ? 0 : 1, w = wash || 0;
   for (let z = 0; z < 5; z++){
-    const h = hl[z] || 0; ctx.fillStyle = h > .04 && tint ? tint : C.ink;
+    const h = hl[z] || 0; ctx.fillStyle = (h > .04 || w > .3) && tint ? tint : C.ink;
     for (const i of B.byZ[z]){
       const a = B.A[i];
-      ctx.globalAlpha = Math.min(1, (.26 + .24*a) + h*(.3 + .45*a));
-      const x = cx + (B.X[i] + sh*.0025*Math.sin(t*.9 + a*40))*H, y = (B.Y[i] + sh*.0018*Math.cos(t*.7 + a*31))*H, s = B.S[i]*(1 + .35*h);
+      ctx.globalAlpha = Math.min(1, (.26 + .24*a)*(1 + .4*w) + h*(.3 + .45*a));
+      const x = cx + (B.X[i] + sh*.0025*Math.sin(t*.9 + a*40))*H*BK, y = BY(B.Y[i] + sh*.0018*Math.cos(t*.7 + a*31))*H, s = B.S[i]*(1 + .35*h);
       ctx.fillRect(x - s/2, y - s/2, s, s);
     }
   }
@@ -130,10 +150,10 @@ const acc = { a:null, s:null, x:null };
    the last 3 seconds of «а», the siren and the «с-с-с» go into the picture of the day */
 const rec = { buf:[], last:0, clips:{} };
 const canClip = () => typeof grab === 'function' && typeof gifPut === 'function' && typeof GIF_FPS !== 'undefined';
-let SW = 0, SH = 0, off = null, prevZ = -2, L = null;
+let SW = 0, SH = 0, off = null, off2 = null, prevZ = -2, L = null;
 function resetStep(id){
-  if (id === 'a') acc.a = { t:0, voicedT:0, midis:[], stabs:[], cents:[], zoneT:[0,0,0,0,0] };
-  if (id === 'siren') acc.s = { t:0, midis:[], zoneT:[0,0,0,0,0] };
+  if (id === 'a') acc.a = { t:0, voicedT:0, midis:[], stabs:[], cents:[], zoneT:[0,0,0,0,0], zm:[] };
+  if (id === 'siren') acc.s = { t:0, midis:[], zoneT:[0,0,0,0,0], zm:[] };
   if (id === 'sss') acc.x = { t:0, exh:0 };
   fl.done[id] = false; delete rec.clips[id]; rec.buf = [];
 }
@@ -158,11 +178,13 @@ function build(){
 function buildZones(){
   const zs = $('ptZones'); if (!zs) return;
   zs.innerHTML = [4,3,2,1,0].map(z => `<button class="pt-zb" data-z="${z}" tabindex="-1"><b>${zName(z)}</b><span>${zSub(z)}</span></button>`).join('');
-  zs.querySelectorAll('.pt-zb').forEach(b => b.addEventListener('click', () => {
+  const pick = z => {
     if (ORDER[fl.step] !== 'pick') return;
-    fl.guess = +b.dataset.z; markZones(); renderBar();
+    fl.guess = z; markZones(); renderBar();
     clearTimeout(fl.auto); fl.auto = setTimeout(() => { if (ORDER[fl.step] === 'pick') go(1); }, 550);
-  }));
+  };
+  zs.querySelectorAll('.pt-zb').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); pick(+b.dataset.z); }));
+  $('ptStage').onclick = e => { if (ORDER[fl.step] !== 'pick') return; const b = $('ptStage').getBoundingClientRect(); pick(zoneOfY(BYinv((e.clientY - b.top)/b.height))); };
   layout(); markZones();
 }
 function layout(){
@@ -173,7 +195,7 @@ function layout(){
   st.style.height = H + 'px';
   if (W !== SW || H !== SH){ SW = W; SH = H; fit($('ptCv'), SW, SH); }
   st.classList.toggle('compact', SH < 420);
-  $('ptZones').querySelectorAll('.pt-zb').forEach(b => { const z = +b.dataset.z; b.style.top = (SH*(BAND[z][0] + BAND[z][1])/2) + 'px'; });
+  $('ptZones').querySelectorAll('.pt-zb').forEach(b => { const z = +b.dataset.z; b.style.top = (SH*bandMid(z)) + 'px'; });
 }
 function markZones(){
   const id = ORDER[fl.step];
@@ -231,10 +253,13 @@ function renderBar(){
   let time = '', label = '', acts = '', fin = false, big = true, fill = 0;
   if (id === 'pick'){
     big = false; time = 'Догадка'; label = fl.guess == null ? 'нажми на зону на силуэте' : zName(fl.guess);
-    acts = (fl.guess == null ? `<button class="chip" data-pt="demo">Без микрофона</button>` : '') + `<button class="go" data-pt="next" ${fl.guess == null ? 'disabled style="opacity:.35"' : ''}>Дальше</button>`;
+    acts = `<button class="go" data-pt="next" ${fl.guess == null ? 'disabled style="opacity:.35"' : ''}>Дальше</button>`;
   } else if (id === 'res'){
     fin = true; big = false; time = 'Готово'; label = valid(fl.result) ? 'отпечаток сохранён' : 'голос не услышан';
-    acts = valid(fl.result) ? `<button class="go" data-pt="close">${fl.ctx === 'after' ? 'Дальше' : 'Закрыть'}</button>` : `<button class="go" data-pt="retry">Ещё раз</button>`;
+    const toPractice = valid(fl.result) && fl.ctx !== 'after' && !practised(fl.key);
+    acts = !valid(fl.result) ? `<button class="go" data-pt="retry">Ещё раз</button>`
+      : toPractice ? `<button class="go line" data-pt="close">Закрыть</button><button class="go" data-pt="practice">К прак&shy;тике</button>`
+      : `<button class="go" data-pt="close">${fl.ctx === 'after' ? 'Дальше' : 'Закрыть'}</button>`;
   } else if (fl.done[id]){
     fin = true; big = false;
     time = id === 'sss' ? Math.round(acc.x.exh) + ' с' : 'Готово'; label = id === 'sss' ? 'выдох' : 'дальше: ' + STEPS[id].next;
@@ -260,6 +285,7 @@ async function onBar(e){
   if (a === 'next'){ if (id === 'pick' && fl.guess == null) return; go(fl.step + 1); return; }
   if (a === 'demo'){ fl.demo = true; if (fl.guess == null) fl.guess = 2; go(1); return; }
   if (a === 'close'){ close(); return; }
+  if (a === 'practice'){ fl.onSave = null; close(); if (typeof state !== 'undefined'){ state.tab = 'path'; state.choosing = true; render(); scrollTo(0, 0); } return; }
   if (a === 'retry'){ resetStep('a'); go(1); return; }
   if (a === 'redo'){ resetStep(id); fl.run = true; renderStep(); return; }
   if (a === 'pause'){ fl.run = false; L.solo.target({ e:.12, hold:0, noise:0 }); renderBar(); return; }
@@ -292,10 +318,10 @@ function analyse(info, dt){
   let z = -1;
   if (info.voiced && info.midi > 30){ fl.p = pOf(info.midi, info.cent); z = zoneOf(fl.p); }
   if (id === 'a'){ const a = acc.a; a.t += dt;
-    if (z >= 0){ a.voicedT += dt; a.midis.push(info.midi); a.stabs.push(info.stab); a.cents.push(info.cent); a.zoneT[z] += dt; }
+    if (z >= 0){ a.voicedT += dt; a.midis.push(info.midi); a.stabs.push(info.stab); a.cents.push(info.cent); a.zoneT[z] += dt; (a.zm[z] = a.zm[z] || []).push(info.midi); }
     if (a.voicedT >= STEPS.a.dur) finishStep();
   } else if (id === 'siren'){ const s = acc.s; s.t += dt;
-    if (z >= 0){ s.midis.push(info.midi); s.zoneT[z] += dt; }
+    if (z >= 0){ s.midis.push(info.midi); s.zoneT[z] += dt; (s.zm[z] = s.zm[z] || []).push(info.midi); }
     if (s.t >= STEPS.siren.dur) finishStep();
   } else if (id === 'sss'){ acc.x.t += dt; acc.x.exh = acc.x.t; }
   fl.curZ = id === 'sss' ? -1 : z >= 0 ? z : info.silent ? -1 : fl.curZ;
@@ -314,7 +340,7 @@ function compute(){
   const r = { at:String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), guess:fl.guess,
     comfort: comfort == null ? null : +comfort.toFixed(2), stab: a.stabs.length ? +clamp(mean(a.stabs), 0, 1).toFixed(3) : null,
     low: s.midis.length > 12 ? +pct(all, .04).toFixed(2) : null, high: s.midis.length > 12 ? +pct(all, .96).toFixed(2) : null,
-    contour: contour(s.midis, 32), exhale: x.exh > 1 ? +x.exh.toFixed(1) : null, cent: cent == null ? 0 : +cent.toFixed(3), zones: zt.map(v => +(v/tz).toFixed(3)) };
+    contour: contour(s.midis, 32), exhale: x.exh > 1 ? +x.exh.toFixed(1) : null, cent: cent == null ? 0 : +cent.toFixed(3), zones: zt.map(v => +(v/tz).toFixed(3)), zoneNotes: [0,1,2,3,4].map(z => { const m = (a.zm[z] || []).concat(s.zm[z] || []); return m.length ? +median(m).toFixed(1) : null; }) };
   if (fl.ctx) r.ctx = fl.ctx;
   if (fl.demo) r.demo = true;
   r.actual = r.comfort == null ? null : zoneOf(pOf(r.comfort, r.cent));
@@ -350,17 +376,29 @@ function renderResult(){
   } else $('ptTitle').innerHTML = `Ты звучишь <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>`;
   $('ptHint').textContent = guessLine(r);
   const pv = valid(prev) ? prev : null, s = semis(r), ps = pv ? semis(pv) : null;
-  const zc = ['#5EA879', '#86BE97', '#C9CEC8', '#E780C0', '#ECF176'], z = r.zones || [];
-  const toPractice = fl.ctx !== 'after' && !practised(fl.key);
   $('ptRes').innerHTML = `<div class="pt-tiles">
     <div class="pr-tile dark wide"><span>Комфортная нота</span><b class="pt-note"><span class="pt-dot" style="background:${nCol(r.comfort)}"></span>${escH(nName(r.comfort))}</b><span>${Math.round(hz(r.comfort))} Гц · ${zIn(r.actual)}${pv ? ' · было ' + escH(nName(pv.comfort)) : ''}</span></div>
-    <div class="pr-tile dark"><span>Диапазон сирены</span>${s != null ? `<b class="num">${octs(s)}<small>окт.</small></b><span>${escH(nShort(r.low))} — ${escH(nName(r.high))}${ps != null ? ' · было ' + octs(ps) : ''}</span>` : '<b>—</b><span>сирену не услышала</span>'}</div>
-    <div class="pr-tile dark"><span>Устойчивость «а»</span>${r.stab != null ? `<b class="num">${Math.round(r.stab*100)}<small>%</small></b><span>${pv && pv.stab != null ? 'было ' + Math.round(pv.stab*100) + ' %' : 'насколько ровно держалась нота'}</span>` : '<b>—</b>'}</div>
-    <div class="pr-tile dark"><span>Долгий выдох</span>${r.exhale ? `<b class="num">${Math.round(r.exhale)}<small>с</small></b>` : '<b>—</b>'}<span>цель 30–40 с</span></div>
-    <div class="pr-tile dark wide"><span>Где звучал голос</span><div class="pt-zbar">${z.map((v, i) => v > .005 ? `<i style="flex:${v};background:${zc[i]}"></i>` : '').join('')}</div><span class="pt-zl"><span>${zName(0)}</span><span>${zName(4)}</span></span></div>
-  </div>
-  ${toPractice ? `<button class="blackbtn wt-cta" id="ptPractice">К практике ${ICO.arrow}</button>` : ''}`;
-  const b = $('ptPractice'); if (b) b.onclick = () => { fl.onSave = null; close(); if (typeof state !== 'undefined'){ state.tab = 'path'; state.choosing = true; render(); scrollTo(0, 0); } };
+    <div class="pr-tile b-body"><span>Диапазон сирены</span>${s != null ? `<b class="num">${octs(s)}<small>окт.</small></b><span>${escH(nShort(r.low))} — ${escH(nName(r.high))}${ps != null ? ' · было ' + octs(ps) : ''}</span>` : '<b>—</b><span>сирену не услышала</span>'}</div>
+    <div class="pr-tile b-phon"><span>Устойчивость «а»</span>${r.stab != null ? `<b class="num">${Math.round(r.stab*100)}<small>%</small></b><span>${pv && pv.stab != null ? 'было ' + Math.round(pv.stab*100) + ' %' : 'насколько ровно'}</span>` : '<b>—</b>'}</div>
+    <div class="pr-tile b-breath"><span>Долгий выдох</span>${r.exhale ? `<b class="num">${Math.round(r.exhale)}<small>с</small></b>` : '<b>—</b>'}<span>цель 30–40 с</span></div>
+    <div class="pr-tile dark"><span>Где звучал голос</span><canvas class="pt-zline" id="ptZline" aria-label="Доля времени по зонам, цветом нот"></canvas><span class="pt-zl"><span>${zName(0)}</span><span>${zName(4)}</span></span></div>
+  </div>`;
+  zoneLine($('ptZline'), r);
+}
+/* the share of time per zone as a band of dust, like the day's line in the exercises; each zone in the colour of the note heard there */
+function zoneLine(cv, r){
+  if (!cv) return;
+  const w = cv.clientWidth, h = 26, ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
+  const z = r.zones || [], zn = r.zoneNotes || [], tot = z.reduce((a, b) => a + b, 0) || 1, gap = 3, rr = FL.rng(17);
+  let x = 0; const used = z.filter(v => v > .005).length, room = w - gap*Math.max(0, used - 1);
+  z.forEach((v, i) => {
+    if (v <= .005) return;
+    const ww = room*v/tot, m = zn[i] != null ? zn[i] : (ZB[i] + ZB[i + 1])/2, n = Math.round(ww*h*.42);
+    ctx.fillStyle = nCol(m);
+    for (let q = 0; q < n; q++){ const s = .8 + rr()*1.3; ctx.globalAlpha = .45 + .55*rr(); ctx.fillRect(x + rr()*ww - s/2, h/2 + FL.gs(rr)*h*.2 - s/2, s, s); }
+    x += ww + gap;
+  });
+  ctx.globalAlpha = 1;
 }
 function frame(now){
   const el = $('pt'); if (!el || el.hidden){ fl.raf = 0; return; }
@@ -387,26 +425,32 @@ function frame(now){
 function drawStage(dt){
   const id = ORDER[fl.step], k = a => 1 - Math.pow(1 - a, dt*60), r = fl.result, okR = id === 'res' && valid(r);
   for (let z = 0; z < 5; z++){
-    const tg = id === 'pick' ? (z === fl.guess ? .55 : 0) : z === fl.curZ ? 1 : 0;
+    const tg = id === 'pick' ? (z === fl.guess ? .7 : 0) : z === fl.curZ ? 1 : 0;
     fl.hl[z] += (tg - fl.hl[z])*k(tg > fl.hl[z] ? .12 : .03);
   }
   fl.pShown += (fl.p - fl.pShown)*k(.08);
   const show = (['a','siren','sss'].includes(id) && (fl.run || fl.done[id])) || okR;
   fl.formA += ((show ? 1 : 0) - fl.formA)*k(.06);
   const ctx = $('ptCv').getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, SW, SH);
-  const cxF = .62, tint = id === 'pick' ? C.lime : okR ? nCol(r.comfort) : fl.curZ >= 0 ? V3.toHex(L.solo.color()) : null;
-  drawBody(ctx, body(SW < 420 ? 2300 : 3200, 7), SW, SH, cxF, fl.hl, tint, fl.T);
+  const cxF = .62, voiceCol = okR ? nCol(r.comfort) : fl.curZ >= 0 || id === 'sss' ? V3.toHex(L.solo.color()) : null;
+  const tint = id === 'pick' ? PINK : voiceCol;
+  drawBody(ctx, body(SW < 420 ? 2300 : 3200, 7), SW, SH, cxF, fl.hl, tint, fl.T, id === 'pick' ? 0 : fl.formA*.8);
   if (okR && r.guess != null && r.guess !== r.actual){
-    const yg = SH*(BAND[r.guess][0] + BAND[r.guess][1])/2, ya = SH*yOfP(fl.pShown), x = SW*cxF + SH*.25;
-    ctx.strokeStyle = C.lime; ctx.globalAlpha = .75; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
+    const yg = SH*bandMid(r.guess), ya = SH*BY(yOfP(fl.pShown)), x = SW*cxF + SH*.27;
+    ctx.strokeStyle = PINK; ctx.globalAlpha = .85; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
     ctx.beginPath(); ctx.moveTo(x, yg); ctx.lineTo(x, ya); ctx.stroke(); ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = C.lime; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = PINK; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
   }
   if (fl.formA > .01){
-    const F = Math.round(Math.min(SW*.55, SH*.62)), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
+    /* the form of the voice lives inside the silhouette: drawn on its own layer, then cut by the body mask */
+    if (!off2) off2 = document.createElement('canvas');
+    const lc = fit(off2, SW, SH); lc.clearRect(0, 0, SW, SH);
+    const F = Math.round(Math.min(SW*.62, SH*.7)), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
     L.draw(oc, F, F, .5);
-    const y = SH*(id === 'sss' ? .5 : yOfP(fl.pShown));
-    ctx.globalAlpha = fl.formA; ctx.drawImage(off, SW*cxF - F/2, clamp(y - F/2, -F*.25, SH - F*.75), F, F); ctx.globalAlpha = 1;
+    const y = SH*(id === 'sss' ? BY(.55) : BY(yOfP(fl.pShown)));
+    lc.drawImage(off, SW*cxF - F/2, y - F/2, F, F);
+    lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = 'destination-in'; lc.drawImage(bodyMask(SW, SH, cxF), 0, 0); lc.globalCompositeOperation = 'source-over';
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = fl.formA; ctx.drawImage(off2, 0, 0); ctx.globalAlpha = 1; ctx.setTransform(d, 0, 0, d, 0, 0);
   }
 }
 function setLabels(v){
@@ -688,6 +732,7 @@ function renderProfileIn(root){
   const cmpTxt = (has, txt, def) => b && has ? P.cmp + ': ' + txt : def;
   const cal = H.per === 'all' ? `<div class="pr-h"><h2>Карта дней</h2></div><canvas class="pf-map" id="pfMap" role="img" aria-label="Карта дней: кольцо на каждый день, цвета — ноты дня"></canvas><p class="note">Каждый день — кольцо, окрашенное нотами, на которых звучал голос. Бледное кольцо — день без голоса.</p>` : `<div class="pf-cal ${H.per}" id="pfCal"></div>`;
   $('pfBody').innerHTML = `
+    ${cal}
     <div class="pf-voice" id="prNoteCard">
       <div class="pf-vtop"><div class="pf-vtxt"><span class="note">Как звучит голос</span>
         ${cm != null ? `<b class="pf-note">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц</span>${top != null ? `<span>чаще всего ${zIn(top)}</span>` : ''}`
@@ -696,7 +741,6 @@ function renderProfileIn(root){
       <canvas id="pfBodyCv" role="img" aria-label="Силуэт: доля времени, когда голос звучал в каждой зоне"></canvas>
       ${H.sample ? `<p class="note">Пример, не твои данные · <button class="lnk" data-pfs="0">мои данные</button></p>` : realFew ? `<p class="note"><button class="lnk" data-pfs="1">Показать пример</button>, как это выглядит через несколько месяцев.</p>` : ''}
     </div>
-    ${cal}
     <div class="pr-tiles">
       <div class="pr-tile b-breath"><span>Дней с голосом</span><b class="num">${a.days}</b><span>${cmpTxt(true, b ? b.days : '', 'отпечаток или практика')}</span></div>
       <div class="pr-tile b-body"><span>Диапазон</span>${a.range != null ? `<b class="num">${octs(a.range)}<small>окт.</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.range != null, b && b.range != null ? octs(b.range) + ' окт.' : '', 'по сирене и упражнениям')}</span></div>
@@ -718,12 +762,12 @@ function renderProfileIn(root){
   }
 }
 function drawBodyShare(cv, z){
-  const w = cv.clientWidth, h = Math.round(Math.min(w*1.05, 470)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
+  const w = cv.clientWidth, h = Math.round(Math.min(w*1.45, 580)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
   const mx = z ? Math.max(...z) : 1;
-  drawBody(ctx, body(w < 420 ? 2000 : 2800, 11), w, h, .66, z ? z.map(v => Math.pow(v/mx, .8)) : [0,0,0,0,0], C.kale, 0);
+  drawBody(ctx, body(w < 420 ? 2600 : 3400, 11), w, h, .64, z ? z.map(v => Math.pow(v/mx, .8)) : [0,0,0,0,0], C.kale, 0);
   ctx.textBaseline = 'middle';
   for (let i = 0; i < 5; i++){
-    const y = h*(BAND[i][0] + BAND[i][1])/2, share = z ? Math.round(z[i]*100) : null;
+    const y = h*bandMid(i), share = z ? Math.round(z[i]*100) : null;
     ctx.fillStyle = C.ink; ctx.globalAlpha = share ? 1 : .45; ctx.font = '700 15px "Inter Tight",sans-serif'; ctx.fillText(zName(i), 0, y - 8);
     ctx.fillStyle = C.muted; ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.fillText(share != null ? share + ' %' : '—', 0, y + 9); ctx.globalAlpha = 1;
   }
