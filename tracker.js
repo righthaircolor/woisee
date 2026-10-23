@@ -520,24 +520,50 @@ function viewTrack(){
   return topbar() + `
   <section class="tr-week" aria-label="Неделя">${weekHTML(monday(t))}</section>
   <h1 class="big-title tr-q">${last ? 'Сегодня ты звучишь <span style="color:' + nCol(last.comfort) + '">' + zIn(last.actual) + '</span>' : 'Как ты звучишь ' + when + '?'}</h1>
-  <div class="tr-ring">${last ? `<button class="tr-open" data-act="day" data-v="${k}" aria-label="Открыть сегодняшний день"></button>` : ''}<canvas id="trRing" aria-hidden="true"></canvas>
-    ${last ? '' : `<button class="go big tr-go" data-act="print">Отпе&shy;чаток</button>`}</div>
+  <div class="tr-ring"><canvas id="trRing" aria-hidden="true"></canvas>
+    ${last ? '' : `<button class="tr-go" data-act="print" aria-label="Оставить отпечаток"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M12 6.5v11M6.5 12h11"/></svg></button>`}</div>
   ${P.length ? `<button class="tr-more" data-act="print">Ещё один отпечаток</button>` : `<p class="note tr-note">Полминуты: догадка, «а-а-а», сирена и выдох. Покажет, где в теле живёт голос и на какой ноте.</p>`}`;
 }
-/* the ring is the flowing dust of the current exercise's outline; the part of the week with voice is bright */
-const ring = { P:null, flow:0, t:0, raf:0, last:0, solo:null, cache:null, key:'' };
+/* the ring is the flowing dust of the current exercise's outline; the part of the week with voice is bright.
+   Inside lives one cloud of dots: a loose haze before the first print, the note's pattern after it.
+   A finger (or the mouse on a desktop) stirs it the way it stirs the dots around «Привет» in the profile:
+   dots near it are pushed aside and swirl, then flow back. A tap sends a wave out from the centre,
+   the same push an attack of the voice gives in the exercises. */
+const ring = { P:null, flow:0, t:0, raf:0, last:0, solo:null, VX:null, VY:null, ptr:null, s:0, key:'' };
+const SOLO_N = 3000, SOLO_SC = .45;
 function mountTrack(){
   document.querySelectorAll('canvas[data-trday]').forEach(cv => paintDayCell(cv, cv.dataset.trday));
   const cv = $('trRing'); if (!cv) return;
   if (!ring.P){ ring.P = []; for (let i = 0; i < 1300; i++){ let u = 0; while (!u) u = Math.random(); ring.P.push({ s:Math.random(), sp:.6 + Math.random()*.8, n:Math.sqrt(-2*Math.log(u))*Math.cos(6.283*Math.random()), x:NaN, y:NaN, z:.9 + Math.random()*1.3, a:.45 + Math.random()*.55 }); } }
-  if (!ring.solo){ ring.solo = new V3.Solo(1500, 9); ring.solo.opt.rain = false; ring.solo.opt.mono = C.ink; ring.solo.target({ u:19, e:.35, vo:1, noise:0, stab:.45, hold:.3, amp:.32 }); }
-  ring.key = '';
+  if (!ring.solo){ ring.solo = new V3.Solo(SOLO_N, 9); ring.VX = new Float32Array(SOLO_N); ring.VY = new Float32Array(SOLO_N); }
+  const P = prints(dkey()), last = P[P.length - 1], so = ring.solo;
+  so.opt.crisp = data.profile.lace !== true; so.opt.orbit = true;
+  if (last){
+    const m = Math.round(last.comfort); so.opt.rain = data.profile.rain !== false; so.opt.mono = C.ink;
+    so.target({ u: m - 12*(Math.floor(m/12) - 1), e:1, vo:1, noise:0, stab:Math.max(.85, last.stab || .85), hold:1, amp:.5, cent:.5 });
+    if (ring.key !== last.at + m){ ring.key = last.at + m; so.S.u = so.T.u; }
+  } else { so.opt.rain = false; so.opt.mono = C.ink; so.target({ u:19, e:.35, vo:1, noise:0, stab:.45, hold:.3, amp:.32 }); }
+  const box = cv.parentElement;
+  const at = e => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+  box.onpointermove = e => { ring.ptr = at(e); };
+  box.onpointerdown = e => { ring.ptr = at(e); if (!reduced()){ so.kick = 1; so.front = 0; const q = ring.ptr, R = ring.s*SOLO_SC, c = ring.s/2; for (let i = 0; i < SOLO_N; i++){ const dx = so.P.X[i]*R + c - q.x, dy = so.P.Y[i]*R + c - q.y, d = Math.hypot(dx, dy) || 1; if (d < 140){ const f = (1 - d/140)*2.2; ring.VX[i] += dx/d*f; ring.VY[i] += dy/d*f; } } } };
+  box.onpointerleave = box.onpointerup = box.onpointercancel = e => { if (e.pointerType !== 'mouse' || e.type === 'pointerleave') ring.ptr = null; };
   cancelAnimationFrame(ring.raf); ring.last = performance.now(); ring.raf = requestAnimationFrame(ringFrame);
+}
+function stir(dt){
+  const so = ring.solo, R = ring.s*SOLO_SC, c = ring.s/2, q = ring.ptr, damp = Math.exp(-4.5*dt), X = so.P.X, Y = so.P.Y;
+  for (let i = 0; i < SOLO_N; i++){
+    if (q){ const dx = X[i]*R + c - q.x, dy = Y[i]*R + c - q.y, d = Math.hypot(dx, dy) || 1;
+      if (d < 90){ const f = (1 - d/90)*dt; ring.VX[i] += (dx/d*16 - dy/d*10.5)*f; ring.VY[i] += (dy/d*16 + dx/d*10.5)*f; } }
+    ring.VX[i] *= damp; ring.VY[i] *= damp;
+    X[i] += ring.VX[i]*dt; Y[i] += ring.VY[i]*dt;
+  }
 }
 function ringFrame(now){
   const cv = $('trRing'); if (!cv || !cv.isConnected){ ring.raf = 0; return; }
   const dt = Math.min(.05, (now - ring.last)/1000); ring.last = now; ring.t += dt;
   const s = cv.clientWidth; if (!s){ ring.raf = requestAnimationFrame(ringFrame); return; }
+  ring.s = s;
   const ctx = fit(cv, s, s), c = s/2, R = s*.44, still = reduced(); ctx.clearRect(0, 0, s, s);
   const mon = monday(new Date()); let n = 0; for (let i = 0; i < 7; i++) if (voiced(dkey(addDays(mon, i)))) n++;
   const wp = n/7;
@@ -552,15 +578,9 @@ function ringFrame(now){
     ctx.globalAlpha = p.a*(u < wp ? 1 : .18); ctx.fillRect(p.x - p.z/2, p.y - p.z/2, p.z, p.z);
   }
   ctx.globalAlpha = 1;
-  const P = prints(dkey());
-  if (P.length){
-    const last = P[P.length - 1], key = last.at + last.comfort + s;
-    if (ring.key !== key){ ring.key = key; ring.cache = document.createElement('canvas'); const ic = fit(ring.cache, s, s); V3.renderForm(ic, c, c, R*.78, Math.round(uOfM(last.comfort)), Math.round(900 + s*4), 31, nCol(last.comfort), .95, Math.max(.8, s/320), 0, data.profile.lace !== true); }
-    ctx.save(); ctx.translate(c, c); ctx.rotate(still ? 0 : ring.t*.04); ctx.translate(-c, -c); ctx.drawImage(ring.cache, 0, 0, s, s); ctx.restore();
-  } else {
-    ring.solo.ease(dt); ring.solo.step(dt);
-    ctx.save(); ctx.beginPath(); ctx.arc(c, c, R - 10, 0, Math.PI*2); ctx.clip(); ring.solo.draw(ctx, s, s, .4, .5); ctx.restore();
-  }
+  const so = ring.solo, has = prints(dkey()).length > 0;
+  so.ease(dt); so.step(dt); if (!still) stir(dt);
+  ctx.save(); ctx.beginPath(); ctx.arc(c, c, R - 6, 0, Math.PI*2); ctx.clip(); so.draw(ctx, s, s, SOLO_SC, has ? 1 : .55); ctx.restore();
   ring.raf = still ? 0 : requestAnimationFrame(ringFrame);
 }
 
