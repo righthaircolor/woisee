@@ -50,7 +50,11 @@ const labSet = () => labView || ((typeof data !== 'undefined' && data.profile &&
 const zName = i => LABELS[labSet()][i][0], zSub = i => LABELS[labSet()][i][1], zIn = i => ZIN[labSet()][i];
 const BAND = [[.64, .90], [.415, .64], [.28, .415], [.165, .28], [.05, .165]];
 /* the silhouette is drawn 14 % larger than its own coordinates; the hips run out under the frame */
-const BK = 1.14, BY = y => .035 + (y - .05)*BK, BYinv = v => .05 + (v - .035)/BK;
+/* body scale: the silhouette fills the height (crown at the top edge, hips running out under the frame),
+   up to 1.3× its own coordinates, and never wider than the space beside the zone labels allows */
+let BK = 1.14;
+const setBody = (W, H, k) => { BK = Math.min(1.3, k*W/H); return BK; };
+const BY = y => .006 + (y - .064)*BK, BYinv = v => .064 + (v - .006)/BK;
 const bandMid = z => BY((BAND[z][0] + BAND[z][1])/2);
 const PINK = '#E780C0';
 function pOf(midi, cent){
@@ -92,7 +96,7 @@ function edgeFade(W, H){
   fades.set(key, m); return m;
 }
 function bodyMask(W, H, cxF){
-  const key = W + 'x' + H + ':' + cxF; if (masks.has(key)) return masks.get(key);
+  const key = W + 'x' + H + ':' + cxF + ':' + BK.toFixed(3); if (masks.has(key)) return masks.get(key);
   const m = document.createElement('canvas'), d = DPR(); m.width = Math.round(W*d); m.height = Math.round(H*d);
   const c = m.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.filter = 'blur(' + Math.round(H*.016) + 'px)'; c.fillStyle = '#fff';
   const cx = W*cxF, X = x => cx + x*H*BK, Y = y => BY(y)*H;
@@ -204,6 +208,7 @@ function layout(){
   const H = id === 'res' ? Math.round(Math.min(W*1.05, 470)) : Math.round(clamp(innerHeight - top - 128, 260, W*1.3));
   st.style.height = H + 'px';
   if (W !== SW || H !== SH){ SW = W; SH = H; fit($('ptCv'), SW, SH); }
+  setBody(SW, SH, 1.45);
   st.classList.toggle('compact', SH < 420);
   $('ptZones').querySelectorAll('.pt-zb').forEach(b => { const z = +b.dataset.z; b.style.top = (SH*bandMid(z)) + 'px'; });
 }
@@ -442,6 +447,7 @@ function drawStage(dt){
   const show = (['a','siren','sss'].includes(id) && (fl.run || fl.done[id])) || okR;
   fl.formA += ((show ? 1 : 0) - fl.formA)*k(.06);
   const ctx = $('ptCv').getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, SW, SH);
+  setBody(SW, SH, 1.45);
   const cxF = .62, voiceCol = okR ? nCol(r.comfort) : fl.curZ >= 0 || id === 'sss' ? V3.toHex(L.solo.color()) : null;
   const tint = id === 'pick' ? PINK : voiceCol;
   drawBody(ctx, body(SW < 420 ? 2300 : 3200, 7), SW, SH, cxF, fl.hl, tint, fl.T, id === 'pick' ? 0 : fl.formA*.8);
@@ -804,6 +810,7 @@ function renderProfileIn(root){
 }
 function drawBodyShare(cv, z){
   const w = cv.clientWidth, h = Math.round(Math.min(w*1.45, 580)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
+  setBody(w, h, 1.62);
   const mx = z ? Math.max(...z) : 1;
   drawBody(ctx, body(w < 420 ? 2600 : 3400, 11), w, h, .64, z ? z.map(v => Math.pow(v/mx, .8)) : [0,0,0,0,0], C.kale, 0);
   ctx.textBaseline = 'middle';
