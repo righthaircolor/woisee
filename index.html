@@ -539,10 +539,12 @@ button.cal-d:active{transform:scale(.94)}
 .pf-vmap,.pf-cast{display:block;width:100%}
 .pf-read .hist{margin:0}
 .pf-say{font-size:14px;line-height:1.45;color:var(--muted);margin-top:10px}
-.pf-voice{border:1px solid var(--ink);border-radius:32px;padding:20px 20px 12px;display:flex;flex-direction:column;gap:6px}
+.pf-voice{border:.5px solid var(--ink);border-radius:32px;padding:20px 20px 12px;display:flex;flex-direction:column;gap:6px}
 .pf-vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.pf-vtxt{display:flex;flex-direction:column;gap:4px}
-.pf-vtxt>span:not(.note){font-size:14px}
+.pf-vtop.empty{flex-direction:column;gap:4px}
+.pf-vtxt{display:flex;flex-direction:column;gap:6px;align-items:flex-end;text-align:right}
+.pf-vtop.empty .pf-vtxt{align-items:flex-start;text-align:left}
+.pf-vtxt>span:not(.note){font-size:14px;line-height:1.3}
 .pf-note{font-size:64px;font-weight:800;letter-spacing:-.05em;line-height:.95}
 .pf-note.none{font-size:30px;letter-spacing:-.03em;line-height:1}
 .pf-voice canvas{display:block;width:100%;margin-top:4px}
