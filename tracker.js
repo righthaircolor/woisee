@@ -719,10 +719,10 @@ const MONN = ['Январь','Февраль','Март','Апрель','Май'
 const inR = (k, s, e) => k >= dkey(s) && k <= dkey(e);
 function period(S){
   const now = new Date();
-  if (H.per === 'w'){ const s = addDays(monday(now), 7*H.off), e = addDays(s, 6); return { s, e, ps:addDays(s, -7), pe:addDays(s, -1), cmp:'неделей раньше', label: s.getMonth() === e.getMonth() ? s.getDate() + '–' + e.getDate() + ' ' + MONS[e.getMonth()] : s.getDate() + ' ' + MONS[s.getMonth()] + ' – ' + e.getDate() + ' ' + MONS[e.getMonth()] }; }
-  if (H.per === 'm'){ const s = new Date(now.getFullYear(), now.getMonth() + H.off, 1), e = new Date(s.getFullYear(), s.getMonth() + 1, 0); return { s, e, ps:new Date(s.getFullYear(), s.getMonth() - 1, 1), pe:new Date(s.getFullYear(), s.getMonth(), 0), cmp:'месяцем раньше', label: MONN[s.getMonth()] + (s.getFullYear() !== now.getFullYear() ? ' ' + s.getFullYear() : '') }; }
+  if (H.per === 'w'){ const s = addDays(monday(now), 7*H.off), e = addDays(s, 6); return { s, e, ps:addDays(s, -7), pe:addDays(s, -1), cmp:'неделей раньше', since:'за неделю', short:'неделя', label: s.getMonth() === e.getMonth() ? s.getDate() + '–' + e.getDate() + ' ' + MONS[e.getMonth()] : s.getDate() + ' ' + MONS[s.getMonth()] + ' – ' + e.getDate() + ' ' + MONS[e.getMonth()] }; }
+  if (H.per === 'm'){ const s = new Date(now.getFullYear(), now.getMonth() + H.off, 1), e = new Date(s.getFullYear(), s.getMonth() + 1, 0); return { s, e, ps:new Date(s.getFullYear(), s.getMonth() - 1, 1), pe:new Date(s.getFullYear(), s.getMonth(), 0), cmp:'месяцем раньше', since:'за месяц', short:'месяц', label: MONN[s.getMonth()] + (s.getFullYear() !== now.getFullYear() ? ' ' + s.getFullYear() : '') }; }
   const s = S.keys.length ? parseKey(S.keys[0]) : now, f = d => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getFullYear()).slice(2);
-  return { s, e:now, ps:null, pe:null, cmp:'в первый месяц', label: f(s) + ' — ' + f(now) };
+  return { s, e:now, ps:null, pe:null, cmp:'в первый месяц', since:'с первого месяца', short:'всё время', label: f(s) + ' — ' + f(now) };
 }
 function statsOf(S, keys){
   const P = [], gs = []; keys.forEach(k => S.P(k).forEach(c => { P.push(c); if (c.guess != null) gs.push(c.guess === c.actual); }));
@@ -745,6 +745,8 @@ function comfortOf(S, keys){
   const e = []; keys.forEach(k => S.notes(k).slice(0, 3).forEach(n => e.push(n.midi)));
   return e.length ? median(e) : (H.sample ? null : data.profile.ref || null);
 }
+const tile = (cls, label, val, sub) => `<div class="pf-t ${cls}"><span class="l">${label}</span><b class="v num">${val}</b><span class="s">${sub}</span></div>`;
+const signed = (n, a, b, c) => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + ' ' + pl(n, a, b, c);
 function profileHTML(){
   return `<section class="pr-sec pf" id="pf">
     <div class="pf-ctl"><div class="pf-seg" role="tablist" aria-label="Период">
@@ -790,19 +792,30 @@ function renderProfileIn(root){
       <canvas id="pfBodyCv" role="img" aria-label="Силуэт: доля времени, когда голос звучал в каждой зоне"></canvas>
       ${H.sample ? `<p class="note">Пример, не твои данные · <button class="lnk" data-pfs="0">мои данные</button></p>` : realFew ? `<p class="note"><button class="lnk" data-pfs="1">Показать пример</button>, как это выглядит через несколько месяцев.</p>` : ''}
     </div>
-    <div class="pr-tiles">
-      <div class="pr-tile b-breath"><span>Дней с голосом</span><b class="num">${a.days}</b><span>${cmpTxt(true, b ? b.days : '', 'отпечаток или практика')}</span></div>
-      <div class="pr-tile b-body"><span>Диапазон</span>${a.range != null ? `<b class="num">${octs(a.range)}<small>окт.</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.range != null, b && b.range != null ? octs(b.range) + ' окт.' : '', 'по сирене и упражнениям')}</span></div>
-      <div class="pr-tile dark"><span>Минут практики</span><b class="num">${a.mins}</b><span>${cmpTxt(true, b ? b.mins + ' мин' : '', a.prac ? a.prac + ' ' + pl(a.prac, 'занятие', 'занятия', 'занятий') : 'пока без практики')}</span></div>
-      <div class="pr-tile dark"><span>Слышишь себя</span>${a.guessed ? `<b class="num">${a.hits}<small>из ${a.guessed}</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.guessed, b ? b.hits + ' из ' + b.guessed : '', 'догадка совпала с отпечатком')}</span></div>
-      <div class="pr-tile dark"><span>Устойчивость</span>${a.stab != null ? `<b class="num">${Math.round(a.stab*100)}<small>%</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.stab != null, b && b.stab != null ? Math.round(b.stab*100) + ' %' : '', 'насколько ровно «а»')}</span></div>
-      <div class="pr-tile dark"><span>Долгий выдох</span>${a.exh ? `<b class="num">${Math.round(a.exh)}<small>с</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.exh, b ? Math.round(b.exh) + ' с' : '', 'лучший за период')}</span></div>
+    <div class="pf-tiles">
+      ${tile('b-breath', 'Слышишь себя', a.guessed ? `${a.hits}<small>из ${a.guessed}</small>` : '—', b && b.guessed ? 'было ' + b.hits + ' из ' + b.guessed : a.guessed ? 'догадка совпала с отпечатком' : 'появится после отпечатка')}
+      ${tile('b-body', 'Диапазон', a.range != null ? `${octs(a.range)}<small>окт.</small>` : '—', b && b.range != null && a.range != null ? signed(Math.round(a.range - b.range), 'полутон', 'полутона', 'полутонов') + ' ' + P.since : 'по сирене и упражнениям')}
+      ${tile('dark', 'Устойчивость', a.stab != null ? `${Math.round(a.stab*100)}<small>%</small>` : '—', b && b.stab != null ? 'было ' + Math.round(b.stab*100) + ' %' : 'ровность «а»')}
+      ${tile('dark', 'Долгий выдох', a.exh ? `${Math.round(a.exh)}<small>с</small>` : '—', b && b.exh ? 'было ' + Math.round(b.exh) + ' с' : 'лучший за период')}
+      ${tile('dark', 'Дней с голосом', `${a.days}`, b ? 'было ' + b.days : 'отпечаток или практика')}
+      ${tile('dark', 'Минут практики', `${a.mins}`, b ? 'было ' + b.mins + ' мин' : a.prac ? a.prac + ' ' + pl(a.prac, 'занятие', 'занятия', 'занятий') : 'пока без практики')}
     </div>
+    <div class="pr-h"><h2>Карта голоса</h2><span class="note">${escH(P.short)}</span></div>
+    <p class="note">Угол — нота, расстояние от центра — высота. Кольца — зоны, где ты её чувствуешь. Яркое — недавнее, бледное — раньше.</p>
+    <canvas class="pf-vmap" id="pfVmap" role="img" aria-label="Карта голоса: 12 нот по кругу, высота — расстояние от центра"></canvas>
+    <div class="pf-read" id="pfRead"></div>
+    <div class="pr-h"><h2>Слепок голоса</h2><span class="note">${escH(P.short)}</span></div>
+    <p class="note">Все отпечатки, наложенные друг на друга. Узор — комфортная нота, кольца вокруг — диапазон.</p>
+    <canvas class="pf-cast" id="pfCast" role="img" aria-label="Слепок голоса"></canvas>
+    <p class="note" id="pfCastCap"></p>
     ${a.P.length ? `<div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
     <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>` : ''}`;
   $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { H.lab = x.dataset.lab; renderProfile(); });
   $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
   drawBodyShare($('pfBodyCv'), zones);
+  voiceMap($('pfVmap'), S, keys, prevKeys, $('pfRead'));
+  const CP = []; keys.forEach(k => S.P(k).forEach(c => CP.push(c)));
+  drawCast($('pfCast'), CP); castCap($('pfCastCap'), CP);
   if (H.per === 'w') drawCal($('pfCal'), S, P); else drawMap($('pfMap'), S, H.per === 'm' ? P : null);
   if (a.P.length){
     const D = keys.filter(k => S.P(k).length).map(k => { const L = S.P(k); return { date:k, m:L[L.length - 1] }; });
@@ -903,6 +916,108 @@ function dayCard(k, S){
 }
 const WDL = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+/* ---------- the voice map: 12 notes around, height = distance from the centre, the body's zones as rings ----------
+   Every note she sounded in the period lands on it: the comfortable note of each print as its own small form,
+   the siren and the held notes of exercises as grains. Recent days are bright, earlier ones pale, and the map
+   fills in day by day when it opens, so the growth of the range is something you watch. */
+const VM = { lo: 36, hi: 88 };
+const vmR = (m, s) => s*(.08 + clamp((m - VM.lo)/(VM.hi - VM.lo), 0, 1)*.36);
+function sirenOf(c){
+  if (c.contour && c.contour.length > 4) return c.contour;
+  if (c.low == null) return [];
+  const out = []; for (let i = 0; i < 9; i++) out.push(c.low + (c.high - c.low)*(.5 - .5*Math.cos(Math.PI*i/8))); return out;
+}
+function vmItems(S, keys){
+  const items = []; const n = keys.length || 1;
+  keys.forEach((k, di) => {
+    const age = di/(n - 1 || 1);
+    S.P(k).forEach(c => { items.push({ t:'f', m:c.comfort, stab:c.stab, k, age }); sirenOf(c).forEach(m => items.push({ t:'g', m, k, age })); });
+    S.notes(k).slice(0, 8).forEach(nn => items.push({ t: (nn.sec || 0) > 2 ? 'f' : 'g', m:nn.midi, stab:nn.stab || .7, k, age, ex:true }));
+  });
+  return items;
+}
+const vm = { raf:0 };
+function voiceMap(cv, S, keys, prevKeys, readEl){
+  if (!cv) return;
+  cancelAnimationFrame(vm.raf);
+  const s = cv.clientWidth, ctx = fit(cv, s, s), c = s/2, items = vmItems(S, keys), raw = items.slice();
+  const base = () => {
+    ctx.clearRect(0, 0, s, s); ctx.lineWidth = 1;
+    for (let z = 1; z < 5; z++){ const r = vmR(ZB[z], s); ctx.strokeStyle = 'rgba(255,254,252,.12)'; ctx.setLineDash(z % 2 ? [2, 4] : []); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI*2); ctx.stroke(); }
+    ctx.setLineDash([]);
+    ctx.font = '500 10px "Inter Tight",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    /* zone names along the top, alternating sides of the axis so thin bands do not collide */
+    ctx.font = '500 ' + Math.max(9, s/40) + 'px "Inter Tight",sans-serif';
+    for (let z = 0; z < 5; z++){ const r = (vmR(Math.max(VM.lo, ZB[z]), s) + vmR(Math.min(VM.hi, ZB[z + 1]), s))/2, a = -Math.PI/2 + (z % 2 ? .2 : -.2);
+      ctx.fillStyle = 'rgba(154,167,163,.8)'; ctx.textAlign = 'center'; ctx.fillText(zName(z), c + Math.cos(a)*r, c + Math.sin(a)*r); }
+    ctx.font = '600 ' + Math.max(11, s/30) + 'px "Inter Tight",sans-serif'; ctx.textAlign = 'center';
+    V3.NAMES.forEach((nm, pc) => { const a = -Math.PI/2 + pc/12*Math.PI*2; ctx.fillStyle = 'rgba(244,242,236,.55)'; ctx.fillText(nm, c + Math.cos(a)*s*.475, c + Math.sin(a)*s*.475); });
+  };
+  base();
+  const r = FL.rng(91), rain = data.profile.rain !== false, crisp = data.profile.lace !== true, uOf = refU(items.filter(x => x.t === 'f').map(x => ({ comfort:x.m })));
+  const draw = it => {
+    const pc = pcOf(it.m), a = -Math.PI/2 + (pc + (r() - .5)*.45)/12*Math.PI*2, rad = vmR(it.m, s) + (r() - .5)*s*.012, x = c + Math.cos(a)*rad, y = c + Math.sin(a)*rad;
+    const col = rain ? V3.HUE[pc] : C.ink, al = .28 + .72*Math.pow(it.age, 1.4);
+    if (it.t === 'f') V3.renderForm(ctx, x, y, s*it.size, uOf(it.m), Math.round(90 + s*.5*it.size/.06), 900 + Math.round(it.m*7) % 97, col, Math.min(1, al + .15), Math.max(.6, s/650), 0, crisp);
+    else { ctx.fillStyle = col; ctx.globalAlpha = al*.8; const z = .9 + r()*1.3; ctx.fillRect(x - z/2, y - z/2, z, z); ctx.globalAlpha = 1; }
+  };
+  /* grains first, in the order of the days; then one form per note, sized by how often she sat on it */
+  const grains = items.filter(i => i.t === 'g'), byNote = new Map();
+  items.filter(i => i.t === 'f').forEach(i => { const q = Math.round(i.m), e = byNote.get(q) || { t:'f', m:q, n:0, age:0, stab:0 }; e.n++; e.age = Math.max(e.age, i.age); e.stab += i.stab || .7; byNote.set(q, e); });
+  const mx = Math.max(1, ...[...byNote.values()].map(e => e.n));
+  const forms = [...byNote.values()].map(e => Object.assign(e, { size: .045 + .04*Math.sqrt(e.n/mx) })).sort((a, b) => a.age - b.age);
+  items.length = 0; items.push(...grains, ...forms);
+  if (reduced() || !items.length) items.forEach(draw);
+  else { let i = 0; const per = Math.max(2, Math.ceil(items.length/70)); const step = () => { if (!cv.isConnected) return; for (let q = 0; q < per && i < items.length; q++, i++) draw(items[i]); if (i < items.length) vm.raf = requestAnimationFrame(step); }; vm.raf = requestAnimationFrame(step); }
+  if (readEl) readEl.innerHTML = vmRead(raw, prevKeys ? vmItems(S, prevKeys) : null);
+}
+/* what the map says, in plain words */
+function vmRead(items, prev){
+  if (!items.length) return `<p class="note">Карта заполнится после первого отпечатка или голосового упражнения.</p>`;
+  const all = items.map(i => i.m), lo = pct(all, .03), hi = pct(all, .97), pcs = new Set(items.map(i => pcOf(i.m)));
+  const F = items.filter(i => i.t === 'f'), cnt = {}; F.forEach(i => { const q = Math.round(i.m); cnt[q] = (cnt[q] || 0) + 1; });
+  const fav = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  const z = [0,0,0,0,0]; items.forEach(i => z[zoneOf(pOf(i.m, null))]++); const zt = z.reduce((a, b) => a + b, 0), zi = z.indexOf(Math.max(...z));
+  const rows = [];
+  rows.push(['Диапазон', `${escH(nName(lo))} — ${escH(nName(hi))} · ${octs(hi - lo)} окт.`]);
+  rows.push(['Нот из 12', `${pcs.size}`]);
+  if (fav) rows.push(['Чаще всего', `<span class="pt-dot" style="background:${nCol(+fav[0])}"></span>${escH(nName(+fav[0]))}`]);
+  rows.push(['Где живёт голос', `${zIn(zi)} · ${Math.round(z[zi]/zt*100)} %`]);
+  let say = '';
+  if (prev && prev.length){
+    const pa = prev.map(i => i.m), plo = pct(pa, .03), phi = pct(pa, .97), ppc = new Set(prev.map(i => pcOf(i.m)));
+    const grow = Math.round((hi - lo) - (phi - plo)), up = Math.round(hi - phi), down = Math.round(plo - lo), fresh = [...pcs].filter(p => !ppc.has(p));
+    const bits = [];
+    if (grow) bits.push(`диапазон ${grow > 0 ? 'шире' : 'уже'} на ${Math.abs(grow)} ${pl(grow, 'полутон', 'полутона', 'полутонов')}`);
+    if (up > 0) bits.push(`верх поднялся до «${escH(nShort(hi))}» — это ${zIn(zoneOf(pOf(hi, null)))}`);
+    if (down > 0) bits.push(`низ опустился до «${escH(nShort(lo))}»`);
+    if (fresh.length) bits.push(`новые ноты: ${fresh.map(p => '«' + V3.NAMES[p] + '»').join(', ')}`);
+    say = bits.length ? 'По сравнению с прошлым периодом ' + bits.join(', ') + '.' : 'Голос звучит там же, где и в прошлый период.';
+  }
+  const meaning = zi <= 1 ? 'Голос опирается на грудной регистр: так звучит спокойная речь. Чтобы он был свободнее вверху, помогают сирена и гудение.'
+    : zi === 2 ? 'Голос часто держится у гортани, на переходе регистров. Если устаёт горло, начни с дыхания и мягкого гудения в маску.'
+    : 'Голос много звучит в маске и голове — ярко и полётно. Не забывай опору: долгий выдох и грудные ноты.';
+  return `<ul class="hist">${rows.map(([l, v]) => `<li><span>${l}</span><span class="m num">${v}</span></li>`).join('')}</ul><p class="pf-say">${say ? say + ' ' : ''}${meaning}</p>`;
+}
+/* the cast: every print of the period laid over the others; the pattern is the comfortable note, the rings the range */
+const refU = D => { const c = median(D.map(d => d.comfort)) || 55; return m => clamp(Math.round(m) - 12*(Math.floor(c/12) - 1), 0, 47); };
+function drawCast(cv, M){
+  if (!cv) return;
+  const s = cv.clientWidth, ctx = fit(cv, s, s), cx = s/2, cy = s/2, R = s*.36; ctx.clearRect(0, 0, s, s);
+  if (!M.length){ ctx.fillStyle = C.muted; ctx.font = '500 13px "Inter Tight",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Слепок проявится после первого отпечатка', cx, cy); ctx.textAlign = 'left'; return; }
+  const uOf = refU(M), r = FL.rng(5), n = M.length, per = n > 60 ? 30 : 70, fN = Math.round((500 + s*1.2)*clamp(36/Math.max(1, n), .3, 1)), crisp = data.profile.lace !== true;
+  M.forEach((m, i) => { if (m.low == null) return; const rad = s*(.3 + clamp((m.high - m.low)/34, 0, 1)*.18);
+    ctx.fillStyle = nCol(m.high); ctx.globalAlpha = .16 + .3*(i/(n - 1 || 1));
+    for (let q = 0; q < per; q++){ const a = r()*Math.PI*2, rr = rad*(1 + (r() - .5)*.05); ctx.fillRect(cx + Math.cos(a)*rr - .6, cy + Math.sin(a)*rr - .6, 1.2, 1.2); }
+    ctx.globalAlpha = 1; });
+  M.forEach((m, i) => V3.renderForm(ctx, cx, cy, R, uOf(m.comfort), fN, 300 + i, nCol(m.comfort), (.1 + .45*(m.stab || .5))*clamp(32/Math.max(1, n), .42, 1), Math.max(.7, s/560), i*.015, crisp));
+}
+function castCap(el, M){
+  if (!el) return;
+  if (M.length < 3){ el.textContent = M.length ? 'Слепок проявляется со временем: пока ' + M.length + ' ' + pl(M.length, 'отпечаток', 'отпечатка', 'отпечатков') + '.' : ''; return; }
+  const nn = {}; M.forEach(m => { const q = nShort(m.comfort); nn[q] = (nn[q] || 0) + 1; }); const t = Object.entries(nn).sort((a, b) => b[1] - a[1]);
+  el.textContent = 'Чаще всего голос живёт на «' + t[0][0] + '»' + (t[1] ? ', иногда уходит на «' + t[1][0] + '»' : '') + '. Двух одинаковых слепков не бывает.';
+}
 /* charts: recessive grid, one ink series, crosshair + tooltip */
 const dShort = k => { const d = parseKey(k); return d.getDate() + ' ' + MONS[d.getMonth()]; };
 function chartFrame(cv, h, l){ const w = cv.clientWidth, ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h); return { ctx, w, h, l:l || 44, r:12, t:12, b:24 }; }
