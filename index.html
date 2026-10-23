@@ -1391,11 +1391,12 @@ function paintFrames(ctx,frames,mul,W,H,live){
   if(!live&&window.WT){const G=WT.gifLayout(W,H);paintAt(ctx,frames,mul,G.cx,G.cy,G.R*1.18,1);return;}
   paintAt(ctx,frames,mul,W/2,H*(live?.5:.46),W*(live?.56:.5),1);
 }
-function paintAt(ctx,frames,mul,cx,cy,R,minZ,mono){
+function paintAt(ctx,frames,mul,cx,cy,R,minZ,mono,step){
+  step=step||1;
   if(mono)ctx.fillStyle=mono;
   for(const f of frames){
     const xy=f.xy,sa=f.sa,ci=f.ci,n=ci.length;
-    for(let i=0;i<n;i++){const z=Math.max(minZ,sa[i*2]/4000*R);if(!mono)ctx.fillStyle=f.cols[ci[i]];ctx.globalAlpha=Math.min(1,sa[i*2+1]/255*mul);ctx.fillRect(cx+xy[i*2]/8000*R-z/2,cy+xy[i*2+1]/8000*R-z/2,z,z);}
+    for(let i=0;i<n;i+=step){const z=Math.max(minZ,sa[i*2]/4000*R);if(!mono)ctx.fillStyle=f.cols[ci[i]];ctx.globalAlpha=Math.min(1,sa[i*2+1]/255*mul);ctx.fillRect(cx+xy[i*2]/8000*R-z/2,cy+xy[i*2+1]/8000*R-z/2,z,z);}
   }
   ctx.globalAlpha=1;
 }
@@ -1439,7 +1440,7 @@ async function paintDayPics(root){
   for(const cv of (root||document).querySelectorAll('canvas[data-daypic]')){
     const k=cv.dataset.daypic,s=cv.clientWidth;if(!s)continue;
     const clips=await dayClips(k),ctx=fitCv(cv,s);ctx.clearRect(0,0,s,s);
-    if(window.WT&&WT.dayNotes(k).length)WT.paintDayCell(cv,k);
+    if(window.WT){WT.liveCell(cv,k);continue;}
     else if(clips.length)paintAt(ctx,dayLayers(clips,0),layerMul(clips.length),s/2,s/2,s*.42,.6);
     else paintSynth(ctx,k,s/2,s/2,s*.42,0);
   }
