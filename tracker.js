@@ -80,7 +80,17 @@ function body(n, seed){
 }
 /* wash: 0..1 — how much the whole silhouette takes the tint (the note's colour while the voice sounds) */
 /* a soft mask of the silhouette: the voice's form is drawn only inside the body, so face and shoulders show through it */
-const masks = new Map();
+const masks = new Map(), fades = new Map();
+/* the stage has no visible edge: anything drawn near it fades out */
+function edgeFade(W, H){
+  const key = W + 'x' + H; if (fades.has(key)) return fades.get(key);
+  const m = document.createElement('canvas'), d = DPR(); m.width = Math.round(W*d); m.height = Math.round(H*d);
+  const c = m.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+  c.globalCompositeOperation = 'destination-in';
+  const band = (x0, y0, x1, y1) => { const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.16, '#fff'); g.addColorStop(.84, '#fff'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); };
+  band(0, 0, 0, H); band(0, 0, W, 0);
+  fades.set(key, m); return m;
+}
 function bodyMask(W, H, cxF){
   const key = W + 'x' + H + ':' + cxF; if (masks.has(key)) return masks.get(key);
   const m = document.createElement('canvas'), d = DPR(); m.width = Math.round(W*d); m.height = Math.round(H*d);
@@ -161,7 +171,7 @@ function build(){
   if ($('pt')) return;
   const el = document.createElement('section');
   el.className = 'pt'; el.id = 'pt'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ptTitle');
-  el.innerHTML = `<div class="pt-in">
+  el.innerHTML = `<canvas class="pt-flow" id="ptFlow" aria-hidden="true"></canvas><div class="pt-in">
     <div class="ex-top"><button class="icon-btn" id="ptClose" aria-label="Закрыть">${ICO.x}</button><div class="segs" id="ptSegs"></div><span></span></div>
     <span class="pill" id="ptPill" style="align-self:flex-start"></span>
     <h2 class="ex-title" id="ptTitle"></h2><p class="pt-hint" id="ptHint"></p>
@@ -441,6 +451,12 @@ function drawStage(dt){
     ctx.beginPath(); ctx.moveTo(x, yg); ctx.lineTo(x, ya); ctx.stroke(); ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = PINK; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
   }
+  /* a voice in the head does not stop at the crown: a stream of dots leaves the top of the head and rises
+     up the whole screen, behind the title, on its own layer under the text */
+  const head = id === 'sss' ? 0 : sm((fl.pShown - .74)/.2)*fl.formA;
+  const fc = $('ptFlow'), sr = $('ptStage').getBoundingClientRect(), fx = fit(fc, innerWidth, innerHeight); fc.style.height = '';
+  fx.clearRect(0, 0, innerWidth, innerHeight);
+  streamStep(fx, dt, head, sr.left + SW*cxF, sr.top + BY(.075)*SH, SH, voiceCol || C.ink);
   if (fl.formA > .01){
     /* the sound spreads past the body, but the body is where it is strongest: the form is drawn whole,
        full strength inside the silhouette and about a third outside it, so the voice leaves the body
@@ -451,13 +467,31 @@ function drawStage(dt){
     const y = SH*(id === 'sss' ? BY(.55) : BY(yOfP(fl.pShown))), M = bodyMask(SW, SH, cxF);
     [[off2, 'destination-in'], [off3, 'destination-out']].forEach(([cv, op]) => {
       const lc = fit(cv, SW, SH); lc.clearRect(0, 0, SW, SH); lc.drawImage(off, SW*cxF - F/2, y - F/2, F, F);
-      lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = op; lc.drawImage(M, 0, 0); lc.globalCompositeOperation = 'source-over';
+      lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = op; lc.drawImage(M, 0, 0);
+      if (op === 'destination-out'){ lc.globalCompositeOperation = 'destination-in'; lc.drawImage(edgeFade(SW, SH), 0, 0); }
+      lc.globalCompositeOperation = 'source-over';
     });
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = fl.formA*.36; ctx.drawImage(off3, 0, 0);
     ctx.globalAlpha = fl.formA; ctx.drawImage(off2, 0, 0);
     ctx.globalAlpha = 1; ctx.setTransform(d, 0, 0, d, 0, 0);
   }
+}
+const stream = [];
+function streamStep(ctx, dt, k, cx, top, H, col){
+  if (reduced()){ stream.length = 0; return; }
+  const born = k*dt*320;
+  for (let n = Math.floor(born) + (Math.random() < born % 1 ? 1 : 0); n >= 1; n--)
+    stream.push({ x: cx + FL.gs(Math.random)*H*.028, y: top + Math.random()*H*.03, vx: FL.gs(Math.random)*H*.01, vy: -(.2 + Math.random()*.32)*H, z: .7 + Math.random()*1.4, a: .4 + Math.random()*.6, ph: Math.random()*6.28 });
+  ctx.fillStyle = col;
+  for (let i = stream.length - 1; i >= 0; i--){
+    const p = stream[i];
+    p.ph += dt*2.4; p.x += (p.vx + Math.sin(p.ph)*H*.02)*dt; p.y += p.vy*dt; p.vx *= 1 + dt*.5;
+    if (p.y < -4){ stream.splice(i, 1); continue; }
+    ctx.globalAlpha = p.a*clamp(p.y/(top*.5), 0, 1)*clamp((top + H*.02 - p.y)/(H*.05), 0, 1)*.85;
+    ctx.fillRect(p.x - p.z/2, p.y - p.z/2, p.z, p.z);
+  }
+  ctx.globalAlpha = 1;
 }
 function setLabels(v){
   data.profile.zoneLabels = v; saveProfile();
