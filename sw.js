@@ -1,5 +1,5 @@
 // woisee offline cache. Bump VERSION after changing any file so phones pick up the update.
-const VERSION = 'woisee-v24b';
+const VERSION = 'woisee-v25';
 const FILES = [
   './',
   './index.html',
@@ -11,7 +11,8 @@ const FILES = [
   './field.js',
   './voice3.js',
   './gifenc.js',
-  './supabase.js'
+  './supabase.js',
+  './tracker.js'
 ];
 
 self.addEventListener('install', e => {

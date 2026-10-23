@@ -275,7 +275,7 @@ p{margin:0}
 .cap .time span{font-size:12px;opacity:.65}
 .cap .time b.big{font-size:min(82px,calc((100vw - 223px) / 1.79));line-height:.73;letter-spacing:-.06em;position:relative;left:-10px;top:.7px}
 .cap .acts{display:flex;align-items:center;gap:8px}
-.go{width:68px;height:68px;border-radius:50%;background:var(--signal);color:var(--ink);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05}
+.go{width:68px;height:68px;border-radius:50%;background:var(--signal);color:var(--ink);font-weight:700;font-size:13px;letter-spacing:-.01em;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05}
 .go.alt{background:var(--paper-2)}
 .chip{border:1px solid rgba(255,254,252,.35);border-radius:99px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--paper-2)}
 .cap.fin{background:var(--lime);color:var(--ink)}
@@ -443,13 +443,125 @@ button.cal-d:active{transform:scale(.94)}
 .sheet{background:var(--paper-2)}
 .sheet .ghost,.sheet .hist li{border-color:var(--rule)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- звучание: отпечаток, вкладка, профиль (tracker.js) ---------- */
+.nav nav{max-width:440px;grid-template-columns:repeat(4,1fr)}
+.nav button{font-size:13px;padding-left:2px;padding-right:2px}
+.pt{position:fixed;inset:0;z-index:30;background:var(--paper);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;--cl:rgba(255,254,252,.16);--ca:var(--ink);--cbox:rgba(255,254,252,.08)}
+.pt-flow{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.pt-in{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 16px) max(18px,env(safe-area-inset-right,0px)) calc(130px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.pt-hint{color:var(--muted);font-size:15px;max-width:36ch;margin-top:-4px}
+.pt-hint:empty{display:none}
+.pt-stage{position:relative;flex:none;cursor:pointer}
+.pt-stage canvas{display:block;width:100%;height:100%}
+.pt-zones{position:absolute;inset:0;pointer-events:none}
+.pt-zb{position:absolute;left:0;transform:translateY(-50%);text-align:left;display:flex;flex-direction:column;gap:1px;padding:6px 10px 6px 0;border-radius:14px;max-width:40%;opacity:.55;transition:opacity .25s,background .25s,padding .25s}
+.pt-zb b{font-size:15px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.pt-zb span{font-size:11px;color:var(--muted);line-height:1.25}
+.pt-stage.pick .pt-zb{pointer-events:auto;opacity:.9}
+.pt-stage.compact .pt-zb span{display:none}
+.pt-zb.on{opacity:1}
+.pt-zb.on b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);margin-right:6px;vertical-align:.1em}
+.pt-zb.guess{opacity:1;background:var(--rasp);color:var(--ebony);padding-left:10px}
+.pt-zb.guess span{color:rgba(25,37,36,.7)}
+.pt-res{display:flex;flex-direction:column;gap:18px}
+.pt-res:empty{display:none}
+.pt-table li{align-items:baseline}
+.pt-was{color:var(--muted)}
+.pt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:.06em}
+.pt-bar{z-index:31}
+.pt-bar .cap .acts .chip{white-space:nowrap}
+.pt-win{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--ink);padding-top:14px}
+.pt-win b{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.pt-win span{font-size:15px}
+.pt-win .blackbtn{margin-top:6px}
+.wt-cta{background:var(--lime);color:var(--ebony)}
+.pt-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pt-tiles .wide{grid-column:1/-1;min-height:0}
+.pt-tiles .pr-tile{min-height:132px}
+.pt-tiles .pr-tile>span:last-child{line-height:1.3}
+.pt-note{font-size:40px!important;font-weight:800!important;letter-spacing:-.04em!important;line-height:1!important;display:flex;align-items:center}
+.pt-note .pt-dot{width:14px;height:14px;margin-right:10px}
+.pt-zline{display:block;width:100%;height:26px;margin-top:auto}
+.pt-bar .go.line{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.pt-zbar{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;margin-top:auto;background:rgba(255,254,252,.06)}
+.pt-zbar i{display:block;height:100%}
+.pt-zl{display:flex;justify-content:space-between;gap:6px;font-size:12px!important;color:var(--muted)}
+
+.cap.fin .chip{color:var(--ebony);border-color:rgba(25,37,36,.3)}
+.tr-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.tr-day{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.tr-day.t{color:var(--ink);font-weight:700}
+.tr-dc{width:100%;max-width:46px;aspect-ratio:1;border-radius:50%;position:relative;display:grid;place-items:center;overflow:hidden}
+.tr-dc canvas{position:absolute;inset:0;width:100%;height:100%}
+.tr-dc i{width:62%;aspect-ratio:1;border-radius:50%;border:1px dashed #3A4744}
+.tr-dc.fut i{border-style:solid;border-color:rgba(255,254,252,.06)}
+.tr-dc.empty i{border:1.5px solid var(--ink);position:relative}
+.tr-dc.empty i::before,.tr-dc.empty i::after{content:"";position:absolute;left:50%;top:50%;width:40%;height:1.5px;background:var(--ink);transform:translate(-50%,-50%)}
+.tr-dc.empty i::after{transform:translate(-50%,-50%) rotate(90deg)}
+.tr-q{margin-top:6px}
+/* the ring takes what is left of the screen after the header, week, title, button and the tab bar */
+.tr-ring{position:relative;width:min(100%,calc(100svh - 470px),460px);min-width:200px;touch-action:none;aspect-ratio:1;margin:-6px auto -10px}
+.tr-more{align-self:center;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:1px solid var(--rule);border-radius:99px;font-size:14px;font-weight:500;color:var(--ink)}
+.tr-more:active{background:var(--paper-2)}
+.tr-ring canvas{position:absolute;inset:0;width:100%;height:100%}
+.tr-go{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;width:48px;height:48px;border-radius:50%;border:1px solid var(--ink);color:var(--ink);background:rgba(18,26,25,.55);display:grid;place-items:center}
+.tr-go svg{width:22px;height:22px}
+.tr-go:active{background:var(--paper-2)}
+.tr-note{text-align:center;max-width:32ch;align-self:center}
+.tr-list .tr-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:baseline;width:100%;text-align:left;font-size:15px}
+.tr-list li{display:block;padding:0}
+.tr-list .tr-row{padding:12px 0}
+.tr-row small{display:block;font-size:12px;color:var(--muted)}
+.tr-n{color:var(--muted);white-space:nowrap}
+.pr-big span{max-width:12ch}
+.pf{gap:18px}
+.pf-ctl{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--ink);padding-top:14px}
+.pf-seg{display:flex;border:1px solid var(--rule);border-radius:99px;padding:4px}
+.pf-seg button{width:44px;height:38px;border-radius:99px;font-weight:600;font-size:15px;color:var(--muted);display:grid;place-items:center}
+.pf-seg button svg{width:22px;height:22px}
+.pf-seg button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.pf-nav{display:flex;align-items:center;gap:4px;border:1px solid var(--rule);border-radius:99px;padding:4px;flex:1;max-width:250px}
+.pf-nav button{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none}
+.pf-nav button svg{width:20px;height:20px}
+.pf-nav button:disabled{opacity:.25}
+.pf-nav span{flex:1;text-align:center;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.pf-nav.static{justify-content:center;height:48px}
+#pfBody{display:flex;flex-direction:column;gap:18px}
+#pfBody>.pf-voice{margin-top:14px}
+.pf-voice{border:1px solid var(--ink);border-radius:32px;padding:20px 20px 12px;display:flex;flex-direction:column;gap:6px}
+.pf-vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pf-vtxt{display:flex;flex-direction:column;gap:4px}
+.pf-vtxt>span:not(.note){font-size:14px}
+.pf-note{font-size:64px;font-weight:800;letter-spacing:-.05em;line-height:.95}
+.pf-note.none{font-size:30px;letter-spacing:-.03em;line-height:1}
+.pf-voice canvas{display:block;width:100%;margin-top:4px}
+.mini{display:flex;gap:4px;flex:none}
+.mini button{font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px;color:var(--muted);border:1px solid var(--rule)}
+.mini button[aria-selected="true"]{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+.pf-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px 6px;justify-items:center}
+.pf-wh{font-size:12px;color:var(--muted);font-weight:600}
+.pf-cd{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%}
+.pf-dc{width:100%;max-width:46px;aspect-ratio:1;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center}
+.pf-dc canvas{position:absolute;inset:0;width:100%;height:100%}
+.pf-dc i{width:62%;aspect-ratio:1;border-radius:50%;border:1px dashed #3A4744}
+.pf-dc.fut i{border-style:solid;border-color:rgba(255,254,252,.06)}
+.pf-cd small{font-size:11px;color:var(--muted)}
+.pf-cd.t small{color:var(--ink);font-weight:700}
+.pf-map{display:block;width:100%}
+.pf-maphead{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:-12px}
+.pf-sday canvas{display:block;width:100%;max-width:340px;margin:0 auto}
+.pf-fig{position:relative}
+.pf-fig canvas{display:block;width:100%}
+.pf-tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font-size:12px;line-height:1.3;padding:7px 9px;border-radius:10px;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .12s;z-index:5}
 </style>
 </head>
 <body>
 <main class="app" id="view"></main>
 
 <div class="nav"><nav>
-  <button data-act="tab" data-v="path" id="t-path">Сегодня</button>
+  <button data-act="tab" data-v="track" id="t-track">Звучание</button>
+  <button data-act="tab" data-v="path" id="t-path">Практика</button>
   <button data-act="tab" data-v="measure" id="t-measure">Голос</button>
   <button data-act="tab" data-v="library" id="t-library">Упражнения</button>
 </nav></div>
@@ -457,7 +569,7 @@ button.cal-d:active{transform:scale(.94)}
 <section class="ex" id="ex" hidden></section>
 <div class="tbar" id="tbar" hidden></div>
 <div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
-<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script><script src="supabase.js"></script>
+<script src="voiceform.js"></script><script src="field.js"></script><script src="voice3.js"></script><script src="gifenc.js"></script><script src="supabase.js"></script><script src="tracker.js"></script>
 <script>
 /* ---------- blocks and exercises (from the guide) ---------- */
 const BLOCKS=[
@@ -890,9 +1002,9 @@ function openDay(k){
   const feel={easy:'легко',ok:'нормально',tired:'голос устал'}[d.feel];
   const exs=d.exhale&&Object.keys(d.exhale).length?Object.keys(SOUNDS).filter(s=>d.exhale[s]).map(s=>`[${SOUNDS[s]}] ${Math.round(d.exhale[s])} с`).join(' · '):'';
   openSheet(`<div class="sec-h"><h3>${esc(weekday(parseKey(k)))}, ${esc(dateLong(parseKey(k)))}</h3><button class="icon-btn plain" data-act="closesheet" aria-label="Закрыть">${ICON_X}</button></div>
-    ${HAS_FORM?`<div class="vf-stage free day-stage"><canvas id="dayCv" aria-label="Все упражнения дня, наложенные друг на друга"></canvas>${list.some(x=>x.done)?`<button class="gif-ico wait" id="dayGifBtn" data-act="gifday" data-v="${k}" aria-label="Сохранить гифку дня">${ICON_SHARE}</button>`:''}</div>`:''}
+    ${HAS_FORM?`<div class="vf-stage free day-stage"><canvas id="dayCv" aria-label="Все упражнения дня, наложенные друг на друга"></canvas>${list.some(x=>x.done)||(window.WT&&WT.hasNote(k))?`<button class="gif-ico wait" id="dayGifBtn" data-act="gifday" data-v="${k}" aria-label="Сохранить гифку дня">${ICON_SHARE}</button>`:''}</div>`:''}
     <ul class="hist">
-      <li><span>Время</span><span class="m num">${Math.round((d.seconds||0)/60)} мин</span></li>
+      ${window.WT?WT.dayRows(k):''}<li><span>Практика</span><span class="m num">${Math.round((d.seconds||0)/60)} мин</span></li>
       <li><span>Упражнения</span><span class="m num">${doneN}${d.plan?' из '+d.plan.length:''}${voiced?' · с голосом '+voiced:''}</span></li>
       ${f?`<li><span>Акцент</span><span class="m">${esc(f.name)}</span></li>`:''}
       ${exs?`<li><span>Долгий выдох</span><span class="m num">${exs}</span></li>`:''}
@@ -1266,6 +1378,7 @@ async function dayClips(k){
 /* frames laid over each other; with many layers each one is fainter, so repeated shapes glow and the rest is haze */
 function paintFrames(ctx,frames,mul,W,H,live){
   W=W||GIF_W;H=H||GIF_H;
+  if(!live&&window.WT){const G=WT.gifLayout(W,H);paintAt(ctx,frames,mul,G.cx,G.cy,G.R*1.18,1);return;}
   paintAt(ctx,frames,mul,W/2,H*(live?.5:.46),W*(live?.56:.5),1);
 }
 function paintAt(ctx,frames,mul,cx,cy,R,minZ,mono){
@@ -1308,6 +1421,7 @@ function paintSynth(ctx,k,cx,cy,R,rot,mono){
 }
 function paintPlateFrame(ctx,k,ph,W,H,live){
   W=W||GIF_W;H=H||GIF_H;
+  if(!live&&window.WT){const G=WT.gifLayout(W,H);paintSynth(ctx,k,G.cx,G.cy,G.R,.07*Math.sin(2*Math.PI*ph));return;}
   paintSynth(ctx,k,W/2,H*(live?.5:.46),W*(live?.4:.38),.07*Math.sin(2*Math.PI*ph));
 }
 /* still pictures of days (the week in the profile): the first frame of the clips, or the rebuilt day */
@@ -1315,11 +1429,13 @@ async function paintDayPics(root){
   for(const cv of (root||document).querySelectorAll('canvas[data-daypic]')){
     const k=cv.dataset.daypic,s=cv.clientWidth;if(!s)continue;
     const clips=await dayClips(k),ctx=fitCv(cv,s);ctx.clearRect(0,0,s,s);
-    if(clips.length)paintAt(ctx,dayLayers(clips,0),layerMul(clips.length),s/2,s/2,s*.42,.6);
+    if(window.WT&&WT.dayNotes(k).length)WT.paintDayCell(cv,k);
+    else if(clips.length)paintAt(ctx,dayLayers(clips,0),layerMul(clips.length),s/2,s/2,s*.42,.6);
     else paintSynth(ctx,k,s/2,s/2,s*.42,0);
   }
 }
 function gifText(ctx,day){
+  if(window.WT){WT.gifText(ctx,day,GIF_W,GIF_H);return;}
   ctx.globalAlpha=1;ctx.fillStyle=FC.dot;ctx.textBaseline='alphabetic';
   ctx.textAlign='left';ctx.font='800 22px "Inter Tight", sans-serif';ctx.fillText('woisee',24,GIF_H-34);
   ctx.textAlign='right';ctx.font='400 15px "Inter Tight", sans-serif';ctx.fillStyle='#9AA7A3';ctx.fillText(dateLong(parseKey(day)),GIF_W-24,GIF_H-36);
@@ -1331,7 +1447,7 @@ async function encodeGif(n,paint,day){
   const ctx=cv.getContext('2d',{willReadFrequently:true});
   try{await document.fonts.load('800 22px "Inter Tight"');}catch(e){}
   const frame=i=>{ctx.globalAlpha=1;ctx.fillStyle=FC.ground;ctx.fillRect(0,0,GIF_W,GIF_H);paint(ctx,i);gifText(ctx,day);return ctx.getImageData(0,0,GIF_W,GIF_H).data;};
-  const picks=[0,Math.floor(n/3),Math.floor(2*n/3),n-1],sample=new Uint8ClampedArray(GIF_W*GIF_H*4*picks.length);
+  const picks=[0,1,2,3,4,5,6,7].map(q=>Math.floor(q*(n-1)/7)),sample=new Uint8ClampedArray(GIF_W*GIF_H*4*picks.length);
   picks.forEach((i,q)=>sample.set(frame(i),q*GIF_W*GIF_H*4));
   const pal=quantize(sample,256,{format:'rgb444'}),gif=GIFEncoder(),delay=Math.round(1000/GIF_FPS);
   for(let i=0;i<n;i++){
@@ -1345,7 +1461,8 @@ async function dayGif(k){
   const key='d:'+k;
   if(mom.cache.has(key))return mom.cache.get(key);
   const clips=await dayClips(k);let blob;
-  if(clips.length){const L=Math.max(...clips.map(c=>c.frames.length)),N=2*L-2,mul=layerMul(clips.length);blob=await encodeGif(N,(ctx,i)=>paintFrames(ctx,dayLayers(clips,i),mul),k);}
+  if(window.WT&&WT.hasNote(k)){const G=WT.gifLayout(GIF_W,GIF_H);blob=await encodeGif(WT.LOOP,(ctx,i)=>WT.paintDay(ctx,k,clips,i,G.cx,G.cy,G.R),k);}
+  else if(clips.length){const L=Math.max(...clips.map(c=>c.frames.length)),N=2*L-2,mul=layerMul(clips.length);blob=await encodeGif(N,(ctx,i)=>paintFrames(ctx,dayLayers(clips,i),mul),k);}
   else{const N=48;blob=await encodeGif(N,(ctx,i)=>paintPlateFrame(ctx,k,i/N),k);}
   mom.cache.set(key,blob);return blob;
 }
@@ -1361,7 +1478,8 @@ async function dayStage(k){
     const {ctx,w,h}=fitLive(c),i=Math.floor((now-t0)/1000*GIF_FPS),sc=w/GIF_W;
     ctx.save();ctx.scale(sc,sc);
     const H=h/sc;
-    if(clips.length)paintFrames(ctx,dayLayers(clips,i),mul,GIF_W,H,true);else paintPlateFrame(ctx,k,(i%96)/96,GIF_W,H,true);
+    if(window.WT&&WT.paintDay(ctx,k,clips,(now-t0)/1000*GIF_FPS,GIF_W/2,H*.5,GIF_W*.42)){}
+    else if(clips.length)paintFrames(ctx,dayLayers(clips,i),mul,GIF_W,H,true);else paintPlateFrame(ctx,k,(i%96)/96,GIF_W,H,true);
     ctx.restore();
     mom.dayRaf=REDUCED()?0:requestAnimationFrame(frame);
   };
@@ -1417,10 +1535,12 @@ function miniFrame(now){
   if(!mini.list.length){mini.raf=0;return;}
   const i=Math.floor(now/1000*GIF_FPS);
   for(const e of mini.list){
-    if(i===e.last)continue;e.last=i;
+    const live=window.WT&&WT.hasNote(e.k);
+    if(!live&&i===e.last)continue;e.last=i;
     const s=e.cv.clientWidth;if(!s)continue;
     const ctx=fitCv(e.cv,s);ctx.clearRect(0,0,s,s);
-    if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*e.r,.8,e.mono);
+    if(live&&WT.paintDay(ctx,e.k,e.clips,now/1000*GIF_FPS,s/2,s/2,s*e.r,e.mono)){}
+    else if(e.clips.length)paintAt(ctx,dayLayers(e.clips,i),e.mul,s/2,s/2,s*e.r,.8,e.mono);
     else paintSynth(ctx,e.k,s/2,s/2,s*e.r*.95,.07*Math.sin(2*Math.PI*(i%96)/96),e.mono);
   }
   mini.raf=REDUCED()?0:requestAnimationFrame(miniFrame);
@@ -1566,7 +1686,7 @@ function profileStart(){
 
 /* ---------- numbers ---------- */
 function profStats(){
-  const all=Object.keys(data.days).sort(),days=all.filter(ok),now=dkey();
+  const all=Object.keys(data.days).sort(),days=all.filter(k=>window.WT?WT.voiced(k):ok(k)),now=dkey();
   const mins=Math.round(days.reduce((a,k)=>a+(data.days[k].seconds||0),0)/60);
   const duo=days.filter(k=>(data.days[k].log||[]).some(L=>(L.voices||1)>1)).length;
   const midis=[];all.forEach(k=>(data.days[k].log||[]).forEach(L=>(L.notes||[]).forEach(n=>{if(n.midi!=null&&(n.sec||0)>=.5)midis.push(n.midi);})));
@@ -1591,27 +1711,12 @@ function viewProfile(){
     <div class="pr-greet" id="prGreet"><h1 id="prH"><span>${PR_GREET}</span><span>${esc(profName())}</span></h1>
       <button class="pr-notebtn" id="prNoteBtn" data-act="prnote" aria-label="Моя нота${ref!=null?': '+noteName(ref):''}"></button>
       <canvas id="prCv" aria-hidden="true"></canvas></div>
-    <p class="note">${since}</p>
+    
   </section>
   <section class="pr-streak">
-    <div class="pr-big"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')}<br>подряд</span></div>
-    <div class="pr-week">${week.map(w=>w.has?`<button class="pr-day" data-act="day" data-v="${w.k}" aria-label="${esc(dateLong(parseKey(w.k)))}"><canvas data-daypic="${w.k}"></canvas><span class="${w.t?'t':''}">${w.w}</span></button>`:`<span class="pr-day off"><i></i><span class="${w.t?'t':''}">${w.w}</span></span>`).join('')}</div>
+    <div class="pr-big"><b class="num">${st}</b><span>${plural(st,'день','дня','дней')} с голосом<br>подряд</span></div>
   </section>
-  <section class="pr-note" id="prNoteCard">
-    <div><span class="note">Комфортная нота</span>
-      ${ref!=null?`<b>${noteName(ref)}</b><span>${OCT_NAME[octIdx(ref)]} · ${hzOf(ref)} Гц</span><button class="lnk pr-again" data-act="resetref">Найти заново</button>`:`<b class="pr-none">ещё не найдена</b><span class="note">Найдётся сама в первом голосовом упражнении.</span>`}</div>
-    <div class="pr-form"><canvas id="prNoteCv" aria-label="Форма комфортной ноты из точек"></canvas></div>
-  </section>
-  <section class="pr-tiles">
-    <div class="pr-tile b-body"><span>Диапазон</span>${range?`<b class="num">${range.v}<small>октавы</small></b><span>${range.t}</span>`:`<b>—</b><span>появится после голосовых упражнений</span>`}</div>
-    <div class="pr-tile b-breath"><span>Рекорд выдоха</span>${S.best?`<b class="num">${S.best.v}<small>с</small></b><span>на звук «${SOUNDS[S.best.s]}»</span>`:`<b>—</b><span>во вкладке «Голос»</span>`}</div>
-    <div class="pr-tile dark"><span>Минут всего</span><b class="num">${S.mins}</b><span>${S.avg} мин в среднем</span></div>
-    <div class="pr-tile dark"><span>Занятий</span><b class="num">${S.days.length}</b><span>${S.duo?'из них '+S.duo+' вдвоём':'пока без совместных'}</span></div>
-  </section>
-  <section class="pr-sec"><div class="pr-h"><h2>Карта голоса</h2><span class="note">4 недели</span></div>
-    <canvas class="vmap pr-map" data-vmap="1" aria-label="Карта голоса: 12 нот по кругу, октава — расстояние от центра"></canvas>
-    <p class="note">${esc(mapSummary())}</p></section>
-  ${hist?`<section class="pr-sec"><div class="pr-h"><h2>История</h2></div><ul class="pr-hist">${hist}</ul></section>`:''}`;
+  ${window.WT&&HAS_FORM?WT.profileHTML():`<section class="pr-sec"><div class="pr-h"><h2>История</h2></div><ul class="pr-hist">${hist}</ul></section>`}`;
 }
 document.addEventListener('change',ev=>{if(ev.target&&ev.target.id==='prNameIn'){data.profile.name=ev.target.value.trim().slice(0,40);saveProfile();}});
 window.addEventListener('resize',()=>{if(state.tab==='profile')profLayout();});
@@ -1772,7 +1877,8 @@ async function initCloud(){
 
 /* ---------- day plan ---------- */
 const ok=k=>data.days[k]&&data.days[k].seconds>=60;
-function streak(){let d=new Date();if(!ok(dkey(d)))d=addDays(d,-1);let n=0;while(ok(dkey(d))){n++;d=addDays(d,-1);}return n;}
+/* one streak: a day counts with a voice print or with a minute of practice (tracker.js) */
+function streak(){if(window.WT)return WT.streak();let d=new Date();if(!ok(dkey(d)))d=addDays(d,-1);let n=0;while(ok(dkey(d))){n++;d=addDays(d,-1);}return n;}
 function daysBefore(k){return Object.keys(data.days).filter(x=>x<k&&ok(x)).length;}
 function getDay(k){if(!data.days[k])data.days[k]={date:k,seconds:0,plan:null,done:[],dur:null,focus:null,feel:null,exhale:{}};const d=data.days[k];d.done=d.done||[];d.exhale=d.exhale||{};return d;}
 function focusFor(k){const d=data.days[k];if(d&&d.focus){const f=FOCI.find(x=>x.id===d.focus);if(f)return f;}return FOCI[daysBefore(k)%FOCI.length];}
@@ -1799,14 +1905,16 @@ function nextUndone(plan,done,after){
 }
 
 /* ---------- views ---------- */
-const state={tab:'path',choosing:false,sound:'s'};
+const state={tab:window.WT&&HAS_FORM?'track':'path',choosing:false,sound:'s'};
 function render(){
-  for(const t of ['path','measure','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
-  $('view').innerHTML=state.tab==='path'?viewPath():state.tab==='profile'?(HAS_FORM?viewProfile():viewSettings()):state.tab==='settings'?viewSettings():state.tab==='measure'?viewMeasure():viewLibrary();
+  for(const t of ['track','path','measure','library'])$('t-'+t).setAttribute('aria-current',state.tab===t?'page':'false');
+  $('view').innerHTML=state.tab==='track'&&window.WT?WT.viewTrack():state.tab==='path'?viewPath():state.tab==='profile'?(HAS_FORM?viewProfile():viewSettings()):state.tab==='settings'?viewSettings():state.tab==='measure'?viewMeasure():viewLibrary();
   paintPlates($('view'));
   if(HAS_FORM&&state.tab==='path'){tlStart();pathStart();}
   if(HAS_FORM&&state.tab==='measure')freeStart();
   if(HAS_FORM&&state.tab==='profile')profileStart();
+  if(window.WT&&state.tab==='track')WT.mountTrack();
+  if(window.WT&&state.tab==='profile')WT.mountProfile();
 }
 function topbar(){
   const st=streak();
@@ -1852,7 +1960,7 @@ function viewPath(){
     <div class="hero-grid"><div class="count"><b class="num">${n}</b><span>из ${plan.length}<br>${plural(plan.length,'упражнения','упражнений','упражнений')}</span></div>${HAS_FORM?`<span class="plate-hit" data-act="openday" data-v="${dkey()}" role="button" aria-label="Открыть день"><canvas class="plate-sm" data-liveday="${dkey()}" aria-hidden="true"></canvas></span>`:''}</div>
     ${HAS_FORM?'<div class="tlw"><canvas id="tlCv" aria-hidden="true"></canvas><span class="redpill" id="tlPill">сейчас</span></div>':`<div class="tl" aria-hidden="true">${tl}</div>`}
   </section>
-  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${feelBlock(d.feel)}${typeof acctNudge==='function'?acctNudge():''}</section>`:''}
+  <div class="wrapS" id="wrapS">${!cur?`<section class="donecard" id="doneCard"><h3>Занятие на сегодня выполнено</h3><p>${Math.round(d.seconds/60)} мин практики. Завтра будет новый акцент.</p>${window.WT&&HAS_FORM?WT.doneNudge(dkey()):''}${feelBlock(d.feel)}${typeof acctNudge==='function'?acctNudge():''}</section>`:''}
   <section class="stack">${stack}</section>${HAS_FORM?'<canvas id="pathCv" aria-hidden="true"></canvas>':''}</div>`;
 }
 const FEEL_NOTE={easy:'Отлично. Завтра можно взять 20 или 30 минут.',ok:'Хороший рабочий темп. Главное — регулярность.',tired:'Дайте голосу отдохнуть: меньше говорить громко, пить тёплую воду. Завтра хватит 15 минут, особенно гудения и соломинки.'};
@@ -1866,6 +1974,7 @@ function viewSettings(){
   <section class="pr-set">
     <label class="pr-line pr-name"><span>Как к вам обращаться</span><input id="prNameIn" type="text" maxlength="40" autocomplete="given-name" placeholder="Имя" value="${esc(data.profile.name||'')}"></label>
     <div class="pr-line"><span>Звуковой сигнал в конце таймера</span>${sw('sound',data.profile.sound!==false,'Звуковой сигнал')}</div>
+    ${window.WT?`<div class="pr-line"><span>Чакры вместо частей тела<small>Подписи зон в отпечатке голоса и в профиле.</small></span>${sw('zonelab',data.profile.zoneLabels==='chakra','Чакры вместо частей тела')}</div>`:''}
     ${HAS_FORM?`<div class="pr-line"><span>Микрофон в упражнениях<small>Голос собирает форму. Звук не записывается.</small></span>${sw('mic',data.profile.micOff!==true,'Микрофон в упражнениях')}</div>
     <div class="pr-line"><span>Радуга нот<small>Цвет точек — нота. Выключено — один цвет.</small></span>${sw('rain',data.profile.rain!==false,'Радуга нот')}</div>`:''}
   </section>
@@ -2076,7 +2185,8 @@ function showDayDone(){
     <h1 class="huge">Готово.</h1>
     <div class="mins"><b class="num">${mins}</b><span>${plural(mins,'минута','минуты','минут')}<br>голоса сегодня</span></div>
     ${st?`<p style="font-size:18px">${st} ${plural(st,'день','дня','дней')} подряд. Все четыре блока пройдены.</p>`:''}
-    ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">Картинка дня: все упражнения сегодня, наложенные друг на друга.</p><button class="blackbtn" data-act="gifday" data-v="${k}">Сохранить гифку дня ${ICON_ARROW}</button>`:''}
+    ${HAS_FORM?`<canvas class="win-plate" id="winPlate" aria-label="Картинка дня"></canvas><p class="note" style="color:var(--ink)">${window.WT&&WT.dayNotes(k).length?'Картинка дня: все упражнения, наложенные друг на друга, и нота дня, которая проступает из них.':'Картинка дня: все упражнения сегодня, наложенные друг на друга.'}</p><button class="blackbtn" data-act="gifday" data-v="${k}">Сохранить гифку дня ${ICON_ARROW}</button>`:''}
+    ${window.WT&&HAS_FORM?WT.winBlock(k):''}
     ${feelBlock(d.feel)}
     ${typeof acctNudge==='function'?acctNudge():''}
     <button class="blackbtn" data-act="close">На главную ${ICON_ARROW}</button></div>`;
@@ -2156,6 +2266,9 @@ document.addEventListener('click',ev=>{
     case 'start':openEx(v,'plan');go();break;
     case 'choose':state.choosing=true;render();window.scrollTo(0,0);break;
     case 'openday':openDay(v);break;
+    case 'print':if(window.WT)WT.open(null,()=>render());break;
+    case 'printafter':if(window.WT)WT.open('after',()=>{if(ex.open)showDayDone();else render();});break;
+    case 'topractice':state.tab='path';state.choosing=true;render();window.scrollTo(0,0);break;
     case 'cancelChoose':state.choosing=false;render();break;
     case 'ex':openEx(v,'plan');break;
     case 'single':openEx(v,'single');break;
@@ -2169,6 +2282,7 @@ document.addEventListener('click',ev=>{
     case 'finishNow':complete(false);break;
     case 'next':nextEx();break;
     case 'sound':data.profile.sound=data.profile.sound===false;saveProfile();audioInit();render();break;
+    case 'zonelab':data.profile.zl2=1;data.profile.zoneLabels=data.profile.zoneLabels==='chakra'?'body':'chakra';saveProfile();render();break;
     case 'psnd':state.sound=v;render();break;
     case 'snd':if(!ex.sw.running){ex.sw.sound=v;ex.sw.last=null;document.querySelectorAll('.snd').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));$('swRec').hidden=true;$('swBtn').innerHTML='Старт<br>выдоха';$('swHist').innerHTML=exhaleHist(v);paintPlates($('swHist'));tick();}break;
     case 'sw':swToggle();break;
@@ -2192,7 +2306,10 @@ document.addEventListener('click',ev=>{
   }
 });
 
-loadLocal();render();
+loadLocal();
+/* earlier builds saved the profile's Тело/Чакры switch as the default: back to body parts once, chakras only from the settings */
+if(!data.profile.zl2){delete data.profile.zoneLabels;data.profile.zl2=1;saveLocal(true);}
+render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
 if(typeof acctInit==='function')acctInit();
