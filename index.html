@@ -530,12 +530,13 @@ button.cal-d:active{transform:scale(.94)}
 #pfBody{display:flex;flex-direction:column;gap:18px}
 #pfBody>.pf-voice{margin-top:14px}
 .pf-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.pf-t{border-radius:22px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;background:var(--paper-2);color:var(--ink);min-width:0}
+.pf-t{border-radius:22px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:0;background:var(--paper-2);color:var(--ink);min-width:0}
 .pf-t.b-breath,.pf-t.b-body{background:var(--c);color:var(--ebony)}
 .pf-t .l{font-size:13px;line-height:1.2;opacity:.72}
-.pf-t .v{font-size:38px;font-weight:800;letter-spacing:-.045em;line-height:1;margin-top:2px;display:flex;align-items:baseline;gap:5px;white-space:nowrap}
+.pf-t .v{font-size:38px;font-weight:800;letter-spacing:-.045em;line-height:1;margin-top:22px;display:flex;align-items:baseline;gap:5px;white-space:nowrap}
 .pf-t .v small{font-size:19px;font-weight:800;letter-spacing:-.02em;opacity:.5}
-.pf-t .s{font-size:13px;line-height:1.3;opacity:.72}
+/* outer and inner: the label stands apart, the note under the value sticks to it */
+.pf-t .s{font-size:13px;line-height:1.3;opacity:.72;margin-top:6px}
 .pf-vmap,.pf-cast{display:block;width:100%}
 .pf-read .hist{margin:0}
 .pf-say{font-size:14px;line-height:1.45;color:var(--muted);margin-top:10px}
