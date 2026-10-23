@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#121A19">
+<title>woisee · трекер голоса</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --paper:#121A19; --paper-2:#1D2826; --soft:#2C3836; --ink:#F4F2EC; --muted:#9AA7A3; --rule:rgba(255,254,252,.14);
+  --signal:#F0472C; --lime:#ECF176; --rasp:#E780C0; --kale:#5EA879; --ebony:#192524; --vanilla:#FFFEFC;
+  --f:"Inter Tight","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--paper)}
+body{margin:0;color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45;letter-spacing:-.005em;-webkit-tap-highlight-color:transparent}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;touch-action:manipulation}
+button:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:10px}
+canvas{display:block;width:100%}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+.top{position:sticky;top:0;z-index:20;background:rgba(18,26,25,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--rule);padding-top:env(safe-area-inset-top,0px)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:52px}
+.wm{font-weight:800;letter-spacing:-.05em;font-size:22px;color:var(--ink);text-decoration:none}
+.tag{font-size:13px;color:var(--muted);font-weight:500}
+
+.hero{padding:28px 0 18px}
+.hero h1{font-size:clamp(36px,10.5vw,52px);line-height:.95}
+.hero p{margin-top:12px;color:var(--muted);max-width:44ch}
+
+.seg{display:flex;gap:4px;background:var(--paper-2);border-radius:999px;padding:4px}
+.seg button{flex:1;text-align:center;padding:10px 12px;border-radius:999px;font-weight:600;font-size:15px;color:var(--muted);transition:background .2s,color .2s}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--ebony)}
+.seg.small button{padding:7px 10px;font-size:13px}
+
+.stage{position:relative;margin-top:16px;border-radius:22px;overflow:hidden;background:#0E1514}
+.stage canvas{height:100%}
+.zones{position:absolute;inset:0;pointer-events:none}
+.zb{position:absolute;left:12px;transform:translateY(-50%);pointer-events:auto;text-align:left;display:flex;flex-direction:column;gap:1px;padding:6px 8px 6px 10px;border-radius:12px;border-left:2px solid transparent;max-width:38%;transition:background .25s,border-color .25s,opacity .25s;opacity:.62}
+.zb b{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.zb span{font-size:11px;color:var(--muted);line-height:1.25}
+.zb.on{opacity:1;border-left-color:var(--zc,var(--ink))}
+.zb.guess{opacity:1;background:rgba(255,254,252,.07)}
+.zb.guess::after{content:"твоя догадка";font-size:10px;font-weight:600;color:var(--lime);margin-top:2px}
+.zb:disabled{cursor:default}
+.readout{position:absolute;right:14px;top:12px;text-align:right;pointer-events:none}
+.readout b{display:block;font-size:20px;font-weight:800;letter-spacing:-.03em;min-height:1.2em}
+.readout span{font-size:12px;color:var(--muted)}
+.labtog{position:absolute;right:12px;bottom:12px;width:150px}
+
+.panel{margin-top:14px;background:var(--paper-2);border-radius:22px;padding:20px 18px 18px;display:flex;flex-direction:column;gap:12px}
+.panel .kick{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.panel h2{font-size:26px;line-height:1.02}
+.panel p{color:var(--muted)}
+.bar{height:6px;border-radius:6px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--ink);border-radius:6px;transition:width .15s linear}
+.live{font-size:14px;color:var(--ink);min-height:1.4em}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.btn{padding:13px 18px;border-radius:999px;font-weight:700;font-size:15px;background:var(--ink);color:var(--ebony)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
+.btn:disabled{opacity:.35;cursor:default}
+.small{font-size:12px;color:var(--muted)}
+
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.res .t{background:var(--paper);border-radius:16px;padding:12px 12px 10px}
+.res .t .l{font-size:12px;color:var(--muted);font-weight:500}
+.res .t .v{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:4px}
+.res .t .s{font-size:12px;color:var(--muted);margin-top:2px}
+.res .wide{grid-column:1/-1}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:.08em;margin-right:6px}
+.zbar{display:flex;gap:2px;height:10px;margin-top:8px;border-radius:5px;overflow:hidden}
+.zbar i{display:block;height:100%;background:var(--ink)}
+.zleg{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;gap:4px}
+.verdict{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.verdict em{font-style:normal;color:var(--lime)}
+
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.tile{background:var(--paper-2);border-radius:18px;padding:14px}
+.tile .l{font-size:12px;color:var(--muted);font-weight:500}
+.tile .v{font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:8px}
+.tile .s{font-size:12px;color:var(--muted);margin-top:6px}
+.card{margin:8px 0 0;background:var(--paper-2);border-radius:22px;padding:16px;position:relative}
+.card h2{font-size:20px;line-height:1.1}
+.card .sub{font-size:13px;color:var(--muted);margin-top:4px}
+.card canvas{margin-top:12px;border-radius:14px}
+.card .seg{margin-top:12px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--ebony);font-size:12px;line-height:1.3;padding:7px 9px;border-radius:10px;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .12s;z-index:5}
+.tip b{font-weight:700}
+.empty{padding:24px 6px;color:var(--muted);text-align:center;font-size:14px}
+
+.how{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
+.how h2{font-size:20px}
+.how p,.how li{font-size:14px;color:var(--muted)}
+.how ul{padding-left:18px;margin:10px 0 0;display:flex;flex-direction:column;gap:6px}
+footer{padding:26px 0 calc(32px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="wm" href="../index.html">woisee</a><span class="tag">трекер голоса · прототип</span></div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>Ты знаешь, как ты звучишь?</h1>
+    <p>Полминуты в день: где в теле живёт голос, на какой ноте и насколько ровно. День за днём из этого складывается слепок голоса.</p>
+  </section>
+
+  <div class="seg" role="tablist">
+    <button role="tab" data-tab="check" aria-selected="true">Замер дня</button>
+    <button role="tab" data-tab="month" aria-selected="false">Месяц</button>
+  </div>
+
+  <!-- ===== замер дня ===== -->
+  <section id="check">
+    <div class="stage" id="stage">
+      <canvas id="bodyCv" aria-label="Силуэт из точек: зоны тела, где ощущается голос"></canvas>
+      <div class="zones" id="zones"></div>
+      <div class="readout" aria-live="polite"><b id="roNote"></b><span id="roSub"></span></div>
+      <div class="seg small labtog" role="tablist" aria-label="Подписи зон">
+        <button role="tab" data-lab="body" aria-selected="true">Тело</button>
+        <button role="tab" data-lab="chakra" aria-selected="false">Чакры</button>
+      </div>
+    </div>
+    <div class="panel" id="panel"></div>
+  </section>
+
+  <!-- ===== месяц ===== -->
+  <section id="month" hidden>
+    <div class="seg small" role="tablist" aria-label="Данные" style="margin-top:16px">
+      <button role="tab" data-src="sim" aria-selected="true">Тестовый месяц</button>
+      <button role="tab" data-src="mine" aria-selected="false">Мои замеры</button>
+    </div>
+    <div id="monthBody"></div>
+  </section>
+
+  <section class="how">
+    <h2>Как это считается</h2>
+    <ul>
+      <li><b>Зона</b> — оценка по высоте и яркости тембра. Низкие ноты ощущаются в груди, средние у гортани и в «маске» лица, высокие в голове. Границы зон — примерные места регистровых переходов, одни для всех голосов.</li>
+      <li><b>Цвет</b> — нота с хроматического круга: «до» жёлтое, «соль♯» красное. Цвет говорит, какую ноту ты держишь, а зона — где она в теле.</li>
+      <li><b>Чакры</b> — только другие подписи к тем же пяти зонам. Считается то же самое.</li>
+      <li>Звук не записывается и никуда не уходит. В браузере сохраняются только цифры замера.</li>
+      <li>Это не диагностика. Если голос сел, хрипит или болит дольше двух недель, нужен фониатр.</li>
+    </ul>
+  </section>
+  <footer>woisee · эксперимент · отдельная папка tracker/, приложение не изменено</footer>
+</main>
+
+<script src="../field.js"></script>
+<script src="../voiceform.js"></script>
+<script src="../voice3.js"></script>
+<script>
+(function(){
+'use strict';
+const V3 = window.Voice3, FL = window.Field;
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const sm = t => { t = clamp(t, 0, 1); return t*t*(3 - 2*t); };
+const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const C = { ink:'#F4F2EC', muted:'#9AA7A3', ground:'#0E1514', card:'#1D2826', rule:'rgba(255,254,252,.10)', lime:'#ECF176' };
+function fit(cv, w, h){ const d = DPR(); const W = Math.max(1, Math.round(w*d)), H = Math.max(1, Math.round(h*d)); if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } cv.style.height = h + 'px'; const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); return ctx; }
+
+/* ---------- notes ---------- */
+const OCTN = { 1:'субконтроктавы', 2:'контроктавы', 3:'большой', 4:'малой', 5:'первой', 6:'второй', 7:'третьей' };
+const pcOf = m => ((Math.round(m) % 12) + 12) % 12;
+const noteName = m => V3.NAMES[pcOf(m)] + ' ' + (OCTN[Math.floor(Math.round(m)/12)] || '');
+const noteShort = m => V3.NAMES[pcOf(m)];
+const plural = (n, a, b, c) => { const k = Math.abs(n) % 100, l = k % 10; return k > 10 && k < 20 ? c : l === 1 ? a : l > 1 && l < 5 ? b : c; };
+const hz = m => 440*Math.pow(2, (m - 69)/12);
+const noteCol = m => V3.HUE[pcOf(m)];
+
+/* ---------- zones: pitch (+ brightness) → place in the body ----------
+   boundaries in MIDI: E2 · E3 · D4 · G4 · D5 · D6 (male speech lands in 0, female speech in 1) — rough register transitions, the same for every voice */
+const ZB = [40, 52, 62, 67, 74, 86];
+const LABELS = {
+  body:   [['Низ груди','рёбра, солнечное сплетение'], ['Грудь','грудина, ключицы'], ['Шея','гортань, переход'], ['Маска','скулы, нос, губы'], ['Голова','лоб, темя']],
+  chakra: [['Манипура','солнечное сплетение'], ['Анахата','сердце'], ['Вишудха','горло'], ['Аджна','третий глаз'], ['Сахасрара','макушка']]
+};
+let labSet = 'body';
+const zName = i => LABELS[labSet][i][0];
+/* vertical bands on the silhouette, as fractions of stage height (zone 0 at the bottom) */
+const BAND = [[.64, .90], [.415, .64], [.28, .415], [.165, .28], [.05, .165]];
+function pOf(midi, cent){
+  let p;
+  if (midi <= ZB[0]) p = 0; else if (midi >= ZB[5]) p = 1;
+  else { let i = 0; while (midi > ZB[i + 1]) i++; p = (i + (midi - ZB[i])/(ZB[i + 1] - ZB[i]))/5; }
+  if (cent != null) p += 0.04*clamp(cent, 0, 1);   // a brighter, more forward tone sits a little higher; most vowels read ~0 here
+  return clamp(p, 0, 0.999);
+}
+const zoneOf = p => Math.min(4, Math.max(0, Math.floor(p*5)));
+function yOfP(p){ const i = zoneOf(p), f = p*5 - i, b = BAND[i]; return b[1] - f*(b[1] - b[0]); }
+function zoneOfY(y){ for (let i = 0; i < 5; i++) if (y >= BAND[i][0] && y <= BAND[i][1]) return i; return y > BAND[0][1] ? 0 : 4; }
+
+/* ---------- silhouette made of grain ---------- */
+function shape(x, y){
+  const hx = x/.088, hy = (y - .168)/.104; if (hx*hx + hy*hy < 1) return 1;
+  if (y > .25 && y < .37 && Math.abs(x) < .046) return 1;
+  if (y >= .335 && y < .98){ const hw = .046 + (.215 - .046)*sm((y - .335)/.1); if (Math.abs(x) < hw) return y > .88 ? 1 - (y - .88)/.1 : 1; }
+  return 0;
+}
+function makeBody(n, seed){
+  const r = FL.rng(seed), X = [], Y = [], S = [], A = [], Zn = [];
+  while (X.length < n){ const x = (r() - .5)*.46, y = .05 + r()*.93; if (r() < shape(x, y)){ X.push(x); Y.push(y); S.push(.6 + r()*r()*1.3); A.push(r()); Zn.push(zoneOfY(y)); } }
+  const byZ = [[], [], [], [], []]; Zn.forEach((z, i) => byZ[z].push(i));
+  return { X, Y, S, A, byZ, n };
+}
+/* hl: highlight 0..1 per zone; tint: colour per zone or null */
+function drawBody(ctx, B, W, H, cxF, hl, tint, t){
+  const cx = W*cxF, sh = reduced() ? 0 : 1;
+  for (let z = 0; z < 5; z++){
+    const h = hl[z] || 0; ctx.fillStyle = h > .04 && tint && tint[z] ? tint[z] : C.ink;
+    const list = B.byZ[z];
+    for (let k = 0; k < list.length; k++){
+      const i = list[k], a = B.A[i];
+      ctx.globalAlpha = (.16 + .14*a) + h*(.3 + .45*a);
+      const x = cx + (B.X[i] + sh*.0025*Math.sin(t*.9 + a*40))*H, y = (B.Y[i] + sh*.0018*Math.cos(t*.7 + a*31))*H, s = B.S[i]*(1 + .35*h);
+      ctx.fillRect(x - s/2, y - s/2, s, s);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- storage ---------- */
+const LS = 'woisee-tracker-v1';
+function loadMine(){ try { const v = JSON.parse(localStorage.getItem(LS) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+function saveDay(d){ try { const all = loadMine().filter(x => x.date !== d.date); all.push(d); all.sort((a, b) => a.date < b.date ? -1 : 1); localStorage.setItem(LS, JSON.stringify(all.slice(-120))); return true; } catch (e) { return false; } }
+const dkey = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+const MON = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const dLabel = k => { const p = k.split('-'); return (+p[2]) + ' ' + MON[+p[1] - 1]; };
+
+/* =================================================================
+   ЗАМЕР ДНЯ
+   ================================================================= */
+const stage = $('#stage'), bodyCv = $('#bodyCv'), panel = $('#panel'), zonesEl = $('#zones');
+const L = new V3.Live(innerWidth < 700 ? 2600 : 4000); L.setOpts({ rain:true, crisp:true, mono:'#F4F2EC' });
+const off = document.createElement('canvas');
+let SW = 0, SH = 0, body = null;
+const st = { mode:'intro', demo:false, guess:null, stepT:0, hl:[0,0,0,0,0], p:.3, pShown:.3, showForm:false, formA:0, curZ:-1, result:null, err:'' };
+const A = {};
+function resetA(){ Object.assign(A, { voicedT:0, midis:[], stabs:[], cents:[], siren:[], zoneT:[0,0,0,0,0], exh:0, exhOn:false, quiet:0 }); }
+resetA();
+
+function layout(){
+  SW = stage.clientWidth; SH = Math.round(Math.min(SW*1.2, 620));
+  stage.style.height = SH + 'px'; fit(bodyCv, SW, SH);
+  body = makeBody(SW < 420 ? 2300 : 3200, 7);
+  zonesEl.querySelectorAll('.zb').forEach((b, i) => { const z = +b.dataset.z; b.style.top = (SH*(BAND[z][0] + BAND[z][1])/2) + 'px'; });
+}
+function buildZones(){
+  zonesEl.innerHTML = [4,3,2,1,0].map(z => `<button class="zb" data-z="${z}" aria-label="${LABELS[labSet][z][0]}"><b>${LABELS[labSet][z][0]}</b><span>${LABELS[labSet][z][1]}</span></button>`).join('');
+  zonesEl.querySelectorAll('.zb').forEach(b => b.addEventListener('click', () => { if (st.mode !== 'intro') return; st.guess = +b.dataset.z; renderPanel(); markZones(); }));
+  layout(); markZones();
+}
+function markZones(){
+  zonesEl.querySelectorAll('.zb').forEach(b => {
+    const z = +b.dataset.z;
+    b.classList.toggle('guess', st.guess === z && (st.mode === 'intro' || st.mode === 'result'));
+    b.classList.toggle('on', z === st.curZ);
+    b.disabled = st.mode !== 'intro';
+  });
+}
+
+/* ---- steps ---- */
+const STEPS = {
+  a:     { n:1, title:'Скажи «а-а-а», как обычно говоришь', hint:'Ровно и спокойно, на удобной ноте. Пять секунд звука.' },
+  siren: { n:2, title:'Сирена снизу вверх и обратно', hint:'Проведи голосом от самой низкой удобной ноты до самой высокой и вниз. Без крика.' },
+  sss:   { n:3, title:'Вдохни и тяни «с-с-с»', hint:'Пока хватает воздуха, ровно. Замер закончится сам, когда замолчишь.' }
+};
+function renderPanel(){
+  if (st.mode === 'intro'){
+    panel.innerHTML = `<span class="kick">Шаг 0 · догадка</span>
+      <h2>${st.guess == null ? 'Где, по-твоему, звучит твой голос?' : 'Догадка: ' + zName(st.guess)}</h2>
+      <p>${st.guess == null ? 'Нажми на зону на силуэте. Потом замер покажет, где голос на самом деле.' : 'Теперь три коротких шага, около 30 секунд.'}</p>
+      ${st.err ? `<p class="small" style="color:var(--signal)">${st.err}</p>` : ''}
+      <div class="btns"><button class="btn" id="go" ${st.guess == null ? 'disabled' : ''}>Начать замер</button><button class="btn ghost" id="demo">Демо без микрофона</button></div>
+      <p class="small">Микрофон включается только на время замера. Звук не записывается.</p>`;
+    $('#go').addEventListener('click', () => start(false));
+    $('#demo').addEventListener('click', () => { if (st.guess == null){ st.guess = 2; markZones(); } start(true); });
+    return;
+  }
+  if (STEPS[st.mode]){
+    const S = STEPS[st.mode];
+    panel.innerHTML = `<span class="kick">Шаг ${S.n} из 3${st.demo ? ' · демо' : ''}</span><h2>${S.title}</h2><p>${S.hint}</p>
+      <div class="bar"><i id="prog"></i></div><div class="live num" id="liveTxt"></div>
+      <div class="btns"><button class="btn ghost" id="next">${st.mode === 'sss' ? 'Готово' : 'Дальше'}</button><button class="btn ghost" id="stop">Отменить</button></div>`;
+    $('#next').addEventListener('click', nextStep);
+    $('#stop').addEventListener('click', cancel);
+    return;
+  }
+  if (st.mode === 'result') renderResult();
+}
+async function start(demo){
+  st.err = ''; st.demo = demo; resetA();
+  if (!demo){
+    try { await L.start(); }
+    catch (e){ st.err = 'Микрофон недоступен. Можно посмотреть демо.'; renderPanel(); return; }
+  }
+  st.mode = 'a'; st.stepT = 0; st.showForm = true; st.result = null; markZones(); renderPanel();
+}
+function cancel(){ if (L.on) L.stop(); st.mode = 'intro'; st.showForm = false; st.curZ = -1; markZones(); renderPanel(); }
+function nextStep(){
+  const order = ['a', 'siren', 'sss'], i = order.indexOf(st.mode);
+  if (i < 2){ st.mode = order[i + 1]; st.stepT = 0; renderPanel(); return; }
+  finish();
+}
+const median = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length/2)] : null; };
+const pct = (a, q) => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[clamp(Math.round(q*(s.length - 1)), 0, s.length - 1)] : null; };
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0)/a.length : null;
+function finish(){
+  if (L.on) L.stop();
+  const comfort = median(A.midis), all = A.midis.concat(A.siren), cent = mean(A.cents);
+  const tz = A.zoneT.reduce((x, y) => x + y, 0) || 1;
+  const r = {
+    date: dkey(new Date()), guess: st.guess,
+    comfort: comfort == null ? null : +comfort.toFixed(2),
+    stab: A.stabs.length ? +clamp(mean(A.stabs), 0, 1).toFixed(3) : null,
+    low: A.siren.length > 12 ? +pct(all, .04).toFixed(2) : null,
+    high: A.siren.length > 12 ? +pct(all, .96).toFixed(2) : null,
+    exhale: +A.exh.toFixed(1), cent: cent == null ? .5 : +cent.toFixed(3),
+    zones: A.zoneT.map(v => +(v/tz).toFixed(3)), demo: st.demo || undefined
+  };
+  r.actual = r.comfort == null ? null : zoneOf(pOf(r.comfort, r.cent));
+  st.result = r; st.mode = 'result';
+  if (r.comfort != null){
+    st.p = pOf(r.comfort, r.cent); st.curZ = r.actual;
+    L.solo.target({ u: r.comfort - 12*(Math.floor(r.comfort/12) - 1), vo:1, noise:0, amp:.55, stab:Math.max(.7, r.stab || .7), e:1, hold:1, cent:.5 });
+    if (!st.demo) saveDay(r);
+  } else { st.showForm = false; st.curZ = -1; }
+  markZones(); renderPanel();
+}
+function renderResult(){
+  const r = st.result;
+  if (r.comfort == null){
+    panel.innerHTML = `<span class="kick">Замер</span><h2>Голос не услышан</h2><p>Похоже, микрофон не поймал звук. Попробуй ближе к телефону и в тихом месте.</p><div class="btns"><button class="btn" id="again">Ещё раз</button></div>`;
+    $('#again').addEventListener('click', cancel); return;
+  }
+  const same = r.guess === r.actual, dir = r.guess < r.actual;
+  const verdict = same ? `Ты слышишь себя точно: <em>${zName(r.actual)}</em>.` : `Ты думала: ${zName(r.guess)}. <em>На деле: ${zName(r.actual)}.</em>`;
+  const why = same ? 'Попадание совпадает с замером. Это редкость: изнутри голос обычно звучит иначе.'
+    : dir ? 'Изнутри голос кажется ниже, чем снаружи: кости черепа добавляют низких частот. Поэтому своя запись звучит выше и тоньше.'
+          : 'Ты звучишь ниже, чем кажется. Часто так бывает, когда голос опирается на грудь, а внимание сосредоточено на горле.';
+  const semis = r.low != null ? Math.round(r.high - r.low) : null;
+  const zcols = ['#5EA879', '#7FB98F', '#C9CEC8', '#E780C0', '#ECF176'];
+  panel.innerHTML = `<span class="kick">Итог замера${r.demo ? ' · демо, не сохранено' : ''}</span>
+    <p class="verdict">${verdict}</p><p>${why}</p>
+    <div class="res">
+      <div class="t wide"><div class="l">Комфортная нота</div><div class="v"><span class="dot" style="background:${noteCol(r.comfort)}"></span>${noteName(r.comfort)}</div><div class="s num">${Math.round(hz(r.comfort))} Гц · зона «${zName(r.actual)}»</div></div>
+      <div class="t"><div class="l">Диапазон сирены</div><div class="v num">${semis != null ? (semis/12).toFixed(1).replace('.', ',') + ' окт.' : '—'}</div><div class="s">${semis != null ? noteName(r.low) + ' — ' + noteName(r.high) + ' · ' + semis + ' ' + plural(semis, 'полутон', 'полутона', 'полутонов') : 'сирену не услышала'}</div></div>
+      <div class="t"><div class="l">Устойчивость «а»</div><div class="v num">${r.stab != null ? Math.round(r.stab*100) + ' %' : '—'}</div><div class="s">насколько ровно держалась нота</div></div>
+      <div class="t"><div class="l">Долгий выдох</div><div class="v num">${r.exhale ? Math.round(r.exhale) + ' с' : '—'}</div><div class="s">цель 30–40 с</div></div>
+      <div class="t"><div class="l">Где звучал голос</div><div class="zbar">${r.zones.map((v, i) => v > .005 ? `<i style="flex:${v};background:${zcols[i]}" title="${zName(i)}"></i>` : '').join('')}</div><div class="zleg"><span>${zName(0)}</span><span>${zName(4)}</span></div></div>
+    </div>
+    <div class="btns"><button class="btn" id="toMonth">Посмотреть месяц</button><button class="btn ghost" id="again">Новый замер</button></div>`;
+  $('#again').addEventListener('click', () => { st.guess = null; cancel(); });
+  $('#toMonth').addEventListener('click', () => { setTab('month'); setSrc(r.demo ? 'sim' : 'mine'); scrollTo({ top:0, behavior:'smooth' }); });
+}
+
+/* ---- demo voice: scripted instead of the microphone ---- */
+function demoInfo(mode, t){
+  if (mode === 'a'){
+    if (t < .6) return { voiced:false, silent:true, act:false, noise:0 };
+    return { voiced:true, midi:55.2 + .18*Math.sin(t*5.5) + .06*Math.sin(t*17), stab:.86, act:true, silent:false, noise:0, cent:.46 };
+  }
+  if (mode === 'siren'){
+    if (t > 10.4) return { voiced:false, silent:true, act:false, noise:0 };
+    return { voiced:true, midi:52 + 25*Math.sin(Math.PI*Math.min(t, 10)/10), stab:.7, act:true, silent:false, noise:0, cent:.5 };
+  }
+  if (t < .5 || t > 17.5) return { voiced:false, silent:true, act:false, noise:0 };
+  return { voiced:false, act:true, silent:false, noise:.95, cent:.85 };
+}
+
+/* ---- per-frame analysis ---- */
+function analyse(info, dt){
+  st.stepT += dt;
+  const live = $('#liveTxt'), prog = $('#prog');
+  let z = -1;
+  if (info.voiced && info.midi > 30){ const p = pOf(info.midi, info.cent); z = zoneOf(p); st.p = p; }
+  if (st.mode === 'a'){
+    if (info.voiced && z >= 0){ A.voicedT += dt; A.midis.push(info.midi); A.stabs.push(info.stab); A.cents.push(info.cent); A.zoneT[z] += dt; }
+    if (prog) prog.style.width = clamp(A.voicedT/5, 0, 1)*100 + '%';
+    if (A.voicedT >= 5 || st.stepT > 18) nextStep();
+  } else if (st.mode === 'siren'){
+    if (info.voiced && z >= 0){ A.siren.push(info.midi); A.zoneT[z] += dt; }
+    if (prog) prog.style.width = clamp(st.stepT/11, 0, 1)*100 + '%';
+    if (st.stepT >= 11) nextStep();
+  } else if (st.mode === 'sss'){
+    if (!info.voiced && info.act && info.noise > .5){ A.exh += dt; A.exhOn = true; A.quiet = 0; }
+    else if (A.exhOn){ A.quiet += dt; if (A.quiet > 1.2) { finish(); return; } }
+    if (prog) prog.style.width = clamp(A.exh/40, 0, 1)*100 + '%';
+    if (live) live.textContent = A.exhOn ? 'Выдох: ' + A.exh.toFixed(1).replace('.', ',') + ' с' : 'Жду «с-с-с»…';
+    if (st.stepT > 60){ finish(); return; }
+  }
+  if (live && st.mode !== 'sss') live.textContent = info.voiced ? 'Слышу: ' + noteName(info.midi) + ' · ' + zName(z) : (st.mode === 'a' && A.voicedT === 0 ? 'Жду звук…' : '');
+  st.curZ = z >= 0 ? z : (info.silent ? -1 : st.curZ);
+  if (st.mode === 'sss') st.curZ = -1;
+  $('#roNote').textContent = info.voiced ? noteShort(info.midi) : (st.mode === 'sss' && info.noise > .5 ? 'с-с-с' : '');
+  $('#roSub').textContent = info.voiced ? zName(z) : '';
+}
+
+/* ---- loop ---- */
+let last = performance.now(), T = 0, prevZ = -2;
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now; T += dt;
+  let info = null;
+  if (STEPS[st.mode]){
+    if (st.demo){
+      info = demoInfo(st.mode, st.stepT);
+      if (info.voiced) L.solo.target({ u: info.midi - 36, vo:1, noise:0, amp:.62, stab:info.stab, e:1, hold:.9, cent:.5 });
+      else if (info.noise > .5){ L.solo.target({ vo:0, noise:1, cent:.85, amp:.5, e:1, hold:0, stab:.25 }); L.solo.exh += dt; }
+      else { L.solo.target({ e:.08, hold:0, noise:0 }); L.solo.exh = 0; }
+    } else if (L.on){ info = L.update(dt).info; }
+    if (info) analyse(info, dt);
+  }
+  if (st.mode === 'result' || STEPS[st.mode]) L.step(dt);
+  if (st.curZ !== prevZ){ prevZ = st.curZ; markZones(); }
+
+  // highlights
+  for (let z = 0; z < 5; z++){
+    const target = z === st.curZ ? 1 : (st.mode === 'intro' && z === st.guess ? .3 : 0);
+    st.hl[z] += (target - st.hl[z])*(1 - Math.pow(1 - (target > st.hl[z] ? .12 : .03), dt*60));
+  }
+  st.pShown += (st.p - st.pShown)*(1 - Math.pow(1 - .08, dt*60));
+  st.formA += ((st.showForm ? 1 : 0) - st.formA)*(1 - Math.pow(1 - .06, dt*60));
+
+  const ctx = bodyCv.getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0);
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, SW, SH);
+  const cxF = .62, colZ = st.curZ >= 0 && st.mode !== 'sss' ? (st.result && st.mode === 'result' ? noteCol(st.result.comfort) : (L.solo.opt.rain ? V3.toHex(L.solo.color()) : C.ink)) : null;
+  drawBody(ctx, body, SW, SH, cxF, st.hl, colZ ? [colZ, colZ, colZ, colZ, colZ] : null, T);
+  // guess vs actual marker on the result
+  if (st.mode === 'result' && st.result && st.result.actual != null && st.guess != null && st.guess !== st.result.actual){
+    const yg = SH*(BAND[st.guess][0] + BAND[st.guess][1])/2, ya = SH*yOfP(st.pShown), x = SW*cxF + SH*.25;
+    ctx.strokeStyle = C.lime; ctx.globalAlpha = .7; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(x, yg); ctx.lineTo(x, ya); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = C.lime; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+  }
+  // the live form floats at the height of the voice
+  if (st.formA > .01){
+    const F = Math.round(SW*.5), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
+    L.draw(oc, F, F, .5);
+    const y = SH*(st.mode === 'sss' ? .5 : yOfP(st.pShown));
+    ctx.globalAlpha = st.formA; ctx.drawImage(off, SW*cxF - F/2, clamp(y - F/2, -F*.25, SH - F*.75), F, F); ctx.globalAlpha = 1;
+  }
+  requestAnimationFrame(frame);
+}
+
+/* =================================================================
+   МЕСЯЦ
+   ================================================================= */
+function simMonth(){
+  const r = FL.rng(2026), out = [], today = new Date(), skip = { 5:1, 12:1, 21:1 }, tired = { 9:1, 17:1, 24:1 };
+  for (let d = 0; d < 30; d++){
+    if (skip[d]) continue;
+    const t = d/29, k = tired[d] ? 1 : 0, dt = new Date(today); dt.setDate(today.getDate() - (29 - d));
+    const comfort = 54.3 + 1.2*t + (r() - .5)*.9 - k*1.1;
+    const low = 50.6 - 4.6*t + (r() - .5)*1.3 + k*1.2;
+    const high = 68.8 + 10.5*Math.pow(t, .8) + (r() - .5)*2.2 - k*4.5;
+    const stab = clamp(.61 + .24*t + (r() - .5)*.08 - k*.16, .3, .97);
+    const exhale = 13 + 14.5*t + (r() - .5)*3.2 - k*4;
+    const cent = .42 + .16*t + (r() - .5)*.1;
+    const zt = [0,0,0,0,0];
+    for (let q = 0; q < 50; q++) zt[zoneOf(pOf(comfort + (r() - .5)*.6, cent))] += .1;
+    for (let q = 0; q < 100; q++){ const m = low + (high - low)*(.5 - .5*Math.cos(Math.PI*q/99)); zt[zoneOf(pOf(m, cent))] += .1; }
+    const tot = zt.reduce((a, b) => a + b, 0), actual = zoneOf(pOf(comfort, cent));
+    const correct = r() < .25 + .65*t;
+    const guess = correct ? actual : clamp(actual + (r() < .8 ? 1 : -1), 0, 4);   // most people guess higher zones: they listen in the throat
+    out.push({ date: dkey(dt), comfort:+comfort.toFixed(2), low:+low.toFixed(2), high:+high.toFixed(2), stab:+stab.toFixed(3), exhale:+exhale.toFixed(1), cent:+cent.toFixed(3), zones: zt.map(v => +(v/tot).toFixed(3)), guess, actual });
+  }
+  return out;
+}
+const SIM = simMonth();
+let src = 'sim', wk = 'last';
+const mb = $('#monthBody');
+function dataNow(){ return src === 'sim' ? SIM : loadMine().filter(d => d.comfort != null); }
+
+function renderMonth(){
+  const D = dataNow();
+  if (!D.length){ mb.innerHTML = `<div class="card"><div class="empty">Пока нет ни одного замера.<br>Сделай первый на вкладке «Замер дня», и он появится здесь. Слепок начнёт складываться через неделю.</div></div>`; return; }
+  const first = D.slice(0, Math.min(7, D.length)), lastW = D.slice(-Math.min(7, D.length));
+  const hits = a => a.filter(d => d.guess === d.actual).length;
+  const rng = a => { const v = a.filter(d => d.low != null).map(d => d.high - d.low); return v.length ? median(v) : null; };
+  const r0 = rng(first), r1 = rng(lastW), s0 = mean(first.filter(d => d.stab != null).map(d => d.stab)), s1 = mean(lastW.filter(d => d.stab != null).map(d => d.stab));
+  const e0 = Math.max(...first.map(d => d.exhale || 0)), e1 = Math.max(...lastW.map(d => d.exhale || 0));
+  const many = D.length >= 10;
+  mb.innerHTML = `
+    <div class="tiles">
+      <div class="tile"><div class="l">Слышишь себя</div><div class="v num">${hits(lastW)}<span style="font-size:20px;color:var(--muted)"> из ${lastW.length}</span></div><div class="s">${many ? 'в первую неделю ' + hits(first) + ' из ' + first.length : 'догадка совпала с замером'}</div></div>
+      <div class="tile"><div class="l">Диапазон</div><div class="v num">${r1 != null ? (r1/12).toFixed(1).replace('.', ',') : '—'}<span style="font-size:20px;color:var(--muted)"> окт.</span></div><div class="s">${many && r0 != null ? (r1 - r0 >= 0 ? '+' : '−') + Math.abs(Math.round(r1 - r0)) + ' ' + plural(Math.round(r1 - r0), 'полутон', 'полутона', 'полутонов') + ' за месяц' : 'по сирене'}</div></div>
+      <div class="tile"><div class="l">Устойчивость</div><div class="v num">${s1 != null ? Math.round(s1*100) : '—'}<span style="font-size:20px;color:var(--muted)"> %</span></div><div class="s">${many && s0 != null ? 'было ' + Math.round(s0*100) + ' %' : 'ровность «а»'}</div></div>
+      <div class="tile"><div class="l">Долгий выдох</div><div class="v num">${Math.round(e1)}<span style="font-size:20px;color:var(--muted)"> с</span></div><div class="s">${many ? 'было ' + Math.round(e0) + ' с' : 'лучший за неделю'}</div></div>
+    </div>
+    <figure class="card"><h2>Слепок голоса</h2><p class="sub">Все замеры, наложенные друг на друга. Узор — комфортная нота, кольца вокруг — диапазон.</p><canvas id="cast" role="img" aria-label="Слепок голоса"></canvas><figcaption id="castCap"></figcaption></figure>
+    <figure class="card"><h2>Где живёт голос</h2><p class="sub">Сколько времени голос провёл в каждой зоне во время замеров.</p>
+      ${many ? `<div class="seg small" role="tablist"><button role="tab" data-wk="first" aria-selected="${wk === 'first'}">Первая неделя</button><button role="tab" data-wk="last" aria-selected="${wk === 'last'}">Последняя неделя</button></div>` : ''}
+      <canvas id="bodyM" role="img" aria-label="Силуэт с зонами"></canvas><figcaption id="bodyCap"></figcaption></figure>
+    <figure class="card"><h2>Диапазон и комфортная нота</h2><p class="sub">Столбик — от самой низкой до самой высокой ноты сирены. Точка — комфортная нота её цветом.</p><canvas id="rangeCv" role="img" aria-label="Диапазон по дням"></canvas><div class="tip" id="tipR"></div></figure>
+    <figure class="card"><h2>Устойчивость</h2><p class="sub">Насколько ровно держится «а», в процентах.</p><canvas id="stabCv" role="img" aria-label="Устойчивость по дням"></canvas><div class="tip" id="tipS"></div></figure>
+    <figure class="card"><h2>Долгий выдох</h2><p class="sub">Секунды на «с-с-с». Пунктир — цель 30 секунд.</p><canvas id="exhCv" role="img" aria-label="Выдох по дням"></canvas><div class="tip" id="tipE"></div></figure>
+    <figure class="card"><h2>Замеры по дням</h2><p class="sub">Каждая форма — комфортная нота дня. Чем ровнее голос, тем чётче узор.</p><canvas id="daysCv" role="img" aria-label="Формы замеров по дням"></canvas><div class="tip" id="tipD"></div></figure>`;
+  mb.querySelectorAll('[data-wk]').forEach(b => b.addEventListener('click', () => { wk = b.dataset.wk; renderMonth(); }));
+  drawCast(D); drawBodyMonth(D); drawRange(D); drawLine(D, '#stabCv', '#tipS', d => d.stab == null ? null : d.stab*100, [40, 100], v => Math.round(v) + ' %', null);
+  drawLine(D, '#exhCv', '#tipE', d => d.exhale || null, [0, 40], v => Math.round(v) + ' с', 30); drawDays(D);
+}
+const W_ = el => el.clientWidth;
+const refU = (D) => { const c = median(D.map(d => d.comfort)); return m => clamp(Math.round(m) - 12*(Math.floor(c/12) - 1), 0, 47); };
+
+function drawCast(D){
+  const cv = $('#cast'), s = W_(cv), ctx = fit(cv, s, s), cx = s/2, cy = s/2, uOf = refU(D), R = s*.36;
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, s, s);
+  const r = FL.rng(5);
+  D.forEach((d, i) => {
+    if (d.low != null){
+      const rad = s*(.3 + clamp((d.high - d.low)/34, 0, 1)*.18), n = 70, hc = noteCol(d.high);
+      ctx.fillStyle = hc; ctx.globalAlpha = .18 + .3*(i/(D.length - 1 || 1));
+      for (let q = 0; q < n; q++){ const a = r()*Math.PI*2, rr = rad*(1 + (r() - .5)*.05); ctx.fillRect(cx + Math.cos(a)*rr - .6, cy + Math.sin(a)*rr - .6, 1.2, 1.2); }
+      ctx.globalAlpha = 1;
+    }
+  });
+  D.forEach((d, i) => V3.renderForm(ctx, cx, cy, R, uOf(d.comfort), Math.round(500 + s*1.2), 300 + i, noteCol(d.comfort), .1 + .45*(d.stab || .5), Math.max(.7, s/560), i*.015, true));
+  const notes = {}; D.forEach(d => { const k = noteShort(d.comfort); notes[k] = (notes[k] || 0) + 1; });
+  const top = Object.entries(notes).sort((a, b) => b[1] - a[1]);
+  $('#castCap').textContent = D.length < 7 ? 'Слепок проявляется со временем: пока ' + D.length + ' ' + (D.length === 1 ? 'замер' : 'замера') + '.'
+    : 'Чаще всего голос живёт на «' + top[0][0] + '»' + (top[1] ? ', иногда уходит на «' + top[1][0] + '»' : '') + '. Таких слепков два одинаковых не бывает.';
+}
+function drawBodyMonth(D){
+  const cv = $('#bodyM'), w = W_(cv), h = Math.round(Math.min(w*1.25, 580)), ctx = fit(cv, w, h);
+  const sel = D.length >= 10 ? (wk === 'first' ? D.slice(0, 7) : D.slice(-7)) : D;
+  const z = [0,0,0,0,0]; sel.forEach(d => d.zones.forEach((v, i) => z[i] += v));
+  const tot = z.reduce((a, b) => a + b, 0) || 1, mx = Math.max(...z) || 1;
+  const B = makeBody(w < 420 ? 2000 : 2800, 11);
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, w, h);
+  // the silhouette uses height for scale; keep it in the same proportions as the stage
+  const H = h;
+  drawBody(ctx, B, w, H, .64, z.map(v => Math.pow(v/mx, .8)), ['#5EA879','#5EA879','#5EA879','#5EA879','#5EA879'], 0);
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 5; i++){
+    const y = H*(BAND[i][0] + BAND[i][1])/2, share = Math.round(z[i]/tot*100);
+    ctx.fillStyle = C.ink; ctx.globalAlpha = share > 0 ? 1 : .45; ctx.font = '700 15px "Inter Tight",sans-serif'; ctx.fillText(zName(i), 12, y - 8);
+    ctx.fillStyle = C.muted; ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.fillText(share + ' % времени', 12, y + 9); ctx.globalAlpha = 1;
+  }
+  const g = [0,0,0,0,0], a = [0,0,0,0,0]; sel.forEach(d => { if (d.guess != null) g[d.guess]++; if (d.actual != null) a[d.actual]++; });
+  const gi = g.indexOf(Math.max(...g)), ai = a.indexOf(Math.max(...a));
+  $('#bodyCap').textContent = (D.length >= 10 ? (wk === 'first' ? 'Первая неделя: ' : 'Последняя неделя: ') : '') + 'комфортная нота чаще всего в зоне «' + zName(ai) + '»' + (gi === ai ? ', и догадки чаще всего совпадают.' : ', а догадки чаще «' + zName(gi) + '».');
+}
+
+/* single-series charts: recessive grid, one ink line, crosshair + tooltip */
+function chartFrame(cv, h, l){ const w = W_(cv), ctx = fit(cv, w, h); ctx.fillStyle = C.ground; ctx.fillRect(0, 0, w, h); return { ctx, w, h, l:l || 44, r:12, t:12, b:24 }; }
+function xOf(F, D, i){ return F.l + (D.length === 1 ? .5 : i/(D.length - 1))*(F.w - F.l - F.r); }
+function xAxis(F, D){
+  const ctx = F.ctx; ctx.fillStyle = C.muted; ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'alphabetic';
+  const idx = D.length < 3 ? D.map((_, i) => i) : [0, Math.floor((D.length - 1)/2), D.length - 1];
+  idx.forEach((i, k) => { ctx.textAlign = k === 0 && idx.length > 1 ? 'left' : k === idx.length - 1 && idx.length > 1 ? 'right' : 'center'; ctx.fillText(dLabel(D[i].date), clamp(xOf(F, D, i), F.l, F.w - F.r), F.h - 6); });
+  ctx.textAlign = 'left';
+}
+function hover(cv, tip, D, F, html, yAt){
+  const card = cv.parentElement;
+  const show = ev => {
+    const rc = cv.getBoundingClientRect(), x = ev.clientX - rc.left; let best = 0, bd = 1e9;
+    D.forEach((_, i) => { const dx = Math.abs(xOf(F, D, i) - x); if (dx < bd){ bd = dx; best = i; } });
+    const tx = xOf(F, D, best), ty = yAt(best);
+    tip.innerHTML = html(D[best]); tip.style.left = clamp(cv.offsetLeft + tx, 70, card.clientWidth - 70) + 'px'; tip.style.top = (cv.offsetTop + Math.max(8, ty - 10)) + 'px'; tip.style.opacity = 1;
+    redraw(best);
+  };
+  const hide = () => { tip.style.opacity = 0; redraw(-1); };
+  let redraw = () => {};
+  cv.onpointermove = show; cv.onpointerdown = show; cv.onpointerleave = hide;
+  return f => { redraw = f; };
+}
+function drawRange(D){
+  const cv = $('#rangeCv'), tip = $('#tipR');
+  const lo = Math.floor(Math.min(...D.map(d => d.low != null ? d.low : d.comfort)) - 2), hi = Math.ceil(Math.max(...D.map(d => d.high != null ? d.high : d.comfort)) + 2);
+  let F;
+  const yOf = m => F.t + (1 - (m - lo)/(hi - lo))*(F.h - F.t - F.b);
+  const draw = sel => {
+    F = chartFrame(cv, 240, 70); const ctx = F.ctx;
+    ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'middle';
+    for (let m = Math.ceil(lo/12)*12; m <= hi; m += 12){ const y = yOf(m); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText('до ' + (OCTN[m/12] || ''), 6, y); }
+    const bw = Math.max(3, Math.min(10, (F.w - F.l - F.r)/D.length*.45));
+    D.forEach((d, i) => {
+      const x = xOf(F, D, i);
+      if (sel === i){ ctx.strokeStyle = 'rgba(255,254,252,.25)'; ctx.beginPath(); ctx.moveTo(x, F.t); ctx.lineTo(x, F.h - F.b); ctx.stroke(); }
+      if (d.low != null){ const y1 = yOf(d.high), y2 = yOf(d.low); ctx.fillStyle = sel === i ? 'rgba(244,242,236,.6)' : 'rgba(244,242,236,.28)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - bw/2, y1, bw, y2 - y1, bw/2) : ctx.rect(x - bw/2, y1, bw, y2 - y1); ctx.fill(); }
+      const yc = yOf(d.comfort); ctx.fillStyle = C.ground; ctx.beginPath(); ctx.arc(x, yc, 6, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = noteCol(d.comfort); ctx.beginPath(); ctx.arc(x, yc, 4.2, 0, Math.PI*2); ctx.fill();
+    });
+    xAxis(F, D);
+  };
+  draw(-1);
+  hover(cv, tip, D, F, d => `<b>${dLabel(d.date)}</b><br>комфортная: ${noteName(d.comfort)}<br>${d.low != null ? 'сирена: ' + noteShort(d.low) + ' — ' + noteShort(d.high) + ', ' + Math.round(d.high - d.low) + ' ' + plural(Math.round(d.high - d.low), 'полутон', 'полутона', 'полутонов') : 'без сирены'}`, i => yOf(D[i].high != null ? D[i].high : D[i].comfort))(draw);
+}
+function drawLine(D, sel, tipSel, val, yr, fmt, goal){
+  const cv = $(sel), tip = $(tipSel); let F;
+  const vals = D.map(val), lo = Math.min(yr[0], ...vals.filter(v => v != null)), hi = Math.max(yr[1], ...vals.filter(v => v != null));
+  const yOf = v => F.t + (1 - (v - lo)/(hi - lo))*(F.h - F.t - F.b);
+  const draw = s => {
+    F = chartFrame(cv, 170); const ctx = F.ctx;
+    ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'middle';
+    [lo, (lo + hi)/2, hi].forEach(v => { const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(fmt(v), 6, y); });
+    if (goal != null){ const y = yOf(goal); ctx.strokeStyle = 'rgba(236,241,118,.6)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.setLineDash([]); }
+    if (s >= 0){ const x = xOf(F, D, s); ctx.strokeStyle = 'rgba(255,254,252,.25)'; ctx.beginPath(); ctx.moveTo(x, F.t); ctx.lineTo(x, F.h - F.b); ctx.stroke(); }
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath(); let started = false;
+    vals.forEach((v, i) => { if (v == null) return; const x = xOf(F, D, i), y = yOf(v); started ? ctx.lineTo(x, y) : ctx.moveTo(x, y); started = true; }); ctx.stroke();
+    vals.forEach((v, i) => { if (v == null) return; const x = xOf(F, D, i), y = yOf(v), big = i === s || i === vals.length - 1 || D.length < 8;
+      if (!big) return; ctx.fillStyle = C.ground; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill(); });
+    xAxis(F, D);
+  };
+  draw(-1);
+  hover(cv, tip, D, F, d => `<b>${dLabel(d.date)}</b> · ${val(d) != null ? fmt(val(d)) : '—'}`, i => vals[i] != null ? yOf(vals[i]) : F.t)(draw);
+}
+function drawDays(D){
+  const cv = $('#daysCv'), tip = $('#tipD'), w = W_(cv), cols = 6, cell = w/cols, rows = Math.ceil(D.length/cols), h = Math.round(rows*cell), ctx = fit(cv, w, h), uOf = refU(D);
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, w, h);
+  D.forEach((d, i) => {
+    const cx = (i % cols + .5)*cell, cy = (Math.floor(i/cols) + .5)*cell;
+    V3.renderForm(ctx, cx, cy, cell*.42, uOf(d.comfort), Math.round(260 + cell*6), 700 + i, noteCol(d.comfort), .55 + .45*(d.stab || .5), Math.max(.8, cell/80), 0, true);
+    ctx.fillStyle = C.muted; ctx.font = '500 10px "Inter Tight",sans-serif'; ctx.textBaseline = 'top'; ctx.fillText(dLabel(d.date).split(' ')[0], (i % cols)*cell + 5, Math.floor(i/cols)*cell + 4);
+  });
+  const show = ev => { const rc = cv.getBoundingClientRect(), i = Math.floor((ev.clientY - rc.top)/cell)*cols + Math.floor((ev.clientX - rc.left)/cell), d = D[i]; if (!d){ tip.style.opacity = 0; return; }
+    tip.innerHTML = `<b>${dLabel(d.date)}</b> · ${noteName(d.comfort)}<br>зона «${zName(d.actual)}» · ровность ${d.stab != null ? Math.round(d.stab*100) + ' %' : '—'}`;
+    tip.style.left = clamp(cv.offsetLeft + (i % cols + .5)*cell, 80, cv.parentElement.clientWidth - 80) + 'px'; tip.style.top = (cv.offsetTop + Math.floor(i/cols)*cell + 6) + 'px'; tip.style.opacity = 1; };
+  cv.onpointermove = show; cv.onpointerdown = show; cv.onpointerleave = () => tip.style.opacity = 0;
+}
+
+/* ---------- tabs and toggles ---------- */
+function setTab(t){
+  $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  $('#check').hidden = t !== 'check'; $('#month').hidden = t !== 'month';
+  if (t === 'month') renderMonth(); else layout();
+}
+function setSrc(s){ src = s; $$('[data-src]').forEach(b => b.setAttribute('aria-selected', b.dataset.src === s)); renderMonth(); }
+$$('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+$$('[data-src]').forEach(b => b.addEventListener('click', () => setSrc(b.dataset.src)));
+$$('[data-lab]').forEach(b => b.addEventListener('click', () => {
+  labSet = b.dataset.lab; $$('[data-lab]').forEach(x => x.setAttribute('aria-selected', x === b)); buildZones(); renderPanel();
+  if (!$('#month').hidden) renderMonth();
+}));
+let rT = 0; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { layout(); if (!$('#month').hidden) renderMonth(); }, 150); });
+
+buildZones(); renderPanel(); requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (!$('#month').hidden) renderMonth(); });
+const q = new URLSearchParams(location.search); if (q.get('tab') === 'month') setTab('month');
+window.__tracker = { st, A, start, setTab, setSrc, SIM };
+})();
+</script>
+</body>
+</html>
