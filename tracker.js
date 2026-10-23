@@ -829,9 +829,16 @@ function renderProfileIn(root){
   }).filter(Boolean);
   const DN = D.filter(d => d.m), DE = D.filter(d => exm(d.date));
   const DS = DN.filter(d => d.m.stab != null), none = 'появится после отпечатка или упражнения';
-  if (DN.length) drawRange($('pfRange'), $('pfTipR'), DN); else drawEmpty($('pfRange'), 210, none);
-  if (DS.length) drawLine($('pfStab'), $('pfTipS'), DS, d => d.m.stab*100, [40, 100], v => Math.round(v) + ' %'); else drawEmpty($('pfStab'), 150, 'появится после «а» в отпечатке');
-  if (DE.length) drawLine($('pfExh'), $('pfTipE'), DE, d => exm(d.date) || null, [0, 40], v => Math.round(v) + ' с', 30); else drawEmpty($('pfExh'), 150, 'появится после «с-с-с» на выдохе');
+  /* an empty period keeps its chart with the real scales and the period's dates: you see what will be here */
+  const now = new Date(), pe = P.e > now ? now : P.e, PD = [];
+  for (let d = new Date(P.s); d <= pe; d = addDays(d, 1)) PD.push({ date:dkey(d) });
+  if (!PD.length) PD.push({ date:dkey(now) });
+  if (DN.length) drawRange($('pfRange'), $('pfTipR'), DN);
+  else drawEmpty($('pfRange'), 210, none, { l:66, yr:[46, 74], ticks:[48, 60, 72].map(v => [v, 'до ' + (OCTS[v/12] || '')]), D:PD });
+  if (DS.length) drawLine($('pfStab'), $('pfTipS'), DS, d => d.m.stab*100, [40, 100], v => Math.round(v) + ' %');
+  else drawEmpty($('pfStab'), 150, 'появится после «а» в отпечатке', { yr:[40, 100], ticks:[[40, '40 %'], [70, '70 %'], [100, '100 %']], D:PD });
+  if (DE.length) drawLine($('pfExh'), $('pfTipE'), DE, d => exm(d.date) || null, [0, 40], v => Math.round(v) + ' с', 30);
+  else drawEmpty($('pfExh'), 150, 'появится после «с-с-с» на выдохе', { yr:[0, 40], ticks:[[0, '0 с'], [20, '20 с'], [40, '40 с']], goal:30, D:PD });
 }
 function drawBodyShare(cv, z){
   const w = cv.clientWidth, h = Math.round(Math.min(w*1.45, 580)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
@@ -1033,12 +1040,17 @@ function hover(cv, tip, D, getF, html, yAt, redraw){
   cv.onpointermove = show; cv.onpointerdown = show; cv.onpointerleave = () => { tip.style.opacity = 0; redraw(-1); };
 }
 /* a period without data still shows its chart: empty grid and one quiet line */
-function drawEmpty(cv, h, text){
-  const F = chartFrame(cv, h), ctx = F.ctx;
+function drawEmpty(cv, h, text, o){
+  const F = chartFrame(cv, h, o.l), ctx = F.ctx, [lo, hi] = o.yr, yOf = v => F.t + (1 - (v - lo)/(hi - lo))*(F.h - F.t - F.b);
   cv.onpointermove = cv.onpointerdown = cv.onpointerleave = null;
-  for (let i = 0; i < 3; i++){ const y = F.t + i/2*(F.h - F.t - F.b); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); }
-  ctx.fillStyle = C.muted; ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(text, (F.l + F.w - F.r)/2, (F.t + F.h - F.b)/2 + (F.h - F.t - F.b)/4); ctx.textAlign = 'left';
+  ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'middle';
+  o.ticks.forEach(([v, t]) => { const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(t, 0, y); });
+  if (o.goal != null){ const y = yOf(o.goal); ctx.strokeStyle = 'rgba(236,241,118,.6)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.setLineDash([]); }
+  if (o.D && o.D.length) xAxis(F, o.D);
+  const cx = (F.l + F.w - F.r)/2, cy = (F.t + F.h - F.b)/2;
+  ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.textAlign = 'center';
+  const tw = ctx.measureText(text).width; ctx.fillStyle = C.ground; ctx.fillRect(cx - tw/2 - 8, cy - 10, tw + 16, 20);
+  ctx.fillStyle = C.muted; ctx.fillText(text, cx, cy); ctx.textAlign = 'left';
 }
 function drawRange(cv, tip, D){
   const M = D.map(d => d.m), lo = Math.floor(Math.min(...M.map(m => m.low != null ? m.low : m.comfort)) - 2), hi = Math.ceil(Math.max(...M.map(m => m.high != null ? m.high : m.comfort)) + 2);
