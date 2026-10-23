@@ -39,15 +39,10 @@ const uOfM = m => typeof uOfMidi === 'function' ? uOfMidi(m) : clamp(Math.round(
 /* ---------- zones: where in the body a note is felt ----------
    by pitch (+ a little by brightness); boundaries in MIDI E2 · E3 · D4 · G4 · D5 · D6 — rough register transitions */
 const ZB = [40, 52, 62, 67, 74, 86];
-const LABELS = {
-  body:   [['Низ груди','рёбра, солнечное сплетение'], ['Грудь','грудина, ключицы'], ['Шея','гортань, переход'], ['Маска','скулы, нос, губы'], ['Голова','лоб, темя']],
-  chakra: [['Манипура','солнечное сплетение'], ['Анахата','сердце'], ['Вишудха','горло'], ['Аджна','третий глаз'], ['Сахасрара','макушка']]
-};
-const ZIN = { body:['в низу груди','в груди','в шее','в маске','в голове'], chakra:['в манипуре','в анахате','в вишудхе','в аджне','в сахасраре'] };
-/* body parts by default; chakras only when chosen in the settings. The profile can switch its own view without changing that. */
-let labView = null;
-const labSet = () => labView || ((typeof data !== 'undefined' && data.profile && data.profile.zoneLabels === 'chakra') ? 'chakra' : 'body');
-const zName = i => LABELS[labSet()][i][0], zSub = i => LABELS[labSet()][i][1], zIn = i => ZIN[labSet()][i];
+/* zones are named by parts of the body only */
+const LABELS = [['Низ груди','рёбра, солнечное сплетение'], ['Грудь','грудина, ключицы'], ['Шея','гортань, переход'], ['Маска','скулы, нос, губы'], ['Голова','лоб, темя']];
+const ZIN = ['в низу груди','в груди','в шее','в маске','в голове'];
+const zName = i => LABELS[i][0], zSub = i => LABELS[i][1], zIn = i => ZIN[i];
 const BAND = [[.64, .90], [.415, .64], [.28, .415], [.165, .28], [.05, .165]];
 /* the silhouette is drawn 14 % larger than its own coordinates; the hips run out under the frame */
 /* body scale: the silhouette fills the height (crown at the top edge, hips running out under the frame),
@@ -501,10 +496,6 @@ function streamStep(ctx, dt, k, cx, top, H, col){
   }
   ctx.globalAlpha = 1;
 }
-function setLabels(v){
-  data.profile.zoneLabels = v; saveProfile();
-  if ($('pt') && !$('pt').hidden){ buildZones(); renderStep(); }
-}
 
 /* =========================== picture of the day =========================== */
 /* The haze of the day stays as it is — every exercise's clip laid over the others, moving, chaotic.
@@ -738,7 +729,7 @@ function dayRows(k){
 }
 
 /* =========================== profile =========================== */
-const H = { per:'w', off:0, sample:false, lab:null };
+const H = { per:'w', off:0, sample:false };
 let SAMPLE = null;
 /* a stand-in history to see the profile filled: never stored, never mixed with hers */
 function sampleData(){
@@ -813,8 +804,7 @@ function mountProfile(){
 }
 function renderProfile(){
   const root = $('pf'); if (!root) return;
-  labView = H.lab;
-  try { renderProfileIn(root); } finally { labView = null; }
+  renderProfileIn(root);
 }
 function renderProfileIn(root){
   const S = src(), P = period(S), keys = S.keys.filter(k => inR(k, P.s, P.e));
@@ -835,8 +825,7 @@ function renderProfileIn(root){
     <div class="pf-voice" id="prNoteCard">
       <div class="pf-vtop"><div class="pf-vtxt"><span class="note">Как звучит голос</span>
         ${cm != null ? `<b class="pf-note">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц</span>${top != null ? `<span>чаще всего ${zIn(top)}</span>` : ''}`
-          : `<b class="pf-note none">ещё не слышно</b><span class="note">Появится после первого отпечатка или голосового упражнения.</span>`}</div>
-        <div class="mini" role="tablist" aria-label="Подписи"><button role="tab" data-lab="body" aria-selected="${labSet() === 'body'}">Тело</button><button role="tab" data-lab="chakra" aria-selected="${labSet() === 'chakra'}">Чакры</button></div></div>
+          : `<b class="pf-note none">ещё не слышно</b><span class="note">Появится после первого отпечатка или голосового упражнения.</span>`}</div></div>
       <canvas id="pfBodyCv" role="img" aria-label="Силуэт: доля времени, когда голос звучал в каждой зоне"></canvas>
       ${H.sample ? `<p class="note">Пример, не твои данные · <button class="lnk" data-pfs="0">мои данные</button></p>` : realFew ? `<p class="note"><button class="lnk" data-pfs="1">Показать пример</button>, как это выглядит через несколько месяцев.</p>` : ''}
     </div>
@@ -859,7 +848,6 @@ function renderProfileIn(root){
     <div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
     <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>
     <div class="pr-h"><h2>Долгий выдох</h2><span class="note">цель — 30 секунд</span></div><div class="pf-fig"><canvas id="pfExh" role="img" aria-label="Долгий выдох по дням"></canvas><div class="pf-tip" id="pfTipE"></div></div>`;
-  $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { H.lab = x.dataset.lab; renderProfile(); });
   $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
   drawBodyShare($('pfBodyCv'), zones);
   voiceMap($('pfVmap'), S, keys, prevKeys, $('pfRead'));
@@ -1085,5 +1073,5 @@ function drawLine(cv, tip, D, val, yr, fmt, goal){
   hover(cv, tip, D, () => F, d => `<b>${dShort(d.date)}</b> · ${val(d) != null ? fmt(val(d)) : '—'}`, i => vals[i] != null ? yOf(vals[i]) : F.t, draw);
 }
 
-g.WT = { hasNote: k => noteKeys(k).length > 0, open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, liveCell, setLabels, SAFE };
+g.WT = { hasNote: k => noteKeys(k).length > 0, open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, liveCell, SAFE };
 })(window);
