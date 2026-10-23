@@ -204,12 +204,14 @@ function buildZones(){
 function layout(){
   const st = $('ptStage'); if (!st) return;
   const id = ORDER[fl.step], W = st.clientWidth || Math.min(innerWidth, 520) - 36;
-  const top = st.getBoundingClientRect().top + $('pt').scrollTop;
-  const H = id === 'res' ? Math.round(Math.min(W*1.05, 470)) : Math.round(clamp(innerHeight - top - 128, 260, W*1.3));
+  /* the stage runs down to the top of the bottom capsule, so the body stands on it */
+  const top = st.getBoundingClientRect().top + $('pt').scrollTop, cap = $('ptBar') && $('ptBar').firstElementChild;
+  const floor = cap ? cap.getBoundingClientRect().top - 6 : innerHeight - 104;
+  const H = id === 'res' ? Math.round(Math.min(W*1.05, 470)) : Math.round(clamp(floor - top, 260, W*1.7));
   st.style.height = H + 'px';
   if (W !== SW || H !== SH){ SW = W; SH = H; fit($('ptCv'), SW, SH); }
-  setBody(SW, SH, 1.45);
-  st.classList.toggle('compact', SH < 420);
+  setBody(SW, SH, 1.55);
+  st.classList.toggle('compact', SH < 300);
   $('ptZones').querySelectorAll('.pt-zb').forEach(b => { const z = +b.dataset.z; b.style.top = (SH*bandMid(z)) + 'px'; });
 }
 function markZones(){
@@ -260,7 +262,7 @@ function renderStep(){
     $('ptTitle').textContent = STEPS[id].t; $('ptHint').textContent = STEPS[id].h;
     $('ptRes').innerHTML = '';
   } else renderResult();
-  layout(); markZones(); renderBar();
+  renderBar(); layout(); markZones();
 }
 /* the bottom capsule is the one from the exercises: big timer on the left, round button on the right */
 function renderBar(){
@@ -273,7 +275,7 @@ function renderBar(){
     fin = true; big = false; time = 'Готово'; label = valid(fl.result) ? 'отпечаток сохранён' : 'голос не услышан';
     const toPractice = valid(fl.result) && fl.ctx !== 'after' && !practised(fl.key);
     acts = !valid(fl.result) ? `<button class="go" data-pt="retry">Ещё раз</button>`
-      : toPractice ? `<button class="go line" data-pt="close">Закрыть</button><button class="go" data-pt="practice">К прак&shy;тике</button>`
+      : toPractice ? `<button class="chip" data-pt="close">Закрыть</button><button class="go" data-pt="practice">К<br>практике</button>`
       : `<button class="go" data-pt="close">${fl.ctx === 'after' ? 'Дальше' : 'Закрыть'}</button>`;
   } else if (fl.done[id]){
     fin = true; big = false;
@@ -447,12 +449,12 @@ function drawStage(dt){
   const show = (['a','siren','sss'].includes(id) && (fl.run || fl.done[id])) || okR;
   fl.formA += ((show ? 1 : 0) - fl.formA)*k(.06);
   const ctx = $('ptCv').getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, SW, SH);
-  setBody(SW, SH, 1.45);
-  const cxF = .62, voiceCol = okR ? nCol(r.comfort) : fl.curZ >= 0 || id === 'sss' ? V3.toHex(L.solo.color()) : null;
+  setBody(SW, SH, 1.55);
+  const cxF = .63, voiceCol = okR ? nCol(r.comfort) : fl.curZ >= 0 || id === 'sss' ? V3.toHex(L.solo.color()) : null;
   const tint = id === 'pick' ? PINK : voiceCol;
   drawBody(ctx, body(SW < 420 ? 2300 : 3200, 7), SW, SH, cxF, fl.hl, tint, fl.T, id === 'pick' ? 0 : fl.formA*.8);
   if (okR && r.guess != null && r.guess !== r.actual){
-    const yg = SH*bandMid(r.guess), ya = SH*BY(yOfP(fl.pShown)), x = SW*cxF + SH*.27;
+    const yg = SH*bandMid(r.guess), ya = SH*BY(yOfP(fl.pShown)), x = Math.min(SW - 10, SW*cxF + .23*BK*SH);
     ctx.strokeStyle = PINK; ctx.globalAlpha = .85; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
     ctx.beginPath(); ctx.moveTo(x, yg); ctx.lineTo(x, ya); ctx.stroke(); ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = PINK; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
