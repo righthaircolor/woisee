@@ -1,7 +1,6 @@
-/* woisee · замер голоса (трекер) внутри приложения.
-   Замер до занятия → упражнения → замер после. Где в теле звучит голос, комфортная нота, сирена, выдох.
-   Отсюда же: карточки замера в пути дня, центр и орбита картинки дня, история замеров в профиле.
-   Пользуется глобальными данными и функциями приложения (data, getDay, saveDay, dkey, ensureLive, paintAt…);
+/* woisee · звучание: отпечаток голоса, вкладка «Звучание», картинка дня, профиль.
+   Отпечаток — полминуты: догадка «где звучит голос», «а-а-а», сирена, выдох. Можно делать без практики.
+   Файл пользуется данными и функциями приложения (data, getDay, saveDay, dkey, ensureLive, openDay…);
    они вызываются только из функций, поэтому файл подключается до основного скрипта. */
 (function (g) {
 'use strict';
@@ -11,36 +10,34 @@ const sm = t => { t = clamp(t, 0, 1); return t*t*(3 - 2*t); };
 const DPR = () => Math.min(g.devicePixelRatio || 1, 2);
 const reduced = () => g.matchMedia && g.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);
-const C = { ink:'#F4F2EC', muted:'#9AA7A3', ground:'#0E1514', rule:'rgba(255,254,252,.10)', lime:'#ECF176', kale:'#5EA879' };
+const C = { ink:'#F4F2EC', muted:'#9AA7A3', rule:'rgba(255,254,252,.12)', lime:'#ECF176', kale:'#5EA879', ground:'#121A19' };
 function fit(cv, w, h){ const d = DPR(); const W = Math.max(1, Math.round(w*d)), H = Math.max(1, Math.round(h*d)); if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; } cv.style.height = h + 'px'; const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); return ctx; }
+const escH = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const pl = (n, a, b, c) => { const k = Math.abs(n) % 100, l = k % 10; return k > 10 && k < 20 ? c : l === 1 ? a : l > 1 && l < 5 ? b : c; };
 const ICO = {
-  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>',
-  pause:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg>',
-  stop:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>',
-  redo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4.5v4h-4"/></svg>',
-  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
-  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor" style="width:28px;height:28px"><path d="M9 6.5v11l9-5.5z"/></svg>',
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
   chevL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   inf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c-2.2-2.6-3.9-4-5.6-4a4 4 0 0 0 0 8c1.7 0 3.4-1.4 5.6-4zm0 0c2.2 2.6 3.9 4 5.6 4a4 4 0 0 0 0-8c-1.7 0-3.4 1.4-5.6 4z"/></svg>'
 };
-const escH = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-const pl = (n, a, b, c) => { const k = Math.abs(n) % 100, l = k % 10; return k > 10 && k < 20 ? c : l === 1 ? a : l > 1 && l < 5 ? b : c; };
 
 /* ---------- notes ---------- */
-const OCTN = { 1:'субконтроктавы', 2:'контроктавы', 3:'большой', 4:'малой', 5:'первой', 6:'второй', 7:'третьей' };
+const OCTN = { 1:'субконтроктавы', 2:'контроктавы', 3:'большой октавы', 4:'малой октавы', 5:'первой октавы', 6:'второй октавы', 7:'третьей октавы' };
+const OCTS = { 1:'субконтр.', 2:'контр.', 3:'большой', 4:'малой', 5:'первой', 6:'второй', 7:'третьей' };
 const pcOf = m => ((Math.round(m) % 12) + 12) % 12;
-const nName = m => V3.NAMES[pcOf(m)] + ' ' + (OCTN[Math.floor(Math.round(m)/12)] || '');
 const nShort = m => V3.NAMES[pcOf(m)];
+const nName = m => nShort(m) + ' ' + (OCTS[Math.floor(Math.round(m)/12)] || '');
 const hz = m => 440*Math.pow(2, (m - 69)/12);
-const nCol = m => V3.HUE[pcOf(m)];
+const nCol = m => (typeof data === 'undefined' || data.profile.rain !== false) ? V3.HUE[pcOf(m)] : C.ink;
 const octs = n => (n/12).toFixed(1).replace('.', ',');
 const fmtS = s => { s = Math.max(0, s); return Math.floor(s/60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
 const fmt1 = v => v.toFixed(1).replace('.', ',');
+const uOfM = m => typeof uOfMidi === 'function' ? uOfMidi(m) : clamp(Math.round(m) - 36, 0, 47);
 
-/* ---------- zones: pitch (+ brightness) → place in the body ----------
-   boundaries in MIDI: E2 · E3 · D4 · G4 · D5 · D6 — rough register transitions, the same for every voice */
+/* ---------- zones: where in the body a note is felt ----------
+   by pitch (+ a little by brightness); boundaries in MIDI E2 · E3 · D4 · G4 · D5 · D6 — rough register transitions */
 const ZB = [40, 52, 62, 67, 74, 86];
 const LABELS = {
   body:   [['Низ груди','рёбра, солнечное сплетение'], ['Грудь','грудина, ключицы'], ['Шея','гортань, переход'], ['Маска','скулы, нос, губы'], ['Голова','лоб, темя']],
@@ -68,19 +65,19 @@ function shape(x, y){
   if (y >= .335 && y < .98){ const hw = .046 + (.215 - .046)*sm((y - .335)/.1); if (Math.abs(x) < hw) return y > .88 ? 1 - (y - .88)/.1 : 1; }
   return 0;
 }
-function makeBody(n, seed){
-  const r = FL.rng(seed), X = [], Y = [], S = [], A = [], Zn = [];
-  while (X.length < n){ const x = (r() - .5)*.46, y = .05 + r()*.93; if (r() < shape(x, y)){ X.push(x); Y.push(y); S.push(.6 + r()*r()*1.3); A.push(r()); Zn.push(zoneOfY(y)); } }
-  const byZ = [[], [], [], [], []]; Zn.forEach((z, i) => byZ[z].push(i));
-  return { X, Y, S, A, byZ };
+const bodies = new Map();
+function body(n, seed){
+  const key = n + ':' + seed; if (bodies.has(key)) return bodies.get(key);
+  const r = FL.rng(seed), X = [], Y = [], S = [], A = [], byZ = [[], [], [], [], []];
+  while (X.length < n){ const x = (r() - .5)*.46, y = .05 + r()*.93; if (r() < shape(x, y)){ byZ[zoneOfY(y)].push(X.length); X.push(x); Y.push(y); S.push(.6 + r()*r()*1.3); A.push(r()); } }
+  const B = { X, Y, S, A, byZ }; bodies.set(key, B); return B;
 }
 function drawBody(ctx, B, W, H, cxF, hl, tint, t){
   const cx = W*cxF, sh = reduced() ? 0 : 1;
   for (let z = 0; z < 5; z++){
     const h = hl[z] || 0; ctx.fillStyle = h > .04 && tint ? tint : C.ink;
-    const list = B.byZ[z];
-    for (let k = 0; k < list.length; k++){
-      const i = list[k], a = B.A[i];
+    for (const i of B.byZ[z]){
+      const a = B.A[i];
       ctx.globalAlpha = (.16 + .14*a) + h*(.3 + .45*a);
       const x = cx + (B.X[i] + sh*.0025*Math.sin(t*.9 + a*40))*H, y = (B.Y[i] + sh*.0018*Math.cos(t*.7 + a*31))*H, s = B.S[i]*(1 + .35*h);
       ctx.fillRect(x - s/2, y - s/2, s, s);
@@ -93,46 +90,41 @@ function drawBody(ctx, B, W, H, cxF, hl, tint, t){
 const median = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length/2)] : null; };
 const pct = (a, q) => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[clamp(Math.round(q*(s.length - 1)), 0, s.length - 1)] : null; };
 const mean = a => a.length ? a.reduce((x, y) => x + y, 0)/a.length : null;
-const valid = c => c && !c.skip && c.comfort != null;
-function checksOf(k){ const d = data.days[k]; return d && d.checks || null; }
-/* the note of the day: after the exercises if there was a measurement then, otherwise before */
-function mainOf(k){ const c = checksOf(k); if (!c) return null; return valid(c.after) ? c.after : valid(c.before) ? c.before : null; }
-/* where the day stands on the path */
-function gate(d){
-  if (!d || !d.plan) return null;
-  const c = d.checks || {};
-  if (!c.before && !(d.done || []).length) return 'before';
-  if (curOf(d)) return 'ex';
-  if (!c.after) return 'after';
-  return 'done';
+const valid = c => !!(c && c.comfort != null);
+function prints(k){
+  const d = data.days[k]; if (!d) return [];
+  if (d.checks && !d.prints){ d.prints = ['before', 'after'].map(x => d.checks[x]).filter(valid); delete d.checks; }
+  return (d.prints || []).filter(valid);
+}
+const practised = k => typeof ok === 'function' ? ok(k) : false;
+/* a day «with voice»: a voice print or at least a minute of practice — one streak for both */
+const voiced = k => practised(k) || prints(k).length > 0;
+function streak(){ let d = new Date(); if (!voiced(dkey(d))) d = addDays(d, -1); let n = 0; while (voiced(dkey(d))){ n++; d = addDays(d, -1); } return n; }
+/* the notes a day sounded on in its exercises, the longest held first */
+function exNotes(k){
+  const d = data.days[k], out = [];
+  ((d && d.log) || []).forEach(L => (L.notes || []).forEach(n => { if (n.midi != null) out.push({ midi:n.midi, sec:n.sec || 1, stab:n.stab }); }));
+  return out.sort((a, b) => b.sec - a.sec);
+}
+/* the note(s) that gather out of the day's haze: first and last print; or the most held note of the exercises */
+function dayNotes(k){
+  const P = prints(k);
+  if (P.length >= 2) return [P[0].comfort, P[P.length - 1].comfort];
+  if (P.length) return [P[0].comfort];
+  const E = exNotes(k); return E.length ? [E[0].midi] : [];
 }
 
-/* =========================== path cards =========================== */
-function pathCard(kind, d){
-  const gt = gate(d), c = (d.checks || {})[kind], isCur = gt === kind;
-  const idx = kind === 'before' ? '00' : '05', title = kind === 'before' ? 'Замер до' : 'Замер после';
-  const sub = kind === 'before' ? 'Где сейчас звучит голос · полминуты' : 'Что изменилось после занятия · 20 секунд';
-  const open = isCur || valid(c) || (c && c.skip);
-  let row = '';
-  if (isCur) row = `<li><button class="row cur" data-act="check" data-v="${kind}"><span class="t">${kind === 'before' ? 'Догадка, «а-а-а», сирена, выдох' : 'Догадка, «а-а-а», сирена'}</span><span class="d num">${kind === 'before' ? '0:40' : '0:25'}</span><span class="box">${ICO.play}</span></button></li>
-    <li class="ck-skip"><button class="lnk" data-act="checkskip" data-v="${kind}">Пропустить замер</button></li>`;
-  else if (valid(c)) row = `<li><button class="row ck-done" data-act="checkres" data-v="${kind}"><span class="t">Звучишь ${zIn(c.actual)} · ${escH(nName(c.comfort))}</span><span class="d num">${c.at || ''}</span><span class="ck-dot" style="background:${nCol(c.comfort)}"></span></button></li>`;
-  else if (c && c.skip) row = `<li><div class="row dn"><span class="t">Пропущен</span><span class="d"></span><span></span></div></li>`;
-  else row = `<li><div class="row lk" aria-disabled="true"><span class="t">${kind === 'before' ? 'Догадка, «а-а-а», сирена, выдох' : 'После всех упражнений'}</span><span class="d num"></span><span class="box">${typeof ICON_LOCK !== 'undefined' ? ICON_LOCK : ''}</span></div></li>`;
-  return `<article class="blk b-check ${open ? '' : 'closed'}"><header><div><span class="idx">${idx}</span><h3>${title}</h3><p class="sub">${sub}</p></div><span class="cnt num">${valid(c) ? '1' : '0'}<small>/1</small></span></header>
-    ${open ? `<ul>${row}</ul>` : ''}</article>`;
-}
-
-/* =========================== the measurement flow =========================== */
+/* =========================== the voice print (flow) =========================== */
 const STEPS = {
-  pick: { title:'Где, по-твоему, звучит твой голос?', hint:'Прислушайся к себе и нажми на зону. Потом замер проверит.' },
-  a:    { title:'Скажи «а-а-а», как обычно говоришь', hint:'Ровно, на удобной ноте. Таймер идёт, только пока звучит голос.', dur:5 },
-  siren:{ title:'Сирена снизу вверх и обратно', hint:'От самой низкой удобной ноты до самой высокой и вниз. Без крика.', dur:11 },
-  sss:  { title:'Вдохни и тяни «с-с-с»', hint:'Нажми ▶ и тяни ровно, пока хватает воздуха. Воздух закончился — нажми «Стоп».' }
+  pick: { t:'Где, по-твоему, звучит твой голос?', h:'Прислушайся к себе и нажми на зону. Потом отпечаток проверит.' },
+  a:    { t:'Скажи «а-а-а», как обычно говоришь', h:'Ровно, на удобной ноте. Таймер идёт, только пока звучит голос.', dur:5, next:'сирена' },
+  siren:{ t:'Сирена снизу вверх и обратно', h:'От самой низкой удобной ноты до самой высокой и вниз. Без крика.', dur:11, next:'выдох' },
+  sss:  { t:'Вдохни и тяни «с-с-с»', h:'Ровно, пока хватает воздуха. Воздух закончился — нажми «Стоп».' }
 };
-const fl = { onClose:null, kind:'before', steps:[], step:0, guess:null, demo:false, run:false, done:{}, err:'', curZ:-1, p:.3, pShown:.3, hl:[0,0,0,0,0], formA:0, result:null, info:null, auto:0, raf:0, last:0, T:0, onDone:null, key:'' };
+const ORDER = ['pick', 'a', 'siren', 'sss', 'res'];
+const fl = { step:0, guess:null, demo:false, run:false, done:{}, curZ:-1, p:.3, pShown:.3, hl:[0,0,0,0,0], formA:0, result:null, info:null, auto:0, raf:0, last:0, T:0, ctx:null, onSave:null, key:'', saved:-1 };
 const acc = { a:null, s:null, x:null };
-let SW = 0, SH = 0, body = null, off = null, prevZ = -2, L = null;
+let SW = 0, SH = 0, off = null, prevZ = -2, L = null;
 function resetStep(id){
   if (id === 'a') acc.a = { t:0, voicedT:0, midis:[], stabs:[], cents:[], zoneT:[0,0,0,0,0] };
   if (id === 'siren') acc.s = { t:0, midis:[], zoneT:[0,0,0,0,0] };
@@ -140,142 +132,151 @@ function resetStep(id){
   fl.done[id] = false;
 }
 function build(){
-  if ($('ck')) return;
+  if ($('pt')) return;
   const el = document.createElement('section');
-  el.className = 'ck'; el.id = 'ck'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ckTitle');
-  el.innerHTML = `<div class="ck-in">
-    <header class="ck-top"><button class="ck-rb" id="ckClose" aria-label="Закрыть замер">${ICO.x}</button><div class="ck-prog" id="ckProg"></div><span class="ck-sp"></span></header>
-    <div class="ck-head"><span class="ck-kick" id="ckKick"></span><h2 id="ckTitle"></h2><p id="ckHint"></p></div>
-    <div class="ck-stage" id="ckStage"><canvas id="ckCv" aria-label="Силуэт из точек: зоны, где ощущается голос"></canvas><div class="ck-zones" id="ckZones"></div>
-      <div class="ck-timer" aria-live="polite"><b class="num" id="ckNum"></b><span id="ckSub"></span></div></div>
-    <div class="ck-res" id="ckRes"></div>
-    <footer class="ck-ctl" id="ckCtl"></footer></div>`;
-  document.body.appendChild(el);
-  $('ckClose').addEventListener('click', close);
+  el.className = 'pt'; el.id = 'pt'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ptTitle');
+  el.innerHTML = `<div class="pt-in">
+    <div class="ex-top"><button class="icon-btn" id="ptClose" aria-label="Закрыть">${ICO.x}</button><div class="segs" id="ptSegs"></div><span></span></div>
+    <span class="pill" id="ptPill" style="align-self:flex-start"></span>
+    <h2 class="ex-title" id="ptTitle"></h2><p class="pt-hint" id="ptHint"></p>
+    <div class="pt-stage" id="ptStage"><canvas id="ptCv" aria-label="Силуэт из точек: зоны, где ощущается голос"></canvas><div class="pt-zones" id="ptZones"></div></div>
+    <div class="pt-res" id="ptRes"></div></div>`;
+  const bar = document.createElement('div'); bar.className = 'tbar pt-bar'; bar.id = 'ptBar'; bar.hidden = true;
+  document.body.appendChild(el); document.body.appendChild(bar);
+  $('ptClose').addEventListener('click', close);
+  bar.addEventListener('click', onBar);
   addEventListener('keydown', e => { if (e.key === 'Escape' && !el.hidden) close(); });
   addEventListener('resize', () => { if (!el.hidden) layout(); });
   off = document.createElement('canvas');
 }
 function buildZones(){
-  const zs = $('ckZones'); if (!zs) return;
-  zs.innerHTML = [4,3,2,1,0].map(z => `<button class="ck-zb" data-z="${z}" tabindex="-1"><b>${zName(z)}</b><span>${zSub(z)}</span></button>`).join('');
-  zs.querySelectorAll('.ck-zb').forEach(b => b.addEventListener('click', () => {
-    if (fl.steps[fl.step] !== 'pick') return;
-    fl.guess = +b.dataset.z; markZones(); renderCtl();
-    clearTimeout(fl.auto); fl.auto = setTimeout(() => { if (fl.steps[fl.step] === 'pick') go(fl.step + 1); }, 550);
+  const zs = $('ptZones'); if (!zs) return;
+  zs.innerHTML = [4,3,2,1,0].map(z => `<button class="pt-zb" data-z="${z}" tabindex="-1"><b>${zName(z)}</b><span>${zSub(z)}</span></button>`).join('');
+  zs.querySelectorAll('.pt-zb').forEach(b => b.addEventListener('click', () => {
+    if (ORDER[fl.step] !== 'pick') return;
+    fl.guess = +b.dataset.z; markZones(); renderBar();
+    clearTimeout(fl.auto); fl.auto = setTimeout(() => { if (ORDER[fl.step] === 'pick') go(1); }, 550);
   }));
   layout(); markZones();
 }
 function layout(){
-  const st = $('ckStage'); if (!st) return;
-  const id = fl.steps[fl.step], W = st.clientWidth || Math.min(innerWidth, 520) - 36;
-  const reserve = id === 'pick' ? 300 : id === 'res' ? 480 : 330;
-  const H = Math.round(clamp(innerHeight - reserve, 250, W*1.25));
+  const st = $('ptStage'); if (!st) return;
+  const id = ORDER[fl.step], W = st.clientWidth || Math.min(innerWidth, 520) - 36;
+  const top = st.getBoundingClientRect().top + $('pt').scrollTop;
+  const H = id === 'res' ? Math.round(Math.min(W*1.05, 470)) : Math.round(clamp(innerHeight - top - 128, 260, W*1.3));
   st.style.height = H + 'px';
-  if (W !== SW || H !== SH || !body){ SW = W; SH = H; fit($('ckCv'), SW, SH); body = makeBody(SW < 420 ? 2300 : 3200, 7); }
+  if (W !== SW || H !== SH){ SW = W; SH = H; fit($('ptCv'), SW, SH); }
   st.classList.toggle('compact', SH < 420);
-  $('ckZones').querySelectorAll('.ck-zb').forEach(b => { const z = +b.dataset.z; b.style.top = (SH*(BAND[z][0] + BAND[z][1])/2) + 'px'; });
+  $('ptZones').querySelectorAll('.pt-zb').forEach(b => { const z = +b.dataset.z; b.style.top = (SH*(BAND[z][0] + BAND[z][1])/2) + 'px'; });
 }
 function markZones(){
-  const id = fl.steps[fl.step];
-  $('ckZones').querySelectorAll('.ck-zb').forEach(b => {
+  const id = ORDER[fl.step];
+  $('ptStage').classList.toggle('pick', id === 'pick');
+  $('ptZones').querySelectorAll('.pt-zb').forEach(b => {
     const z = +b.dataset.z;
     b.classList.toggle('guess', fl.guess === z && (id === 'pick' || id === 'res'));
     b.classList.toggle('on', z === fl.curZ && id !== 'pick');
     b.tabIndex = id === 'pick' ? 0 : -1;
   });
 }
-/* kind: 'before' | 'after'; onDone(record) after «save» */
-function open(kind, onDone, onClose){
+/* ctx: 'after' when it closes a practice; onSave(record) runs when she leaves the result */
+function open(ctx, onSave){
   if (typeof HAS_FORM !== 'undefined' && !HAS_FORM) return;
   build();
   L = ensureLive(); L.setOpts({ rain: data.profile.rain !== false, crisp: data.profile.lace !== true, mono: '#F4F2EC' });
   L.solo.ghosts.length = 0; L.solo.exh = 0; L.mixT = 0; L.many = 0;
-  Object.assign(fl, { onClose: onClose || null, kind, steps: kind === 'before' ? ['pick','a','siren','sss','res'] : ['pick','a','siren','res'], step:0, guess:null, demo:false, run:false, done:{}, err:'', result:null, curZ:-1, formA:0, info:null, onDone, key:dkey() });
+  Object.assign(fl, { ctx: ctx || null, onSave: onSave || null, step:0, guess:null, demo:false, run:false, done:{}, result:null, curZ:-1, formA:0, info:null, key:dkey(), saved:-1 });
   ['a','siren','sss'].forEach(resetStep);
   L.solo.target({ e:.08, hold:0, noise:0 });
-  const el = $('ck'); el.hidden = false; el.scrollTop = 0; document.body.style.overflow = 'hidden';
+  const el = $('pt'); el.hidden = false; $('ptBar').hidden = false; el.scrollTop = 0; document.body.style.overflow = 'hidden';
   buildZones(); renderStep();
   cancelAnimationFrame(fl.raf); fl.last = performance.now(); fl.raf = requestAnimationFrame(frame);
 }
 function close(){
   if (L && L.on) L.stop();
   fl.run = false; clearTimeout(fl.auto); cancelAnimationFrame(fl.raf); fl.raf = 0;
-  const el = $('ck'); if (el) el.hidden = true; document.body.style.overflow = '';
-  if (fl.onClose){ const f = fl.onClose; fl.onClose = null; f(); return; }
-  if (typeof render === 'function' && !(typeof ex !== 'undefined' && ex.open)) render();
+  if ($('pt')) $('pt').hidden = true; if ($('ptBar')) $('ptBar').hidden = true;
+  document.body.style.overflow = (typeof ex !== 'undefined' && ex.open) ? 'hidden' : '';
+  const cb = fl.onSave, r = fl.saved >= 0 ? fl.result : null; fl.onSave = null;
+  if (cb && r) cb(r); else if (typeof render === 'function' && !(typeof ex !== 'undefined' && ex.open)) render();
 }
 function go(i){
   clearTimeout(fl.auto); fl.run = false;
-  const id = fl.steps[i];
-  if (id === 'res'){ compute(); if (L.on) L.stop(); }
-  fl.step = i; fl.curZ = id === 'res' && fl.result && fl.result.comfort != null ? fl.result.actual : -1;
+  const id = ORDER[i];
+  if (id === 'res'){ compute(); if (L.on) L.stop(); save(); }
+  fl.step = i; fl.curZ = id === 'res' && valid(fl.result) ? fl.result.actual : -1;
   if (id !== 'res') L.solo.target({ e:.08, hold:0, noise:0 });
-  $('ck').scrollTop = 0; renderStep();
+  $('pt').scrollTop = 0; renderStep();
 }
 function renderStep(){
-  const id = fl.steps[fl.step], n = fl.steps.length - 1;
-  $('ckProg').innerHTML = fl.steps.slice(0, -1).map((s, k) => `<i class="${k < fl.step || (k === fl.step && fl.done[s]) ? 'on' : k === fl.step ? 'cur' : ''}"></i>`).join('');
-  $('ckStage').classList.toggle('pick', id === 'pick');
-  const head = fl.kind === 'before' ? 'Замер до' : 'Замер после';
+  const id = ORDER[fl.step];
+  $('ptSegs').innerHTML = ORDER.slice(0, -1).map((s, k) => `<i class="${k < fl.step || (k === fl.step && fl.done[s]) ? 'dn' : k === fl.step ? 'cur' : ''}"></i>`).join('');
   if (id !== 'res'){
-    const S = STEPS[id];
-    $('ckKick').textContent = head + ' · ' + (fl.step + 1) + ' из ' + n + (fl.demo && id !== 'pick' ? ' · демо' : '');
-    $('ckTitle').textContent = S.title; $('ckHint').textContent = S.hint;
-    $('ckRes').innerHTML = id === 'pick' ? `<div class="ck-c"><button class="ck-lnk" id="ckDemo">Нет микрофона? Пройти с демо-голосом</button></div>`
-      : fl.err ? `<p class="ck-err">${fl.err} <button class="ck-lnk" id="ckDemo">Демо-голос</button></p>`
-      : !fl.demo && !(L && L.on) ? `<div class="ck-c"><button class="ck-lnk" id="ckDemo">Нет микрофона? Демо-голос</button></div>` : '';
-    const db = $('ckDemo'); if (db) db.addEventListener('click', () => { fl.demo = true; fl.err = ''; if (fl.guess == null) fl.guess = 2; go(Math.max(1, fl.step)); });
+    $('ptPill').textContent = 'Отпечаток · ' + (fl.step + 1) + ' из 4' + (fl.demo && id !== 'pick' ? ' · демо' : '');
+    $('ptTitle').textContent = STEPS[id].t; $('ptHint').textContent = STEPS[id].h;
+    $('ptRes').innerHTML = '';
   } else renderResult();
-  layout(); markZones(); renderCtl(); updateTimer();
+  layout(); markZones(); renderBar();
 }
-function renderCtl(){
-  const id = fl.steps[fl.step], c = $('ckCtl');
+/* the bottom capsule is the one from the exercises: big timer on the left, round button on the right */
+function renderBar(){
+  const id = ORDER[fl.step], bar = $('ptBar'); if (!bar) return;
+  let time = '', label = '', acts = '', fin = false, big = true, fill = 0;
   if (id === 'pick'){
-    const ls = labSet();
-    c.innerHTML = `<div class="ck-sw" role="tablist" aria-label="Подписи зон"><button role="tab" data-lab="body" aria-selected="${ls === 'body'}">Тело</button><button role="tab" data-lab="chakra" aria-selected="${ls === 'chakra'}">Чакры</button></div>
-      <button class="ck-next ${fl.guess != null ? 'go' : ''}" id="ckNext" ${fl.guess == null ? 'disabled' : ''}>Дальше ${ICO.next}</button>`;
-    c.querySelectorAll('[data-lab]').forEach(x => x.addEventListener('click', () => { setLabels(x.dataset.lab); }));
-  } else if (id !== 'res'){
-    const done = fl.done[id];
-    const mid = id === 'sss' && fl.run ? `<button class="ck-play stop" id="ckPlay" aria-label="Стоп">${ICO.stop}<span>Стоп</span></button>`
-      : `<button class="ck-play ${done ? 'done' : ''}" id="ckPlay" aria-label="${done ? 'Ещё раз' : fl.run ? 'Пауза' : 'Старт'}">${done ? ICO.redo : fl.run ? ICO.pause : ICO.play}</button>`;
-    c.innerHTML = `<button class="ck-rb" id="ckBack" aria-label="Назад">${ICO.back}</button>${mid}<button class="ck-next ${done ? 'go' : ''}" id="ckNext">${done ? 'Дальше' : 'Пропустить'} ${ICO.next}</button>`;
-    $('ckBack').addEventListener('click', () => go(fl.step - 1));
-    $('ckPlay').addEventListener('click', togglePlay);
+    big = false; time = 'Догадка'; label = fl.guess == null ? 'нажми на зону на силуэте' : zName(fl.guess);
+    acts = (fl.guess == null ? `<button class="chip" data-pt="demo">Без микрофона</button>` : '') + `<button class="go" data-pt="next" ${fl.guess == null ? 'disabled style="opacity:.35"' : ''}>Дальше</button>`;
+  } else if (id === 'res'){
+    fin = true; big = false; time = 'Готово'; label = valid(fl.result) ? 'отпечаток сохранён' : 'голос не услышан';
+    acts = valid(fl.result) ? `<button class="go" data-pt="close">${fl.ctx === 'after' ? 'Дальше' : 'Закрыть'}</button>` : `<button class="go" data-pt="retry">Ещё раз</button>`;
+  } else if (fl.done[id]){
+    fin = true; big = false;
+    time = id === 'sss' ? Math.round(acc.x.exh) + ' с' : 'Готово'; label = id === 'sss' ? 'выдох' : 'дальше: ' + STEPS[id].next;
+    acts = `<button class="chip" data-pt="redo">Ещё раз</button><button class="go" data-pt="next">${id === 'sss' ? 'Итог' : 'Дальше'}</button>`;
   } else {
-    const ok = fl.result && fl.result.comfort != null;
-    const label = !ok ? 'Повторить «а-а-а»' : fl.kind === 'before' ? 'К упражнениям' : 'Картинка дня';
-    c.innerHTML = `<button class="ck-rb" id="ckBack" aria-label="Назад">${ICO.back}</button><button class="ck-wide" id="ckSave">${label}</button>`;
-    $('ckBack').addEventListener('click', () => go(fl.step - 1));
-    $('ckSave').addEventListener('click', () => { if (ok) save(); else { resetStep('a'); go(1); } });
+    if (id === 'sss'){ time = fmt1(acc.x.exh); fill = Math.min(100, acc.x.exh/40*100); }
+    else { const left = id === 'a' ? STEPS.a.dur - acc.a.voicedT : STEPS.siren.dur - acc.s.t; time = fmtS(Math.ceil(left - 1e-6)); fill = (1 - left/STEPS[id].dur)*100; }
+    const started = (id === 'a' && acc.a.t > 0) || (id === 'siren' && acc.s.t > 0);
+    if (!fl.run) acts = `<button class="go" data-pt="play" aria-label="${started ? 'Продолжить' : 'Старт'}">${started ? ICO.play : 'Старт'}</button>`;
+    else acts = id === 'sss' ? `<button class="go" data-pt="stop">Стоп</button>` : `<button class="go alt" data-pt="pause">Пауза</button>`;
   }
-  const nx = $('ckNext'); if (nx) nx.addEventListener('click', () => { if (fl.steps[fl.step] === 'pick' && fl.guess == null) return; go(fl.step + 1); });
+  bar.innerHTML = `<div class="cap ${fin ? 'fin' : ''}"><i class="fill" id="ptFill" style="width:${fin ? 100 : fill}%"></i><div class="time"><b id="ptTime" class="${big ? 'big' : ''}">${time}</b>${label ? `<span>${escH(label)}</span>` : ''}</div><div class="acts">${acts}</div></div>`;
 }
-async function togglePlay(){
-  const id = fl.steps[fl.step];
-  if (fl.done[id]){ resetStep(id); fl.run = true; renderStep(); return; }
-  if (!fl.run && !fl.demo && !L.on){
-    if (data.profile.micOff === true){ fl.err = 'Микрофон выключен в настройках.'; renderStep(); return; }
-    try { await L.start(); data.profile.mic = data.profile.mic || 'asked'; }
-    catch (e){ fl.err = 'Микрофон недоступен.'; renderStep(); return; }
+function tickBar(){
+  const id = ORDER[fl.step], t = $('ptTime'), f = $('ptFill'); if (!t || fl.done[id] || id === 'pick' || id === 'res') return;
+  if (id === 'sss'){ t.textContent = fmt1(acc.x.exh); if (f) f.style.width = Math.min(100, acc.x.exh/40*100) + '%'; return; }
+  const left = id === 'a' ? STEPS.a.dur - acc.a.voicedT : STEPS.siren.dur - acc.s.t;
+  t.textContent = fmtS(Math.ceil(left - 1e-6)); if (f) f.style.width = clamp((1 - left/STEPS[id].dur)*100, 0, 100) + '%';
+}
+async function onBar(e){
+  const b = e.target.closest('[data-pt]'); if (!b) return;
+  const a = b.dataset.pt, id = ORDER[fl.step];
+  if (a === 'next'){ if (id === 'pick' && fl.guess == null) return; go(fl.step + 1); return; }
+  if (a === 'demo'){ fl.demo = true; if (fl.guess == null) fl.guess = 2; go(1); return; }
+  if (a === 'close'){ close(); return; }
+  if (a === 'retry'){ resetStep('a'); go(1); return; }
+  if (a === 'redo'){ resetStep(id); fl.run = true; renderStep(); return; }
+  if (a === 'pause'){ fl.run = false; L.solo.target({ e:.12, hold:0, noise:0 }); renderBar(); return; }
+  if (a === 'stop'){ finishStep(); return; }
+  if (a === 'play'){
+    if (!fl.demo && !L.on){
+      if (data.profile.micOff === true) fl.demo = true;
+      else { try { await L.start(); if (!data.profile.mic){ data.profile.mic = 'asked'; saveProfile(); } } catch (err){ fl.demo = true; } }
+      if (fl.demo) renderStep();
+    }
+    fl.run = true; renderBar();
   }
-  if (id === 'sss' && fl.run){ finishStep(); return; }
-  fl.run = !fl.run;
-  if (!fl.run) L.solo.target({ e:.12, hold:0, noise:0 });
-  renderCtl(); updateTimer();
 }
-function finishStep(){ const id = fl.steps[fl.step]; fl.run = false; fl.done[id] = true; L.solo.target({ hold:.2 }); renderCtl(); const b = $('ckProg').children[fl.step]; if (b) b.className = 'on'; updateTimer(); }
+function finishStep(){ const id = ORDER[fl.step]; fl.run = false; fl.done[id] = true; L.solo.target({ hold:.2 }); const s = $('ptSegs').children[fl.step]; if (s) s.className = 'dn'; renderBar(); }
 
 function demoInfo(id, t){
-  const up = fl.kind === 'after' ? 1.6 : 0;
-  if (id === 'a'){ if (t < .6) return { voiced:false, silent:true, act:false, noise:0 }; return { voiced:true, midi:55.2 + up + .18*Math.sin(t*5.5) + .06*Math.sin(t*17), stab:fl.kind === 'after' ? .9 : .78, act:true, silent:false, noise:0, cent:.2 }; }
+  const up = prints(dkey()).length ? 1.6 : 0;
+  if (id === 'a'){ if (t < .6) return { voiced:false, silent:true, act:false, noise:0 }; return { voiced:true, midi:55.2 + up + .18*Math.sin(t*5.5) + .06*Math.sin(t*17), stab:up ? .9 : .78, act:true, silent:false, noise:0, cent:.2 }; }
   if (id === 'siren'){ if (t > 10.4) return { voiced:false, silent:true, act:false, noise:0 }; return { voiced:true, midi:52 - up*.6 + (25 + up*2)*Math.sin(Math.PI*Math.min(t, 10)/10), stab:.7, act:true, silent:false, noise:0, cent:.3 }; }
   if (t < .5 || t > 17.5) return { voiced:false, silent:true, act:false, noise:0 };
   return { voiced:false, act:true, silent:false, noise:.95, cent:.85 };
 }
 function analyse(info, dt){
-  const id = fl.steps[fl.step];
+  const id = ORDER[fl.step];
   let z = -1;
   if (info.voiced && info.midi > 30){ fl.p = pOf(info.midi, info.cent); z = zoneOf(fl.p); }
   if (id === 'a'){ const a = acc.a; a.t += dt;
@@ -284,24 +285,10 @@ function analyse(info, dt){
   } else if (id === 'siren'){ const s = acc.s; s.t += dt;
     if (z >= 0){ s.midis.push(info.midi); s.zoneT[z] += dt; }
     if (s.t >= STEPS.siren.dur) finishStep();
-  } else if (id === 'sss'){ const x = acc.x; x.t += dt; x.exh = x.t; }
+  } else if (id === 'sss'){ acc.x.t += dt; acc.x.exh = acc.x.t; }
   fl.curZ = id === 'sss' ? -1 : z >= 0 ? z : info.silent ? -1 : fl.curZ;
   fl.info = info;
 }
-function updateTimer(){
-  const id = fl.steps[fl.step], n = $('ckNum'), s = $('ckSub'), info = fl.info;
-  if (id === 'pick' || id === 'res'){ n.textContent = ''; s.textContent = ''; return; }
-  if (id === 'a') n.textContent = fmtS(Math.ceil(STEPS.a.dur - acc.a.voicedT - 1e-6));
-  if (id === 'siren') n.textContent = fmtS(Math.ceil(STEPS.siren.dur - acc.s.t - 1e-6));
-  if (id === 'sss') n.textContent = fmt1(acc.x.exh);
-  let sub;
-  if (fl.done[id]) sub = id === 'sss' ? 'секунд выдоха' : 'готово';
-  else if (!fl.run) sub = id === 'sss' ? 'нажми ▶ на вдохе' : 'нажми ▶ и начни';
-  else if (id === 'sss') sub = 'нажми «Стоп», когда воздух закончится';
-  else sub = info && info.voiced ? nName(info.midi) + ' · ' + zName(zoneOf(pOf(info.midi, info.cent))) : 'жду звук…';
-  s.textContent = sub;
-}
-/* the siren as a short contour of notes: it makes the centre of the day picture move */
 function contour(m, n){
   if (m.length < 8) return [];
   const out = [], step = m.length/n;
@@ -315,65 +302,57 @@ function compute(){
   const r = { at:String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), guess:fl.guess,
     comfort: comfort == null ? null : +comfort.toFixed(2), stab: a.stabs.length ? +clamp(mean(a.stabs), 0, 1).toFixed(3) : null,
     low: s.midis.length > 12 ? +pct(all, .04).toFixed(2) : null, high: s.midis.length > 12 ? +pct(all, .96).toFixed(2) : null,
-    contour: contour(s.midis, 32), cent: cent == null ? 0 : +cent.toFixed(3), zones: zt.map(v => +(v/tz).toFixed(3)) };
-  if (fl.kind === 'before') r.exhale = +x.exh.toFixed(1);
+    contour: contour(s.midis, 32), exhale: x.exh > 1 ? +x.exh.toFixed(1) : null, cent: cent == null ? 0 : +cent.toFixed(3), zones: zt.map(v => +(v/tz).toFixed(3)) };
+  if (fl.ctx) r.ctx = fl.ctx;
   if (fl.demo) r.demo = true;
   r.actual = r.comfort == null ? null : zoneOf(pOf(r.comfort, r.cent));
   fl.result = r;
-  if (r.comfort != null){ fl.p = pOf(r.comfort, r.cent); fl.pShown = fl.p; const m = Math.round(r.comfort); L.solo.target({ u: m - 12*(Math.floor(m/12) - 1), vo:1, noise:0, amp:.55, stab:Math.max(.7, r.stab || .7), e:1, hold:1, cent:.5 }); }
+  if (valid(r)){ fl.p = pOf(r.comfort, r.cent); fl.pShown = fl.p; const m = Math.round(r.comfort); L.solo.target({ u: m - 12*(Math.floor(m/12) - 1), vo:1, noise:0, amp:.55, stab:Math.max(.7, r.stab || .7), e:1, hold:1, cent:.5 }); }
 }
+/* the result is kept as soon as it is shown; going back and measuring again replaces it */
+function save(){
+  const r = fl.result; if (!valid(r)) return;
+  const k = fl.key, d = getDay(k); prints(k);
+  d.prints = d.prints || [];
+  if (fl.saved >= 0 && fl.saved < d.prints.length) d.prints[fl.saved] = r; else { d.prints.push(r); fl.saved = d.prints.length - 1; }
+  saveDay(k);
+  if (!data.profile.ref){ data.profile.ref = Math.round(r.comfort); saveProfile(); }
+  if (typeof mom !== 'undefined' && mom.cache) mom.cache.delete('d:' + k);
+}
+const semis = c => c && c.low != null ? Math.round(c.high - c.low) : null;
 function guessLine(r){
   if (r.guess == null) return '';
   if (r.guess === r.actual) return 'Догадка совпала. Это редкость: изнутри голос обычно звучит иначе, чем снаружи.';
   return r.guess > r.actual ? 'Ты думала: «' + zName(r.guess) + '». Голос ниже, чем кажется: он опирается на грудь, а внимание сосредоточено выше.'
-    : 'Ты думала: «' + zName(r.guess) + '». Изнутри голос кажется ниже: кости черепа добавляют низких частот. Поэтому своя запись звучит выше.';
+    : 'Ты думала: «' + zName(r.guess) + '». Изнутри голос кажется ниже: кости черепа добавляют низких частот, поэтому своя запись звучит выше.';
 }
-const semis = c => c && c.low != null ? Math.round(c.high - c.low) : null;
-function delta(v, unit){ if (v == null || !isFinite(v)) return ''; const r = Math.round(v); return r === 0 ? '<span class="ck-dl">без изменений</span>' : `<span class="ck-dl ${r > 0 ? 'up' : ''}">${r > 0 ? '+' : '−'}${Math.abs(r)}${unit}</span>`; }
 function renderResult(){
-  const r = fl.result, k = fl.key;
-  if (!r || r.comfort == null){
-    $('ckKick').textContent = (fl.kind === 'before' ? 'Замер до' : 'Замер после') + ' · итог'; $('ckTitle').textContent = 'Голос не услышан';
-    $('ckHint').textContent = 'Шаг «а-а-а» пропущен или микрофон не поймал звук. Без него не найти комфортную ноту.'; $('ckRes').innerHTML = ''; return;
-  }
-  const s = semis(r), b = fl.kind === 'after' ? (checksOf(k) || {}).before : null, hasB = valid(b);
-  $('ckKick').textContent = (fl.kind === 'before' ? 'Замер до · итог' : 'Замер после · итог') + (fl.demo ? ' · демо' : '');
-  if (fl.kind === 'after' && hasB){
-    const moved = r.actual - b.actual;
-    $('ckTitle').innerHTML = moved === 0 ? `Голос остался <em style="color:${nCol(r.comfort)}">${zIn(r.actual)}</em>` : `Голос ${moved > 0 ? 'поднялся' : 'опустился'} <em style="color:${nCol(r.comfort)}">${zIn(r.actual)}</em>`;
-    $('ckHint').textContent = guessLine(r);
-    const sb = semis(b);
-    $('ckRes').innerHTML = `<div class="ck-chips"><span class="ck-chip"><span class="ck-dot" style="background:${nCol(b.comfort)}"></span>${escH(nName(b.comfort))}</span><span class="ck-ar">→</span><span class="ck-chip"><span class="ck-dot" style="background:${nCol(r.comfort)}"></span>${escH(nName(r.comfort))}</span></div>
-      <div class="ck-card"><div class="ck-rows">
-        <div class="ck-row"><span>Зона</span><b>${zName(b.actual)} → ${zName(r.actual)}</b></div>
-        <div class="ck-row"><span>Комфортная нота</span><b class="num">${Math.round(hz(b.comfort))} → ${Math.round(hz(r.comfort))} Гц ${delta(r.comfort - b.comfort, ' пт')}</b></div>
-        <div class="ck-row"><span>Диапазон сирены</span><b class="num">${sb != null ? octs(sb) : '—'} → ${s != null ? octs(s) : '—'} окт. ${sb != null && s != null ? delta(s - sb, ' пт') : ''}</b></div>
-        <div class="ck-row"><span>Устойчивость «а»</span><b class="num">${b.stab != null ? Math.round(b.stab*100) : '—'} → ${r.stab != null ? Math.round(r.stab*100) : '—'} % ${b.stab != null && r.stab != null ? delta((r.stab - b.stab)*100, ' п.') : ''}</b></div>
-      </div></div>`;
-  } else {
-    $('ckTitle').innerHTML = `Ты звучишь <em style="color:${nCol(r.comfort)}">${zIn(r.actual)}</em>`;
-    $('ckHint').textContent = guessLine(r);
-    $('ckRes').innerHTML = `<div class="ck-chips"><span class="ck-chip">${r.at}</span><span class="ck-chip"><span class="ck-dot" style="background:${nCol(r.comfort)}"></span>${escH(nName(r.comfort))} · <span class="num">${Math.round(hz(r.comfort))} Гц</span></span></div>
-      <div class="ck-card"><div class="ck-rows">
-        <div class="ck-row"><span>Диапазон сирены</span><b class="num">${s != null ? octs(s) + ' окт.<small>' + escH(nName(r.low)) + ' — ' + escH(nName(r.high)) + '</small>' : '—'}</b></div>
-        <div class="ck-row"><span>Устойчивость «а»</span><b class="num">${r.stab != null ? Math.round(r.stab*100) + ' %' : '—'}</b></div>
-        ${fl.kind === 'before' ? `<div class="ck-row"><span>Долгий выдох</span><b class="num">${r.exhale ? Math.round(r.exhale) + ' с' : '—'}</b></div>` : ''}
-      </div></div>`;
-  }
-}
-function save(){
-  const k = fl.key, d = getDay(k);
-  d.checks = d.checks || {}; d.checks[fl.kind] = fl.result; saveDay(k);
-  if (fl.result.comfort != null && !data.profile.ref){ data.profile.ref = Math.round(fl.result.comfort); saveProfile(); }
-  const cb = fl.onDone, r = fl.result;
-  if (L && L.on) L.stop();
-  fl.run = false; cancelAnimationFrame(fl.raf); fl.raf = 0; $('ck').hidden = true; document.body.style.overflow = '';
-  if (cb) cb(r);
+  const r = fl.result;
+  $('ptPill').textContent = 'Отпечаток · итог' + (fl.demo ? ' · демо' : '');
+  if (!valid(r)){ $('ptTitle').textContent = 'Голос не услышан'; $('ptHint').textContent = 'Шаг «а-а-а» пропущен или микрофон не поймал звук. Без него не найти комфортную ноту.'; $('ptRes').innerHTML = ''; return; }
+  const P = (data.days[fl.key] || {}).prints || [], prev = fl.saved > 0 ? P[fl.saved - 1] : null;
+  if (valid(prev)){
+    const mv = r.actual - prev.actual;
+    $('ptTitle').innerHTML = mv === 0 ? `Голос остался <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>` : `Голос ${mv > 0 ? 'поднялся' : 'опустился'} <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>`;
+  } else $('ptTitle').innerHTML = `Ты звучишь <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>`;
+  $('ptHint').textContent = guessLine(r);
+  const pv = valid(prev) ? prev : null, s = semis(r), ps = pv ? semis(pv) : null, was = v => pv ? `<span class="pt-was">${v} →</span> ` : '';
+  const rows = [
+    ['Комфортная нота', was(escH(nShort(pv ? pv.comfort : 0))) + `<span class="pt-dot" style="background:${nCol(r.comfort)}"></span>${escH(nName(r.comfort))} · ${Math.round(hz(r.comfort))} Гц`],
+    ['Диапазон сирены', s != null ? was(ps != null ? octs(ps) : '—') + octs(s) + ' окт.' : '—'],
+    ['Устойчивость «а»', r.stab != null ? was(pv && pv.stab != null ? Math.round(pv.stab*100) : '—') + Math.round(r.stab*100) + ' %' : '—'],
+    ['Долгий выдох', r.exhale ? Math.round(r.exhale) + ' с' : '—'],
+    ['Догадка', r.guess == null ? '—' : r.guess === r.actual ? 'совпала' : zName(r.guess)]
+  ];
+  const toPractice = fl.ctx !== 'after' && !practised(fl.key);
+  $('ptRes').innerHTML = `<ul class="hist pt-table">${rows.map(([l, v]) => `<li><span>${l}</span><span class="m num">${v}</span></li>`).join('')}</ul>
+    ${toPractice ? `<button class="blackbtn wt-cta" id="ptPractice">К практике ${ICO.arrow}</button>` : ''}`;
+  const b = $('ptPractice'); if (b) b.onclick = () => { fl.onSave = null; close(); if (typeof state !== 'undefined'){ state.tab = 'path'; state.choosing = true; render(); scrollTo(0, 0); } };
 }
 function frame(now){
-  const el = $('ck'); if (!el || el.hidden){ fl.raf = 0; return; }
+  const el = $('pt'); if (!el || el.hidden){ fl.raf = 0; return; }
   const dt = Math.min(.05, (now - fl.last)/1000); fl.last = now; fl.T += dt;
-  const id = fl.steps[fl.step];
+  const id = ORDER[fl.step];
   if (['a','siren','sss'].includes(id) && fl.run){
     const t = id === 'a' ? acc.a.t : id === 'siren' ? acc.s.t : acc.x.t;
     let info = null;
@@ -384,7 +363,7 @@ function frame(now){
       else { L.solo.target({ e:.08, hold:0, noise:0 }); L.solo.exh = 0; }
     } else if (L.on) info = L.update(dt).info;
     if (info) analyse(info, dt);
-    updateTimer();
+    tickBar();
   }
   if (id !== 'pick') L.step(dt);
   if (fl.curZ !== prevZ){ prevZ = fl.curZ; markZones(); }
@@ -392,27 +371,25 @@ function frame(now){
   fl.raf = requestAnimationFrame(frame);
 }
 function drawStage(dt){
-  const id = fl.steps[fl.step], k = a => 1 - Math.pow(1 - a, dt*60);
+  const id = ORDER[fl.step], k = a => 1 - Math.pow(1 - a, dt*60), r = fl.result, okR = id === 'res' && valid(r);
   for (let z = 0; z < 5; z++){
     const tg = id === 'pick' ? (z === fl.guess ? .55 : 0) : z === fl.curZ ? 1 : 0;
     fl.hl[z] += (tg - fl.hl[z])*k(tg > fl.hl[z] ? .12 : .03);
   }
   fl.pShown += (fl.p - fl.pShown)*k(.08);
-  const r = fl.result, ok = id === 'res' && r && r.comfort != null;
-  const show = (['a','siren','sss'].includes(id) && (fl.run || fl.done[id])) || ok;
+  const show = (['a','siren','sss'].includes(id) && (fl.run || fl.done[id])) || okR;
   fl.formA += ((show ? 1 : 0) - fl.formA)*k(.06);
-  const ctx = $('ckCv').getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0);
-  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, SW, SH);
-  const cxF = .62, tint = id === 'pick' ? C.lime : ok ? nCol(r.comfort) : fl.curZ >= 0 ? V3.toHex(L.solo.color()) : null;
-  drawBody(ctx, body, SW, SH, cxF, fl.hl, tint, fl.T);
-  if (ok && r.guess != null && r.guess !== r.actual){
+  const ctx = $('ptCv').getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, SW, SH);
+  const cxF = .62, tint = id === 'pick' ? C.lime : okR ? nCol(r.comfort) : fl.curZ >= 0 ? V3.toHex(L.solo.color()) : null;
+  drawBody(ctx, body(SW < 420 ? 2300 : 3200, 7), SW, SH, cxF, fl.hl, tint, fl.T);
+  if (okR && r.guess != null && r.guess !== r.actual){
     const yg = SH*(BAND[r.guess][0] + BAND[r.guess][1])/2, ya = SH*yOfP(fl.pShown), x = SW*cxF + SH*.25;
     ctx.strokeStyle = C.lime; ctx.globalAlpha = .75; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
     ctx.beginPath(); ctx.moveTo(x, yg); ctx.lineTo(x, ya); ctx.stroke(); ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = C.lime; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
   }
   if (fl.formA > .01){
-    const F = Math.round(Math.min(SW*.52, SH*.62)), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
+    const F = Math.round(Math.min(SW*.55, SH*.62)), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
     L.draw(oc, F, F, .5);
     const y = SH*(id === 'sss' ? .5 : yOfP(fl.pShown));
     ctx.globalAlpha = fl.formA; ctx.drawImage(off, SW*cxF - F/2, clamp(y - F/2, -F*.25, SH - F*.75), F, F); ctx.globalAlpha = 1;
@@ -420,215 +397,347 @@ function drawStage(dt){
 }
 function setLabels(v){
   data.profile.zoneLabels = v; saveProfile();
-  if ($('ck') && !$('ck').hidden){ buildZones(); renderStep(); }
-}
-/* a saved measurement, opened from its card in the path */
-function showSaved(kind){
-  const k = dkey(), c = (checksOf(k) || {})[kind]; if (!valid(c)) return;
-  const b = kind === 'after' ? (checksOf(k) || {}).before : null, s = semis(c);
-  openSheet(`<div class="sec-h"><h3>${kind === 'before' ? 'Замер до' : 'Замер после'} · ${c.at || ''}</h3><button class="icon-btn plain" data-act="closesheet" aria-label="Закрыть">${ICO.x}</button></div>
-    <p style="font-size:22px;font-weight:700;letter-spacing:-.02em">Звучишь ${zIn(c.actual)}</p>
-    <ul class="hist">
-      <li><span>Догадка</span><span class="m">${c.guess == null ? '—' : c.guess === c.actual ? 'совпала' : zName(c.guess)}</span></li>
-      <li><span>Комфортная нота</span><span class="m num">${escH(nName(c.comfort))} · ${Math.round(hz(c.comfort))} Гц${valid(b) ? ' (до: ' + escH(nName(b.comfort)) + ')' : ''}</span></li>
-      <li><span>Диапазон сирены</span><span class="m num">${s != null ? octs(s) + ' окт.' : '—'}</span></li>
-      <li><span>Устойчивость «а»</span><span class="m num">${c.stab != null ? Math.round(c.stab*100) + ' %' : '—'}</span></li>
-      ${c.exhale ? `<li><span>Долгий выдох</span><span class="m num">${Math.round(c.exhale)} с</span></li>` : ''}
-    </ul>
-    <div class="sheet-acts"><button class="ghost wide" data-act="checkredo" data-v="${kind}">Перемерить</button></div>`);
+  if ($('pt') && !$('pt').hidden){ buildZones(); renderStep(); }
 }
 
 /* =========================== picture of the day =========================== */
-/* The day as one moving picture, period 8 s (96 frames at 12 fps):
-   centre — the note of the day from the measurement; it holds, then runs along the recorded siren and comes back,
-     so the centre changes symmetry and colour note by note; the «before» note stays under it as a pale ghost;
-   rings of dust — the siren range before (faint) and after (bright);
-   orbit — the exercises of the day, each one its own living clip (or rebuilt form), around the centre. */
+/* The haze of the day stays as it is — every exercise's clip laid over the others, moving, chaotic.
+   Out of it the note of the day gathers: its dots fly in from the cloud, hold the note's pattern for a moment
+   and fall apart again. With prints before and after, the earlier note gathers first, then the later one.
+   One loop is 96 frames (8 s at 12 fps). */
 const LOOP = 96;
-function uAt(m, ph){
-  const base = m.comfort, ct = m.contour && m.contour.length > 3 ? m.contour : null;
-  if (!ct || ph < .35) return base;
-  if (ph < .85){ const q = (ph - .35)/.5*(ct.length - 1), i = Math.floor(q), f = sm(q - i); return ct[i] + (ct[Math.min(ct.length - 1, i + 1)] - ct[i])*f; }
-  const f = sm((ph - .85)/.15); return ct[ct.length - 1] + (base - ct[ct.length - 1])*f;
+const formCache = new Map();
+function formPts(midi, N){
+  const u = Math.round(uOfM(midi)), key = u + ':' + N + ':' + (data.profile.lace === true); if (formCache.has(key)) return formCache.get(key);
+  const Q = V3.makeP(N, 31 + u), st = { u, amp:.4, stab:.95, e:1, hold:1, crisp: data.profile.lace !== true, noise:0, cent:.5, vo:1, bx:1 }, o = [0, 0];
+  const X = new Float32Array(N), Y = new Float32Array(N), A = new Float32Array(N), D = new Float32Array(N), X0 = new Float32Array(N), Y0 = new Float32Array(N);
+  const r = FL.rng(97 + u);
+  for (let i = 0; i < N; i++){ V3.targetOf(Q, st, i, 0, null, o); X[i] = o[0]; Y[i] = o[1]; A[i] = .35 + .65*((i*7919 % 100)/100); D[i] = r(); X0[i] = FL.gs(r)*.55; Y0[i] = FL.gs(r)*.5; }
+  const P = { X, Y, A, D, X0, Y0, Z: Q.Z, N }; formCache.set(key, P); return P;
 }
-function noteForm(ctx, cx, cy, R, midi, N, seed, alpha, dot, rot, mono){
-  const rain = data.profile.rain !== false, crisp = data.profile.lace !== true;
-  const uf = uOfMidi(midi), u0 = Math.floor(uf), f = uf - u0;
-  const col = u => mono || (rain ? V3.noteColor(u) : FC.dot);
-  if (f < .02 || f > .98){ const u = Math.round(uf); V3.renderForm(ctx, cx, cy, R, u, N, seed, col(u), alpha, dot, rot, crisp); return; }
-  V3.renderForm(ctx, cx, cy, R, u0, N, seed, col(u0), alpha*(1 - f), dot, rot, crisp);
-  V3.renderForm(ctx, cx, cy, R, u0 + 1, N, seed, col(u0 + 1), alpha*f, dot, rot, crisp);
+/* how much the n-th note is gathered at phase ph: 0 = haze, 1 = pattern */
+function gather(ph, n, count){
+  const span = 1/count, x = (ph - n*span)/span;
+  if (x < 0 || x > 1) return 0;
+  return x < .15 ? 0 : x < .42 ? sm((x - .15)/.27) : x < .68 ? 1 : x < .95 ? 1 - sm((x - .68)/.27) : 0;
 }
-function dustRing(ctx, cx, cy, r, n, seed, color, alpha, ph, dot){
-  const rr = FL.rng(seed); ctx.fillStyle = color;
-  for (let i = 0; i < n; i++){
-    const a0 = rr()*Math.PI*2, sp = .6 + rr()*.8, a = a0 + (reduced() ? 0 : Math.PI*2*ph*(i % 2 ? 1 : -1)*sp*.25), off = FL.gs(rr)*r*.03, z = (.7 + rr()*1.2)*dot;
-    ctx.globalAlpha = alpha*(.45 + .55*rr());
-    ctx.fillRect(cx + Math.cos(a)*(r + off) - z/2, cy + Math.sin(a)*(r + off) - z/2, z, z);
-  }
+function hazeOf(k, clips, i, ctx, cx, cy, R, mul, mono){
+  if (clips && clips.length) paintAt(ctx, dayLayers(clips, i), layerMul(clips.length)*mul, cx, cy, R*1.18, .8, mono);
+  else { ctx.save(); ctx.globalAlpha = 1; paintSynth(ctx, k, cx, cy, R*1.05, .07*Math.sin(2*Math.PI*(i % LOOP)/LOOP), mono); ctx.restore(); }
+}
+/* returns false when the day has no note: then the caller paints it as before */
+function paintDay(ctx, k, clips, i, cx, cy, R, mono){
+  const notes = dayNotes(k); if (!notes.length) return false;
+  const ph = (((i % LOOP) + LOOP) % LOOP)/LOOP, still = reduced();
+  const ws = notes.map((m, n) => still ? (n === notes.length - 1 ? 1 : 0) : gather(ph, n, notes.length)), w = Math.max(...ws);
+  hazeOf(k, clips, i, ctx, cx, cy, R, 1 - .6*w, mono);
+  const N = Math.round(clamp(R*R*.08, 600, 3000)), dot = Math.max(1, R/115), T2 = Math.PI*2;
+  notes.forEach((m, n) => {
+    const wn = ws[n]; if (wn < .01) return;
+    const P = formPts(m, N), rot = still ? 0 : .25*Math.sin(T2*ph), c = Math.cos(rot), s = Math.sin(rot), Rf = R*.78;
+    ctx.fillStyle = mono || nCol(m);
+    for (let j = 0; j < P.N; j++){
+      const e = sm((wn - P.D[j]*.35)/.65); if (e <= 0) continue;
+      const fx = P.X[j]*c - P.Y[j]*s, fy = P.X[j]*s + P.Y[j]*c;
+      const hx = P.X0[j] + (still ? 0 : .06*Math.sin(T2*ph*2 + j)), hy = P.Y0[j] + (still ? 0 : .06*Math.cos(T2*ph*3 + j*.7));
+      const x = cx + (hx + (fx - hx)*e)*Rf, y = cy + (hy + (fy - hy)*e)*Rf, z = P.Z[j]*dot;
+      ctx.globalAlpha = P.A[j]*e; ctx.fillRect(x - z/2, y - z/2, z, z);
+    }
+  });
   ctx.globalAlpha = 1;
-}
-/* returns false when the day has no measurement: the caller then paints the day as before */
-function paintComp(ctx, k, clips, i, cx, cy, P, mono){
-  const m = mainOf(k); if (!m) return false;
-  const c = checksOf(k) || {}, ph = ((i % LOOP) + LOOP) % LOOP/LOOP, T2 = Math.PI*2;
-  const dot = Math.max(.9, P/150), Rc = P*.44, Ro = P*.77, Rs = P*.19;
-  /* orbit: exercises */
-  const sway = reduced() ? 0 : .22*Math.sin(T2*ph), rot0 = -Math.PI/2 + sway;
-  if (clips && clips.length){
-    const n = clips.length;
-    clips.forEach((cl, j) => { const a = rot0 + T2*j/n, fr = cl.frames[pingpong(i, cl.frames.length)]; if (fr) paintAt(ctx, [fr], .95, cx + Math.cos(a)*Ro, cy + Math.sin(a)*Ro, Rs, .55, mono); });
-  } else {
-    const Ls = synthLayers(k), n = Ls.length, NN = Math.max(120, Math.min(800, Math.round(Rs*Rs*.5)));
-    Ls.forEach((l, j) => { const a = rot0 + T2*j/n, x = cx + Math.cos(a)*Ro, y = cy + Math.sin(a)*Ro;
-      if (l.t === 'n') V3.renderForm(ctx, x, y, Rs, l.u, NN, l.seed, mono || (data.profile.rain !== false ? V3.noteColor(l.u) : FC.dot), .9, dot*.8, 0, data.profile.lace !== true);
-      else V3.renderNoise(ctx, x, y, Rs, l.t === 'z' ? l.cent : .15, Math.round(NN*(l.t === 'z' ? 1 : .6)), l.seed, mono || FC.dot, l.t === 'z' ? .8 : .45, dot*.8); });
-  }
-  /* rings: siren range before and after */
-  const ringR = cc => P*(.5 + .11*clamp(semis(cc)/36, 0, 1));
-  if (valid(c.before) && semis(c.before) != null) dustRing(ctx, cx, cy, ringR(c.before), Math.round(P*2.2), 41, mono || nCol(c.before.high), valid(c.after) ? .35 : .7, ph, dot);
-  if (valid(c.after) && semis(c.after) != null) dustRing(ctx, cx, cy, ringR(c.after), Math.round(P*3), 43, mono || nCol(c.after.high), .85, ph, dot);
-  /* centre: the «before» ghost, then the note of the day running along its siren */
-  const N = Math.round(clamp(P*P*.12, 800, 4200));
-  if (valid(c.before) && valid(c.after)) noteForm(ctx, cx, cy, Rc, c.before.comfort, Math.round(N*.6), 77, .26, dot, .35, mono);
-  noteForm(ctx, cx, cy, Rc, uAt(m, ph), N, 31, 1, dot, reduced() ? 0 : .12*Math.sin(T2*ph), mono);
   return true;
 }
+/* GIF 9:16 with the Reels / TikTok safety zones: picture pinned to the top of the safe area, captions inside it */
+const SAFE = { top:.114, left:.08, right:.058, rightLow:.18, bottom:.71 };
+function gifLayout(W, H){ const side = W*(1 - SAFE.left - SAFE.right), top = H*SAFE.top; return { cx: W*SAFE.left + side/2, cy: top + side/2, R: side*.42, textY: top + side + 30 }; }
+function gifText(ctx, k, W, H){
+  const G = gifLayout(W, H), x0 = W*SAFE.left, x1 = W*(1 - SAFE.rightLow);
+  ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.font = '800 22px "Inter Tight", sans-serif'; ctx.fillText('woisee', x0, G.textY);
+  ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.font = '400 15px "Inter Tight", sans-serif'; ctx.fillText(dateLong(parseKey(k)), x1, G.textY - 2);
+  const P = k ? prints(k) : [];
+  if (P.length){
+    const a = P[0], b = P[P.length - 1], txt = P.length > 1 && nShort(a.comfort) !== nShort(b.comfort) ? nName(a.comfort) + ' → ' + nName(b.comfort) : nName(b.comfort);
+    ctx.textAlign = 'left'; ctx.fillText(txt + ' · ' + zIn(b.actual), x0, G.textY + 24);
+  }
+  ctx.textAlign = 'left';
+}
 
-/* =========================== history (profile) =========================== */
-const H = { per:'m', off:0, sel:null, sample:false };
-function realDays(){ return Object.keys(data.days).sort().map(k => { const c = checksOf(k) || {}, m = mainOf(k); return m ? { date:k, m, b:valid(c.before) ? c.before : null, a:valid(c.after) ? c.after : null } : null; }).filter(Boolean); }
+/* =========================== «Звучание» tab =========================== */
+const WD = ['пн','вт','ср','чт','пт','сб','вс'];
+const monday = dt => { const x = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
+const hasAny = k => voiced(k) || exNotes(k).length > 0;
+/* the little picture of a day: its note, or the rebuilt day when there was only practice */
+function paintDayCell(cv, k){
+  const s = cv.clientWidth; if (!s) return;
+  const ctx = fit(cv, s, s); ctx.clearRect(0, 0, s, s);
+  const n = dayNotes(k), P = prints(k);
+  if (n.length){ const m = n[n.length - 1], st = P.length ? P[P.length - 1].stab : .8; V3.renderForm(ctx, s/2, s/2, s*.5, Math.round(uOfM(m)), Math.round(120 + s*5), 700 + parseInt(k.slice(8), 10), nCol(m), .55 + .45*(st || .6), Math.max(.7, s/60), 0, data.profile.lace !== true); }
+  else paintSynth(ctx, k, s/2, s/2, s*.42, 0);
+}
+function weekHTML(start){
+  const tk = dkey(); let h = '';
+  for (let i = 0; i < 7; i++){
+    const k = dkey(addDays(start, i)), fut = k > tk, isT = k === tk;
+    h += `<div class="tr-day ${isT ? 't' : ''}">${hasAny(k) ? `<button class="tr-dc" data-act="day" data-v="${k}" aria-label="${escH(dateLong(parseKey(k)))}"><canvas data-trday="${k}"></canvas></button>`
+      : isT ? `<button class="tr-dc empty" data-act="print" aria-label="Оставить отпечаток"><i></i></button>` : `<span class="tr-dc ${fut ? 'fut' : 'off'}"><i></i></span>`}<span>${WD[i]}</span></div>`;
+  }
+  return h;
+}
+function viewTrack(){
+  const k = dkey(), P = prints(k), t = new Date(), h = t.getHours();
+  const when = h < 5 ? 'этой ночью' : h < 12 ? 'этим утром' : h < 18 ? 'этим днём' : 'этим вечером';
+  const last = P[P.length - 1];
+  const list = P.map(c => `<li><button class="tr-row" data-act="day" data-v="${k}"><span class="num">${c.at}</span><span>Звучишь ${zIn(c.actual)}${c.ctx === 'after' ? '<small>после практики</small>' : ''}</span><span class="tr-n"><span class="pt-dot" style="background:${nCol(c.comfort)}"></span>${escH(nName(c.comfort))}</span></button></li>`).join('');
+  return topbar() + `
+  <section class="tr-week" aria-label="Неделя">${weekHTML(monday(t))}</section>
+  <h1 class="big-title tr-q">${last ? 'Сегодня ты звучишь <span style="color:' + nCol(last.comfort) + '">' + zIn(last.actual) + '</span>' : 'Как ты звучишь ' + when + '?'}</h1>
+  <div class="tr-ring"><canvas id="trRing" aria-hidden="true"></canvas>
+    ${last ? '' : `<button class="go big tr-go" data-act="print">Отпе&shy;чаток</button>`}</div>
+  ${P.length ? `<ul class="hist tr-list">${list}</ul><button class="ghost" data-act="print">Ещё один отпечаток</button>` : `<p class="note tr-note">Полминуты: догадка, «а-а-а», сирена и выдох. Покажет, где в теле живёт голос и на какой ноте.</p>`}
+  ${!practised(k) ? `<button class="blackbtn wt-cta" data-act="topractice">К практике ${ICO.arrow}</button>` : ''}`;
+}
+/* the ring is the flowing dust of the current exercise's outline; the part of the week with voice is bright */
+const ring = { P:null, flow:0, t:0, raf:0, last:0, solo:null, cache:null, key:'' };
+function mountTrack(){
+  document.querySelectorAll('canvas[data-trday]').forEach(cv => paintDayCell(cv, cv.dataset.trday));
+  const cv = $('trRing'); if (!cv) return;
+  if (!ring.P){ ring.P = []; for (let i = 0; i < 1300; i++){ let u = 0; while (!u) u = Math.random(); ring.P.push({ s:Math.random(), sp:.6 + Math.random()*.8, n:Math.sqrt(-2*Math.log(u))*Math.cos(6.283*Math.random()), x:NaN, y:NaN, z:.9 + Math.random()*1.3, a:.45 + Math.random()*.55 }); } }
+  if (!ring.solo){ ring.solo = new V3.Solo(1500, 9); ring.solo.opt.rain = false; ring.solo.opt.mono = C.ink; ring.solo.target({ u:19, e:.35, vo:1, noise:0, stab:.45, hold:.3, amp:.32 }); }
+  ring.key = '';
+  cancelAnimationFrame(ring.raf); ring.last = performance.now(); ring.raf = requestAnimationFrame(ringFrame);
+}
+function ringFrame(now){
+  const cv = $('trRing'); if (!cv || !cv.isConnected){ ring.raf = 0; return; }
+  const dt = Math.min(.05, (now - ring.last)/1000); ring.last = now; ring.t += dt;
+  const s = cv.clientWidth; if (!s){ ring.raf = requestAnimationFrame(ringFrame); return; }
+  const ctx = fit(cv, s, s), c = s/2, R = s*.44, still = reduced(); ctx.clearRect(0, 0, s, s);
+  const mon = monday(new Date()); let n = 0; for (let i = 0; i < 7; i++) if (voiced(dkey(addDays(mon, i)))) n++;
+  const wp = n/7;
+  ring.flow += still ? 0 : dt*.018;
+  const kk = still ? 1 : 1 - Math.pow(1 - .16, dt*60);
+  ctx.fillStyle = C.ink;
+  for (const p of ring.P){
+    const u = ((p.s + ring.flow*p.sp) % 1 + 1) % 1, an = -Math.PI/2 + u*Math.PI*2, nx = Math.cos(an), ny = Math.sin(an);
+    const o = p.n*2.4 + (still ? 0 : Math.sin(ring.t*2.2 + p.s*40)*1.2), tx = c + nx*(R + o), ty = c + ny*(R + o);
+    if (isNaN(p.x)){ p.x = tx; p.y = ty; }
+    p.x += (tx - p.x)*kk; p.y += (ty - p.y)*kk;
+    ctx.globalAlpha = p.a*(u < wp ? 1 : .18); ctx.fillRect(p.x - p.z/2, p.y - p.z/2, p.z, p.z);
+  }
+  ctx.globalAlpha = 1;
+  const P = prints(dkey());
+  if (P.length){
+    const last = P[P.length - 1], key = last.at + last.comfort + s;
+    if (ring.key !== key){ ring.key = key; ring.cache = document.createElement('canvas'); const ic = fit(ring.cache, s, s); V3.renderForm(ic, c, c, R*.78, Math.round(uOfM(last.comfort)), Math.round(900 + s*4), 31, nCol(last.comfort), .95, Math.max(.8, s/320), 0, data.profile.lace !== true); }
+    ctx.save(); ctx.translate(c, c); ctx.rotate(still ? 0 : ring.t*.04); ctx.translate(-c, -c); ctx.drawImage(ring.cache, 0, 0, s, s); ctx.restore();
+  } else {
+    ring.solo.ease(dt); ring.solo.step(dt);
+    ctx.save(); ctx.beginPath(); ctx.arc(c, c, R - 10, 0, Math.PI*2); ctx.clip(); ring.solo.draw(ctx, s, s, .4, .5); ctx.restore();
+  }
+  ring.raf = still ? 0 : requestAnimationFrame(ringFrame);
+}
+
+/* =========================== after a practice =========================== */
+function winBlock(k){
+  const P = prints(k), after = P.filter(c => c.ctx === 'after').pop(), before = P.filter(c => c !== after)[0];
+  if (after) return `<div class="pt-win"><b>После практики ты звучишь ${zIn(after.actual)}</b><span>${escH(nName(after.comfort))}${before ? ' · до практики ' + escH(nName(before.comfort)) + ', ' + zIn(before.actual) : ''}</span></div>`;
+  return `<div class="pt-win"><b>Как ты звучишь после практики?</b><span>Полминуты. Отпечаток ляжет в картинку дня${P.length ? ' рядом с утренним' : ''}.</span><button class="blackbtn" data-act="printafter">Оставить отпечаток ${ICO.arrow}</button></div>`;
+}
+function doneNudge(k){ return prints(k).some(c => c.ctx === 'after') ? '' : `<button class="ghost" data-act="printafter">Оставить отпечаток после практики</button>`; }
+function dayRows(k){
+  return prints(k).map(c => `<li><span>Отпечаток ${c.at}</span><span class="m"><span class="pt-dot" style="background:${nCol(c.comfort)}"></span>${escH(nName(c.comfort))} · ${zName(c.actual)}</span></li>`).join('');
+}
+
+/* =========================== profile =========================== */
+const H = { per:'w', off:0, sample:false };
 let SAMPLE = null;
-function sampleDays(){
+/* a stand-in history to see the profile filled: never stored, never mixed with hers */
+function sampleData(){
   if (SAMPLE) return SAMPLE;
-  const r = FL.rng(2026), out = [], today = new Date(), days = 120, K = 45, norm = 1 - Math.exp(-(days - 1)/K);
+  const r = FL.rng(2026), out = {}, today = new Date(), days = 120, K = 45, norm = 1 - Math.exp(-(days - 1)/K);
   for (let d = 0; d < days; d++){
-    if (r() < .14){ r(); r(); continue; }
+    if (r() < .14) continue;
     const t = (1 - Math.exp(-d/K))/norm, tired = r() < .07 ? 1 : 0, k = dkey(addDays(today, -(days - d)));
-    const mk = (lift) => {
+    const mk = lift => {
       const comfort = 54.2 + 1.3*t + lift + (r() - .5)*.9 - tired*1.1, low = 50.8 - 5*t - lift*.4 + (r() - .5)*1.3, high = 67.8 + 11.5*Math.pow(t, .8) + lift*1.5 + (r() - .5)*2.2 - tired*4.5;
-      const stab = clamp(.55 + .27*t + lift*.05 + (r() - .5)*.08 - tired*.16, .3, .97), cent = .2 + .3*t;
-      const actual = zoneOf(pOf(comfort, cent)), guess = r() < .2 + .7*t ? actual : clamp(actual + (r() < .8 ? 1 : -1), 0, 4);
+      const stab = clamp(.55 + .27*t + lift*.05 + (r() - .5)*.08 - tired*.16, .3, .97), cent = .2 + .3*t, actual = zoneOf(pOf(comfort, cent));
       const zt = [0,0,0,0,0]; for (let q = 0; q < 40; q++) zt[zoneOf(pOf(comfort, cent))] += .1; for (let q = 0; q < 80; q++){ const m = low + (high - low)*(.5 - .5*Math.cos(Math.PI*q/79)); zt[zoneOf(pOf(m, cent))] += .1; }
       const tot = zt.reduce((a, b) => a + b, 0);
-      const ct = []; for (let q = 0; q < 32; q++) ct.push(+(low + (high - low)*Math.sin(Math.PI*q/31)).toFixed(1));
-      return { comfort:+comfort.toFixed(2), low:+low.toFixed(2), high:+high.toFixed(2), stab:+stab.toFixed(3), cent, actual, guess, zones:zt.map(v => v/tot), contour:ct, exhale:+(12 + 16*t + (r() - .5)*3).toFixed(1) };
+      return { at: lift ? '19:20' : '09:05', comfort:+comfort.toFixed(2), low:+low.toFixed(2), high:+high.toFixed(2), stab:+stab.toFixed(3), cent, actual, guess: r() < .2 + .7*t ? actual : clamp(actual + (r() < .8 ? 1 : -1), 0, 4), zones:zt.map(v => v/tot), exhale:+(12 + 16*t + (r() - .5)*3).toFixed(1), ctx: lift ? 'after' : undefined };
     };
-    const b = mk(0), a = r() < .8 ? mk(.9) : null;
-    out.push({ date:k, b, a, m:a || b, sample:true });
+    const prac = r() < .7, P = [mk(0)]; if (prac && r() < .8) P.push(mk(.9));
+    out[k] = { prints:P, seconds: prac ? 600 + Math.round(r()*1200) : 0 };
   }
   SAMPLE = out; return out;
 }
-function histDays(){ return H.sample ? sampleDays() : realDays(); }
-function period(D){
-  const now = new Date();
-  if (H.per === 'w'){ const s = addDays(mondayOf(now), 7*H.off), e = addDays(s, 6); return { s, e, ps:addDays(s, -7), pe:addDays(s, -1), cmp:'неделей раньше', label: s.getMonth() === e.getMonth() ? s.getDate() + '–' + e.getDate() + ' ' + MONS[e.getMonth()] : s.getDate() + ' ' + MONS[s.getMonth()] + ' – ' + e.getDate() + ' ' + MONS[e.getMonth()] }; }
-  if (H.per === 'm'){ const s = new Date(now.getFullYear(), now.getMonth() + H.off, 1), e = new Date(s.getFullYear(), s.getMonth() + 1, 0); return { s, e, ps:new Date(s.getFullYear(), s.getMonth() - 1, 1), pe:new Date(s.getFullYear(), s.getMonth(), 0), cmp:'месяцем раньше', label: MONN[s.getMonth()] + (s.getFullYear() !== now.getFullYear() ? ' ' + s.getFullYear() : '') }; }
-  const s = D.length ? parseKey(D[0].date) : now, f = d => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getFullYear()).slice(2);
-  return { s, e:now, ps:null, pe:null, cmp:'в первый месяц', label: f(s) + ' — ' + f(now) };
+/* one accessor for both: her days or the sample */
+function src(){
+  if (H.sample){ const S = sampleData(); return { keys:Object.keys(S).sort(), P:k => S[k] ? S[k].prints : [], sec:k => S[k] ? S[k].seconds : 0, ex:() => ({}), notes:() => [], voiced:k => !!S[k], practised:k => !!(S[k] && S[k].seconds >= 60) }; }
+  return { keys:Object.keys(data.days).sort().filter(hasAny), P:prints, sec:k => (data.days[k] || {}).seconds || 0, ex:k => (data.days[k] || {}).exhale || {}, notes:exNotes, voiced, practised };
 }
 const MONS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
 const MONN = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const MONG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-const WDL = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
-const mondayOf = dt => { const x = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
-const dShort = k => { const d = parseKey(k); return d.getDate() + ' ' + MONS[d.getMonth()]; };
-const dLong = k => { const d = parseKey(k); return WDL[d.getDay()].replace(/^./, c => c.toUpperCase()) + ', ' + d.getDate() + ' ' + MONG[d.getMonth()]; };
 const inR = (k, s, e) => k >= dkey(s) && k <= dkey(e);
-function stats(D){
-  const r = D.filter(d => d.m.low != null).map(d => d.m.high - d.m.low), st = D.filter(d => d.m.stab != null).map(d => d.m.stab);
-  const ex = D.map(d => Math.max(d.b && d.b.exhale || 0, ...Object.values((data.days[d.date] || {}).exhale || {}).concat([0])));
-  const gs = []; D.forEach(d => [d.b, d.a].forEach(c => { if (c && c.guess != null) gs.push(c.guess === c.actual); }));
-  return { n:D.length, hits:gs.filter(Boolean).length, guessed:gs.length, range:r.length ? median(r) : null, stab:st.length ? mean(st) : null, exh:ex.length ? Math.max(...ex) : null };
+function period(S){
+  const now = new Date();
+  if (H.per === 'w'){ const s = addDays(monday(now), 7*H.off), e = addDays(s, 6); return { s, e, ps:addDays(s, -7), pe:addDays(s, -1), cmp:'неделей раньше', label: s.getMonth() === e.getMonth() ? s.getDate() + '–' + e.getDate() + ' ' + MONS[e.getMonth()] : s.getDate() + ' ' + MONS[s.getMonth()] + ' – ' + e.getDate() + ' ' + MONS[e.getMonth()] }; }
+  if (H.per === 'm'){ const s = new Date(now.getFullYear(), now.getMonth() + H.off, 1), e = new Date(s.getFullYear(), s.getMonth() + 1, 0); return { s, e, ps:new Date(s.getFullYear(), s.getMonth() - 1, 1), pe:new Date(s.getFullYear(), s.getMonth(), 0), cmp:'месяцем раньше', label: MONN[s.getMonth()] + (s.getFullYear() !== now.getFullYear() ? ' ' + s.getFullYear() : '') }; }
+  const s = S.keys.length ? parseKey(S.keys[0]) : now, f = d => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getFullYear()).slice(2);
+  return { s, e:now, ps:null, pe:null, cmp:'в первый месяц', label: f(s) + ' — ' + f(now) };
 }
-function historyHTML(){
-  return `<section class="pr-sec" id="ckHist"><div class="pr-h"><h2>Замеры</h2><span class="note" id="ckHistNote"></span></div>
-    <div class="ckh-ctl"><div class="ckh-seg" role="tablist" aria-label="Период">
-      <button role="tab" data-ckper="w" aria-label="Неделя">Н</button><button role="tab" data-ckper="m" aria-label="Месяц">М</button><button role="tab" data-ckper="all" aria-label="Всё время">${ICO.inf}</button></div>
-      <div class="ckh-nav" id="ckhNav"><button id="ckhPrev" aria-label="Раньше">${ICO.chevL}</button><span id="ckhLabel"></span><button id="ckhNext" aria-label="Позже">${ICO.chev}</button></div></div>
-    <div id="ckhBody"></div></section>`;
+function statsOf(S, keys){
+  const P = [], gs = []; keys.forEach(k => S.P(k).forEach(c => { P.push(c); if (c.guess != null) gs.push(c.guess === c.actual); }));
+  const r = P.filter(c => c.low != null).map(c => c.high - c.low), st = P.filter(c => c.stab != null).map(c => c.stab);
+  const ex = keys.map(k => Math.max(0, ...S.P(k).map(c => c.exhale || 0), ...Object.values(S.ex(k))));
+  let range = r.length ? median(r) : null;
+  if (range == null){ const m = []; keys.forEach(k => S.notes(k).forEach(n => m.push(n.midi))); if (m.length > 1) range = Math.max(...m) - Math.min(...m) || null; }
+  return { days: keys.filter(S.voiced).length, mins: Math.round(keys.reduce((a, k) => a + (S.practised(k) ? S.sec(k) : 0), 0)/60), prac: keys.filter(S.practised).length,
+    hits: gs.filter(Boolean).length, guessed: gs.length, range, stab: st.length ? mean(st) : null, exh: ex.length ? Math.max(0, ...ex) : 0, P };
 }
-function historyMount(){
-  const root = $('ckHist'); if (!root) return;
-  root.querySelectorAll('[data-ckper]').forEach(b => b.onclick = () => { H.per = b.dataset.ckper; H.off = 0; histRender(); });
-  $('ckhPrev').onclick = () => { H.off--; histRender(); };
-  $('ckhNext').onclick = () => { H.off = Math.min(0, H.off + 1); histRender(); };
-  histRender();
+/* where the voice lives over a period: time in each zone from prints and from every held note of the exercises */
+function zonesOf(S, keys){
+  const z = [0,0,0,0,0];
+  keys.forEach(k => { S.P(k).forEach(c => (c.zones || []).forEach((v, i) => z[i] += v*16)); S.notes(k).forEach(n => z[zoneOf(pOf(n.midi, null))] += n.sec || 1); });
+  const t = z.reduce((a, b) => a + b, 0); return t ? z.map(v => v/t) : null;
 }
-function histRender(){
-  const root = $('ckHist'); if (!root) return;
-  const ALL = histDays(), P = period(ALL), D = ALL.filter(d => inR(d.date, P.s, P.e));
-  root.querySelectorAll('[data-ckper]').forEach(b => b.setAttribute('aria-selected', b.dataset.ckper === H.per));
-  $('ckhLabel').textContent = P.label;
-  $('ckhNav').classList.toggle('static', H.per === 'all');
-  $('ckhPrev').hidden = $('ckhNext').hidden = H.per === 'all';
-  $('ckhNext').disabled = H.off >= 0; $('ckhPrev').disabled = !ALL.length || dkey(P.s) <= ALL[0].date;
-  $('ckHistNote').innerHTML = H.sample ? '<button class="lnk" id="ckhReal">мои замеры</button>' : realDays().length < 3 ? '<button class="lnk" id="ckhSample">показать пример</button>' : '';
-  const sb = $('ckhSample'); if (sb) sb.onclick = () => { H.sample = true; H.off = 0; histRender(); };
-  const rb = $('ckhReal'); if (rb) rb.onclick = () => { H.sample = false; H.off = 0; histRender(); };
-  let prev = P.ps ? ALL.filter(d => inR(d.date, P.ps, P.pe)) : null;
-  if (H.per === 'all' && D.length > 40){ const f = parseKey(D[0].date); prev = D.filter(d => inR(d.date, f, addDays(f, 30))); }
-  const body = $('ckhBody'), cal = H.per === 'all' ? '' : `<div class="ckh-cal" id="ckhCal"></div><div id="ckhDay"></div>`;
-  if (!D.length){ body.innerHTML = cal + (H.per === 'all' ? `<p class="note">Замеров пока нет. Первый — в начале занятия.</p>` : ''); calRender(P, ALL); return; }
-  const a = stats(D), b = prev && prev.length ? stats(prev) : null, sub = (ok, txt, def) => b && ok ? P.cmp + ': ' + txt : def;
-  body.innerHTML = cal + `
-    <div class="pr-tiles">
-      <div class="pr-tile b-breath"><span>Слышишь себя</span><b class="num">${a.hits}<small>из ${a.guessed}</small></b><span>${sub(true, b ? b.hits + ' из ' + b.guessed : '', 'догадка совпала с замером')}</span></div>
-      <div class="pr-tile b-body"><span>Диапазон</span><b class="num">${a.range != null ? octs(a.range) : '—'}<small>окт.</small></b><span>${sub(b && b.range != null, b && b.range != null ? octs(b.range) + ' окт.' : '', 'по сирене')}</span></div>
-      <div class="pr-tile dark"><span>Устойчивость</span><b class="num">${a.stab != null ? Math.round(a.stab*100) : '—'}<small>%</small></b><span>${sub(b && b.stab != null, b && b.stab != null ? Math.round(b.stab*100) + ' %' : '', 'ровность «а»')}</span></div>
-      <div class="pr-tile dark"><span>Долгий выдох</span><b class="num">${a.exh ? Math.round(a.exh) : '—'}<small>с</small></b><span>${sub(b && b.exh, b && b.exh ? Math.round(b.exh) + ' с' : '', 'лучший за период')}</span></div>
+function comfortOf(S, keys){
+  const m = []; keys.forEach(k => S.P(k).forEach(c => m.push(c.comfort)));
+  if (m.length) return median(m);
+  const e = []; keys.forEach(k => S.notes(k).slice(0, 3).forEach(n => e.push(n.midi)));
+  return e.length ? median(e) : (H.sample ? null : data.profile.ref || null);
+}
+function profileHTML(){
+  return `<section class="pr-sec pf" id="pf">
+    <div class="pf-ctl"><div class="pf-seg" role="tablist" aria-label="Период">
+      <button role="tab" data-pfper="w" aria-label="Неделя">Н</button><button role="tab" data-pfper="m" aria-label="Месяц">М</button><button role="tab" data-pfper="all" aria-label="Всё время">${ICO.inf}</button></div>
+      <div class="pf-nav" id="pfNav"><button id="pfPrev" aria-label="Раньше">${ICO.chevL}</button><span id="pfLabel"></span><button id="pfNext" aria-label="Позже">${ICO.chev}</button></div></div>
+    <div id="pfBody"></div></section>`;
+}
+function mountProfile(){
+  const root = $('pf'); if (!root) return;
+  root.querySelectorAll('[data-pfper]').forEach(b => b.onclick = () => { H.per = b.dataset.pfper; H.off = 0; renderProfile(); });
+  $('pfPrev').onclick = () => { H.off--; renderProfile(); };
+  $('pfNext').onclick = () => { H.off = Math.min(0, H.off + 1); renderProfile(); };
+  renderProfile();
+}
+function renderProfile(){
+  const root = $('pf'); if (!root) return;
+  cancelAnimationFrame(map.raf); map.raf = 0;
+  const S = src(), P = period(S), keys = S.keys.filter(k => inR(k, P.s, P.e));
+  root.querySelectorAll('[data-pfper]').forEach(b => b.setAttribute('aria-selected', b.dataset.pfper === H.per));
+  $('pfLabel').textContent = P.label;
+  $('pfNav').classList.toggle('static', H.per === 'all');
+  $('pfPrev').hidden = $('pfNext').hidden = H.per === 'all';
+  $('pfNext').disabled = H.off >= 0; $('pfPrev').disabled = !S.keys.length || dkey(P.s) <= S.keys[0];
+  let prevKeys = P.ps ? S.keys.filter(k => inR(k, P.ps, P.pe)) : null;
+  if (H.per === 'all' && keys.length > 40){ const f = parseKey(keys[0]); prevKeys = keys.filter(k => inR(k, f, addDays(f, 30))); }
+  const a = statsOf(S, keys), b = prevKeys && prevKeys.length ? statsOf(S, prevKeys) : null;
+  const zones = zonesOf(S, keys), cm = comfortOf(S, keys), top = zones ? zones.indexOf(Math.max(...zones)) : null;
+  const realFew = !H.sample && Object.keys(data.days).filter(k => prints(k).length).length < 3;
+  const cmpTxt = (has, txt, def) => b && has ? P.cmp + ': ' + txt : def;
+  const cal = H.per === 'all' ? `<div class="pr-h"><h2>Карта дней</h2></div><canvas class="pf-map" id="pfMap" role="img" aria-label="Карта дней: кольцо на каждый день, цвета — ноты дня"></canvas><p class="note">Каждый день — кольцо, окрашенное нотами, на которых звучал голос. Бледное кольцо — день без голоса.</p>` : `<div class="pf-cal ${H.per}" id="pfCal"></div>`;
+  $('pfBody').innerHTML = `
+    <div class="pf-voice" id="prNoteCard">
+      <div class="pf-vtop"><div class="pf-vtxt"><span class="note">Как звучит голос</span>
+        ${cm != null ? `<b class="pf-note">${escH(nShort(cm))}</b><span>${OCTN[Math.floor(Math.round(cm)/12)] || ''} · ${Math.round(hz(cm))} Гц</span>${top != null ? `<span>чаще всего ${zIn(top)}</span>` : ''}`
+          : `<b class="pf-note none">ещё не слышно</b><span class="note">Появится после первого отпечатка или голосового упражнения.</span>`}</div>
+        <div class="mini" role="tablist" aria-label="Подписи"><button role="tab" data-lab="body" aria-selected="${labSet() === 'body'}">Тело</button><button role="tab" data-lab="chakra" aria-selected="${labSet() === 'chakra'}">Чакры</button></div></div>
+      <canvas id="pfBodyCv" role="img" aria-label="Силуэт: доля времени, когда голос звучал в каждой зоне"></canvas>
+      ${H.sample ? `<p class="note">Пример, не твои данные · <button class="lnk" data-pfs="0">мои данные</button></p>` : realFew ? `<p class="note"><button class="lnk" data-pfs="1">Показать пример</button>, как это выглядит через несколько месяцев.</p>` : ''}
     </div>
-    <div class="ckh-fig"><h3>Где звучит голос</h3><canvas id="ckhBodyCv" role="img" aria-label="Силуэт с долями времени по зонам"></canvas><p class="note" id="ckhBodyCap"></p></div>
-    <div class="ckh-fig"><h3>Слепок голоса</h3><p class="note">Все замеры периода, наложенные друг на друга. Узор — комфортная нота, кольца — диапазон.</p><canvas id="ckhCast" role="img" aria-label="Слепок голоса"></canvas><p class="note" id="ckhCastCap"></p></div>
-    <div class="ckh-fig"><h3>Диапазон и комфортная нота</h3><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><canvas id="ckhRange" role="img" aria-label="Диапазон по дням"></canvas><div class="ckh-tip" id="ckhTipR"></div></div>
-    <div class="ckh-fig"><h3>Устойчивость</h3><canvas id="ckhStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="ckh-tip" id="ckhTipS"></div></div>`;
-  calRender(P, ALL);
-  const share = drawBodyShare($('ckhBodyCv'), D), top = share.indexOf(Math.max(...share)), aa = [0,0,0,0,0]; D.forEach(d => aa[d.m.actual]++);
-  $('ckhBodyCap').textContent = 'Больше всего времени голос проводит ' + zIn(top) + ', комфортная нота чаще всего ' + zIn(aa.indexOf(Math.max(...aa))) + '.';
-  drawCast($('ckhCast'), D.map(d => d.m));
-  const nn = {}; D.forEach(d => { const q = nShort(d.m.comfort); nn[q] = (nn[q] || 0) + 1; }); const tops = Object.entries(nn).sort((x, y) => y[1] - x[1]);
-  $('ckhCastCap').textContent = D.length < 5 ? 'Слепок проявляется со временем: пока ' + D.length + ' ' + pl(D.length, 'замер', 'замера', 'замеров') + '.' : 'Чаще всего голос живёт на «' + tops[0][0] + '»' + (tops[1] ? ', иногда уходит на «' + tops[1][0] + '»' : '') + '.';
-  drawRange($('ckhRange'), $('ckhTipR'), D);
-  drawLine($('ckhStab'), $('ckhTipS'), D, d => d.m.stab == null ? null : d.m.stab*100, [40, 100], v => Math.round(v) + ' %');
+    ${cal}
+    <div class="pr-tiles">
+      <div class="pr-tile b-breath"><span>Дней с голосом</span><b class="num">${a.days}</b><span>${cmpTxt(true, b ? b.days : '', 'отпечаток или практика')}</span></div>
+      <div class="pr-tile b-body"><span>Диапазон</span>${a.range != null ? `<b class="num">${octs(a.range)}<small>окт.</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.range != null, b && b.range != null ? octs(b.range) + ' окт.' : '', 'по сирене и упражнениям')}</span></div>
+      <div class="pr-tile dark"><span>Минут практики</span><b class="num">${a.mins}</b><span>${cmpTxt(true, b ? b.mins + ' мин' : '', a.prac ? a.prac + ' ' + pl(a.prac, 'занятие', 'занятия', 'занятий') : 'пока без практики')}</span></div>
+      <div class="pr-tile dark"><span>Слышишь себя</span>${a.guessed ? `<b class="num">${a.hits}<small>из ${a.guessed}</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.guessed, b ? b.hits + ' из ' + b.guessed : '', 'догадка совпала с отпечатком')}</span></div>
+      <div class="pr-tile dark"><span>Устойчивость</span>${a.stab != null ? `<b class="num">${Math.round(a.stab*100)}<small>%</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.stab != null, b && b.stab != null ? Math.round(b.stab*100) + ' %' : '', 'насколько ровно «а»')}</span></div>
+      <div class="pr-tile dark"><span>Долгий выдох</span>${a.exh ? `<b class="num">${Math.round(a.exh)}<small>с</small></b>` : '<b>—</b>'}<span>${cmpTxt(b && b.exh, b ? Math.round(b.exh) + ' с' : '', 'лучший за период')}</span></div>
+    </div>
+    ${a.P.length ? `<div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
+    <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>` : ''}`;
+  $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { setLabels(x.dataset.lab); renderProfile(); });
+  $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
+  drawBodyShare($('pfBodyCv'), zones);
+  if (H.per === 'all') drawMap($('pfMap'), S); else drawCal($('pfCal'), S, P);
+  if (a.P.length){
+    const D = keys.filter(k => S.P(k).length).map(k => { const L = S.P(k); return { date:k, m:L[L.length - 1] }; });
+    drawRange($('pfRange'), $('pfTipR'), D);
+    drawLine($('pfStab'), $('pfTipS'), D, d => d.m.stab == null ? null : d.m.stab*100, [40, 100], v => Math.round(v) + ' %');
+  }
 }
-function calRender(P, ALL){
-  const el = $('ckhCal'); if (!el) return;
-  const by = new Map(ALL.map(d => [d.date, d])), tk = dkey(), keys = [];
+function drawBodyShare(cv, z){
+  const w = cv.clientWidth, h = Math.round(Math.min(w*1.05, 470)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
+  const mx = z ? Math.max(...z) : 1;
+  drawBody(ctx, body(w < 420 ? 2000 : 2800, 11), w, h, .66, z ? z.map(v => Math.pow(v/mx, .8)) : [0,0,0,0,0], C.kale, 0);
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 5; i++){
+    const y = h*(BAND[i][0] + BAND[i][1])/2, share = z ? Math.round(z[i]*100) : null;
+    ctx.fillStyle = C.ink; ctx.globalAlpha = share ? 1 : .45; ctx.font = '700 15px "Inter Tight",sans-serif'; ctx.fillText(zName(i), 0, y - 8);
+    ctx.fillStyle = C.muted; ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.fillText(share != null ? share + ' %' : '—', 0, y + 9); ctx.globalAlpha = 1;
+  }
+}
+function drawCal(el, S, P){
+  if (!el) return;
+  const tk = dkey(), keys = [];
   for (let d = new Date(P.s); dkey(d) <= dkey(P.e); d = addDays(d, 1)) keys.push(dkey(d));
-  const withData = keys.filter(k => by.get(k));
-  if (!H.sel || !keys.includes(H.sel) || !by.get(H.sel)) H.sel = withData.length ? withData[withData.length - 1] : null;
-  let html = ['П','В','С','Ч','П','С','В'].map(w => `<span class="ckh-wh">${w}</span>`).join('');
-  for (let i = 0; i < (P.s.getDay() + 6) % 7; i++) html += '<span></span>';
-  keys.forEach(k => { const d = by.get(k), fut = k > tk, prac = !d && typeof ok === 'function' && ok(k);
-    html += `<div class="ckh-cd ${k === H.sel ? 'sel' : ''}" data-k="${k}"><button class="ckh-dc ${d ? '' : fut ? 'fut' : prac ? 'prac' : 'miss'}" data-k="${k}" ${d ? '' : 'disabled'} aria-label="${dLong(k)}">${d ? '<canvas></canvas>' : ''}</button><small class="num">${parseKey(k).getDate()}</small></div>`; });
-  el.innerHTML = html;
-  const uOf = refU(ALL.map(d => d.m));
-  el.querySelectorAll('.ckh-dc').forEach((b, i) => { const d = by.get(b.dataset.k), cv = b.querySelector('canvas'); if (cv) miniForm(cv, d.m, b.clientWidth || 40, uOf, 900 + i);
-    b.onclick = () => { H.sel = b.dataset.k; el.querySelectorAll('.ckh-cd').forEach(c => c.classList.toggle('sel', c.dataset.k === H.sel)); dayCard(by, uOf); }; });
-  dayCard(by, uOf);
+  let h = H.per === 'w' ? '' : WD.map(w => `<span class="pf-wh">${w}</span>`).join('');
+  if (H.per === 'm') for (let i = 0; i < (P.s.getDay() + 6) % 7; i++) h += '<span></span>';
+  keys.forEach((k, i) => {
+    const has = S.voiced(k) || S.P(k).length || S.notes(k).length, fut = k > tk;
+    h += `<div class="pf-cd ${k === tk ? 't' : ''}">${has ? `<button class="pf-dc" ${H.sample ? 'disabled' : `data-act="day" data-v="${k}"`} aria-label="${escH(dateLong(parseKey(k)))}"><canvas data-pfk="${k}"></canvas></button>` : `<span class="pf-dc ${fut ? 'fut' : 'off'}"><i></i></span>`}<small class="num">${H.per === 'w' ? WD[i] : parseKey(k).getDate()}</small></div>`;
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('canvas[data-pfk]').forEach(cv => {
+    const k = cv.dataset.pfk;
+    if (!H.sample){ paintDayCell(cv, k); return; }
+    const s = cv.clientWidth; if (!s) return; const ctx = fit(cv, s, s), L = S.P(k), m = L[L.length - 1];
+    ctx.clearRect(0, 0, s, s); V3.renderForm(ctx, s/2, s/2, s*.5, Math.round(uOfM(m.comfort)), Math.round(120 + s*5), 700 + parseInt(k.slice(8), 10), nCol(m.comfort), .55 + .45*m.stab, Math.max(.7, s/60), 0, true);
+  });
 }
-function dayCard(by, uOf){
-  const el = $('ckhDay'); if (!el) return;
-  const d = H.sel && by.get(H.sel);
-  if (!d){ el.innerHTML = `<p class="note" style="margin-top:10px">За этот период замеров нет.</p>`; return; }
-  const m = d.m, s = semis(m), b = d.b, a = d.a;
-  const row = (l, v) => `<li><span>${l}</span><span class="m num">${v}</span></li>`;
-  el.innerHTML = `<div class="ckh-day"><div class="ckh-dtop"><div><span class="note">${dLong(d.date)}</span><b>Звучишь ${zIn(m.actual)}</b><span class="note">${a && b ? (a.actual === b.actual ? 'до и после занятия' : 'до занятия — ' + zIn(b.actual)) : a ? 'после занятия' : 'до занятия'}</span></div><div class="ckh-df"><canvas></canvas></div></div>
-    <ul class="hist">
-      ${row('Комфортная нота', `<span class="ck-dot" style="background:${nCol(m.comfort)}"></span>${escH(nName(m.comfort))}${a && b ? ' <span class="note">(до: ' + escH(nShort(b.comfort)) + ')</span>' : ''}`)}
-      ${row('Диапазон сирены', s != null ? octs(s) + ' окт.' + (a && b && semis(b) != null ? ' <span class="note">(до: ' + octs(semis(b)) + ')</span>' : '') : '—')}
-      ${row('Устойчивость «а»', m.stab != null ? Math.round(m.stab*100) + ' %' : '—')}
-      ${row('Догадка', [b, a].filter(Boolean).map(c => c.guess == null ? '—' : c.guess === c.actual ? 'совпала' : zName(c.guess)).join(' / '))}
-    </ul>${d.sample ? '<p class="note">Пример, не твои данные</p>' : `<button class="ghost" data-act="day" data-v="${d.date}">Картинка дня</button>`}</div>`;
-  miniForm(el.querySelector('canvas'), m, 88, uOf, 42);
+/* the map of days (∞): one dust ring per day in a Mon–Sun grid, the rings overlap and interlock;
+   a ring is split into arcs by the notes the day sounded on, coloured by note; a day without voice is a faint trace.
+   The rings appear one after another, oldest first, and the dust keeps flowing around them. */
+const map = { raf:0, t0:0, rings:[], cv:null, last:0, flow:0 };
+function drawMap(cv, S){
+  if (!cv) return;
+  const keys = S.keys; if (!keys.length){ fit(cv, cv.clientWidth, 40); return; }
+  const first = monday(parseKey(keys[0])), today = new Date(), weeks = Math.round((monday(today) - first)/(7*864e5)) + 1;
+  const W = cv.clientWidth, cw = W/7, rr = cw*.6, Hh = Math.round(weeks*cw + cw*.3);
+  fit(cv, W, Hh);
+  const rings = [];
+  for (let w = 0; w < weeks; w++) for (let d = 0; d < 7; d++){
+    const k = dkey(addDays(first, w*7 + d)); if (k > dkey(today)) continue;
+    const notes = []; S.P(k).forEach(c => notes.push(c.comfort)); S.notes(k).slice(0, 6).forEach(n => notes.push(n.midi));
+    const pcs = []; notes.forEach(m => { const p = pcOf(m); if (!pcs.includes(p)) pcs.push(p); });
+    const has = S.voiced(k) || pcs.length > 0, r = FL.rng(parseInt(k.replace(/-/g, ''), 10) % 2147483647), G = [];
+    for (let i = 0, n = has ? 120 : 50; i < n; i++) G.push({ s:r(), sp:.6 + r()*.8, o:FL.gs(r), z:.8 + r()*1.2, a:.45 + r()*.55 });
+    rings.push({ k, x:d*cw + cw/2, y:w*cw + cw/2 + cw*.15, has, cols: pcs.length ? pcs.slice(0, 6).map(p => data.profile.rain !== false ? V3.HUE[p] : C.ink) : [C.ink], G, idx:rings.length });
+  }
+  Object.assign(map, { rings, cv, t0:performance.now(), last:performance.now(), rr, W, Hh });
+  cv.onclick = H.sample ? null : ev => { const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top; let best = null, bd = 1e9; rings.forEach(R => { const q = Math.hypot(R.x - x, R.y - y); if (q < bd){ bd = q; best = R; } }); if (best && bd < rr && best.has && typeof openDay === 'function') openDay(best.k); };
+  cancelAnimationFrame(map.raf); map.raf = requestAnimationFrame(mapFrame);
 }
-const refU = D => { const c = median(D.map(d => d.comfort)) || 55; return m => clamp(Math.round(m) - 12*(Math.floor(c/12) - 1), 0, 47); };
-function miniForm(cv, d, s, uOf, seed){
-  const ctx = fit(cv, s, s); ctx.clearRect(0, 0, s, s);
-  V3.renderForm(ctx, s/2, s/2, s*.5, uOf(d.comfort), Math.round(120 + s*5), seed || 700, data.profile.rain !== false ? nCol(d.comfort) : FC.dot, .55 + .45*(d.stab || .5), Math.max(.7, s/60), 0, data.profile.lace !== true);
+function mapFrame(now){
+  const cv = map.cv; if (!cv || !cv.isConnected){ map.raf = 0; return; }
+  const dt = Math.min(.05, (now - map.last)/1000); map.last = now; map.flow += reduced() ? 0 : dt*.03;
+  const ctx = cv.getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, map.W, map.Hh);
+  const n = map.rings.length, el = (now - map.t0)/1000, dur = Math.min(2.4, .4 + n*.02);
+  for (const R of map.rings){
+    const appear = reduced() ? 1 : clamp((el - dur*R.idx/n)/.5, 0, 1); if (appear <= 0) continue;
+    const nc = R.cols.length, base = R.has ? 1 : .14;
+    for (const p of R.G){
+      const u = ((p.s + map.flow*p.sp) % 1 + 1) % 1, an = -Math.PI/2 + u*Math.PI*2, rad = map.rr*(1 + p.o*.035);
+      ctx.fillStyle = R.cols[Math.min(nc - 1, Math.floor(p.s*nc))];
+      ctx.globalAlpha = p.a*base*appear; ctx.fillRect(R.x + Math.cos(an)*rad - p.z/2, R.y + Math.sin(an)*rad - p.z/2, p.z, p.z);
+    }
+  }
+  ctx.globalAlpha = 1;
+  map.raf = reduced() && el > dur + .6 ? 0 : requestAnimationFrame(mapFrame);
 }
 /* charts: recessive grid, one ink series, crosshair + tooltip */
-function chartFrame(cv, h, l){ const w = cv.clientWidth, ctx = fit(cv, w, h); ctx.fillStyle = C.ground; ctx.fillRect(0, 0, w, h); return { ctx, w, h, l:l || 44, r:12, t:12, b:24 }; }
+const dShort = k => { const d = parseKey(k); return d.getDate() + ' ' + MONS[d.getMonth()]; };
+function chartFrame(cv, h, l){ const w = cv.clientWidth, ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h); return { ctx, w, h, l:l || 44, r:12, t:12, b:24 }; }
 function xOf(F, D, i){ return F.l + (D.length === 1 ? .5 : i/(D.length - 1))*(F.w - F.l - F.r); }
 function xAxis(F, D){
   const ctx = F.ctx; ctx.fillStyle = C.muted; ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'alphabetic';
@@ -639,18 +748,18 @@ function xAxis(F, D){
 function hover(cv, tip, D, getF, html, yAt, redraw){
   const card = cv.parentElement;
   const show = ev => { const F = getF(), rc = cv.getBoundingClientRect(), x = ev.clientX - rc.left; let best = 0, bd = 1e9;
-    D.forEach((_, i) => { const dx = Math.abs(xOf(F, D, i) - x); if (dx < bd){ bd = dx; best = i; } });
+    D.forEach((_, i) => { const q = Math.abs(xOf(F, D, i) - x); if (q < bd){ bd = q; best = i; } });
     redraw(best); const tx = xOf(getF(), D, best), ty = yAt(best);
-    tip.innerHTML = html(D[best]); tip.style.left = clamp(cv.offsetLeft + tx, 80, card.clientWidth - 80) + 'px'; tip.style.top = (cv.offsetTop + Math.max(8, ty - 10)) + 'px'; tip.style.opacity = 1; };
+    tip.innerHTML = html(D[best]); tip.style.left = clamp(tx, 80, card.clientWidth - 80) + 'px'; tip.style.top = Math.max(8, ty - 10) + 'px'; tip.style.opacity = 1; };
   cv.onpointermove = show; cv.onpointerdown = show; cv.onpointerleave = () => { tip.style.opacity = 0; redraw(-1); };
 }
 function drawRange(cv, tip, D){
   const M = D.map(d => d.m), lo = Math.floor(Math.min(...M.map(m => m.low != null ? m.low : m.comfort)) - 2), hi = Math.ceil(Math.max(...M.map(m => m.high != null ? m.high : m.comfort)) + 2);
   let F; const yOf = v => F.t + (1 - (v - lo)/(hi - lo))*(F.h - F.t - F.b);
   const draw = sel => {
-    F = chartFrame(cv, 220, 70); const ctx = F.ctx;
+    F = chartFrame(cv, 210, 66); const ctx = F.ctx;
     ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'middle';
-    for (let v = Math.ceil(lo/12)*12; v <= hi; v += 12){ const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText('до ' + (OCTN[v/12] || ''), 6, y); }
+    for (let v = Math.ceil(lo/12)*12; v <= hi; v += 12){ const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText('до ' + (OCTS[v/12] || ''), 0, y); }
     const bw = Math.max(2, Math.min(10, (F.w - F.l - F.r)/D.length*.5)), dr = Math.max(2.4, Math.min(4.2, bw*.6));
     M.forEach((m, i) => { const x = xOf(F, D, i);
       if (sel === i){ ctx.strokeStyle = 'rgba(255,254,252,.25)'; ctx.beginPath(); ctx.moveTo(x, F.t); ctx.lineTo(x, F.h - F.b); ctx.stroke(); }
@@ -667,7 +776,7 @@ function drawLine(cv, tip, D, val, yr, fmt){
   const draw = s => {
     F = chartFrame(cv, 150); const ctx = F.ctx;
     ctx.font = '500 11px "Inter Tight",sans-serif'; ctx.textBaseline = 'middle';
-    [lo, (lo + hi)/2, hi].forEach(v => { const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(fmt(v), 6, y); });
+    [lo, (lo + hi)/2, hi].forEach(v => { const y = yOf(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(fmt(v), 0, y); });
     if (s >= 0){ const x = xOf(F, D, s); ctx.strokeStyle = 'rgba(255,254,252,.25)'; ctx.beginPath(); ctx.moveTo(x, F.t); ctx.lineTo(x, F.h - F.b); ctx.stroke(); }
     ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath(); let st = false;
     vals.forEach((v, i) => { if (v == null) return; const x = xOf(F, D, i), y = yOf(v); if (st) ctx.lineTo(x, y); else ctx.moveTo(x, y); st = true; }); ctx.stroke();
@@ -678,34 +787,6 @@ function drawLine(cv, tip, D, val, yr, fmt){
   draw(-1);
   hover(cv, tip, D, () => F, d => `<b>${dShort(d.date)}</b> · ${val(d) != null ? fmt(val(d)) : '—'}`, i => vals[i] != null ? yOf(vals[i]) : F.t, draw);
 }
-function drawCast(cv, M){
-  const s = cv.clientWidth, ctx = fit(cv, s, s), cx = s/2, cy = s/2, uOf = refU(M), R = s*.36;
-  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, s, s);
-  const r = FL.rng(5), n = M.length, per = n > 60 ? 30 : 70, fN = Math.round((500 + s*1.2)*clamp(36/Math.max(1, n), .3, 1));
-  M.forEach((m, i) => { if (m.low == null) return; const rad = s*(.3 + clamp((m.high - m.low)/34, 0, 1)*.18);
-    ctx.fillStyle = nCol(m.high); ctx.globalAlpha = .16 + .3*(i/(n - 1 || 1));
-    for (let q = 0; q < per; q++){ const a = r()*Math.PI*2, rr = rad*(1 + (r() - .5)*.05); ctx.fillRect(cx + Math.cos(a)*rr - .6, cy + Math.sin(a)*rr - .6, 1.2, 1.2); }
-    ctx.globalAlpha = 1; });
-  M.forEach((m, i) => V3.renderForm(ctx, cx, cy, R, uOf(m.comfort), fN, 300 + i, nCol(m.comfort), (.1 + .45*(m.stab || .5))*clamp(32/Math.max(1, n), .42, 1), Math.max(.7, s/560), i*.015, true));
-}
-function drawBodyShare(cv, D){
-  const w = cv.clientWidth, h = Math.round(Math.min(w*1.2, 540)), ctx = fit(cv, w, h);
-  const z = [0,0,0,0,0]; D.forEach(d => (d.m.zones || []).forEach((v, i) => z[i] += v));
-  const tot = z.reduce((a, b) => a + b, 0) || 1, mx = Math.max(...z) || 1, B = makeBody(w < 420 ? 2000 : 2800, 11);
-  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, w, h);
-  drawBody(ctx, B, w, h, .64, z.map(v => Math.pow(v/mx, .8)), C.kale, 0);
-  ctx.textBaseline = 'middle';
-  for (let i = 0; i < 5; i++){ const y = h*(BAND[i][0] + BAND[i][1])/2, share = Math.round(z[i]/tot*100);
-    ctx.fillStyle = C.ink; ctx.globalAlpha = share > 0 ? 1 : .45; ctx.font = '700 15px "Inter Tight",sans-serif'; ctx.fillText(zName(i), 14, y - 8);
-    ctx.fillStyle = C.muted; ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.fillText(share + ' %', 14, y + 9); ctx.globalAlpha = 1; }
-  return z.map(v => v/tot);
-}
-/* a measurement line for the day sheet */
-function dayRows(k){
-  const c = checksOf(k) || {}; if (!valid(c.before) && !valid(c.after)) return '';
-  const r = (l, cc) => valid(cc) ? `<li><span>${l}</span><span class="m">${zName(cc.actual)} · ${escH(nName(cc.comfort))}</span></li>` : '';
-  return r('Замер до', c.before) + r('Замер после', c.after);
-}
 
-g.WT = { gate, pathCard, open, showSaved, paintComp, historyHTML, historyMount, dayRows, mainOf, LOOP, setLabels, valid };
+g.WT = { open, viewTrack, mountTrack, paintDay, gifLayout, gifText, LOOP, dayNotes, prints, voiced, streak, winBlock, doneNudge, dayRows, profileHTML, mountProfile, paintDayCell, setLabels, SAFE };
 })(window);
