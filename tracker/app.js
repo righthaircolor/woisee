@@ -7,6 +7,7 @@ const { clamp } = T;
 const I = {
   plus:'<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   play:'<svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/></svg>',
+  stop:'<svg class="i" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" stroke="none"/></svg>',
   pause:'<svg class="i" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg>',
   redo:'<svg class="i" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4.5v4h-4"/></svg>',
   next:'<svg class="i" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
@@ -37,9 +38,9 @@ let tab = 'today';
 function setTab(t){
   tab = t;
   $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  $('#vToday').hidden = t !== 'today'; $('#vMonth').hidden = t !== 'month'; $('#vData').hidden = t !== 'data';
+  $('#vToday').hidden = t !== 'today'; $('#vData').hidden = t !== 'data';
   scrollTo(0, 0);
-  if (t === 'today') renderToday(); else if (t === 'month') renderMonth(); else renderData();
+  if (t === 'today') renderToday(); else renderData();
 }
 $$('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
@@ -61,7 +62,7 @@ function renderToday(){
   $$('#week .dc').forEach(b => {
     const d = byDate.get(b.dataset.k), cv = b.querySelector('canvas');
     if (cv) T.miniForm(cv, d, b.clientWidth || 44, uOf, 700 + days.indexOf(b.dataset.k));
-    b.addEventListener('click', () => { if (byDate.get(b.dataset.k)){ selDay = b.dataset.k; mOff = monthOffsetOf(b.dataset.k); setTab('month'); } else if (b.dataset.k === tk) openFlow(); });
+    b.addEventListener('click', () => { if (byDate.get(b.dataset.k)){ selDay = b.dataset.k; setPer('w'); setTab('data'); } else if (b.dataset.k === tk) openFlow(); });
   });
   const td = byDate.get(tk);
   todayCache = null;
@@ -104,38 +105,37 @@ function drawRing(dt){
   }
 }
 
-/* =========================== МЕСЯЦ =========================== */
-let mOff = 0, selDay = null;
-function monthOffsetOf(k){ const d = T.kdate(k), n = new Date(); return (d.getFullYear() - n.getFullYear())*12 + d.getMonth() - n.getMonth(); }
-function renderMonth(){
-  const now = new Date(), tk = todayKey(), first = new Date(now.getFullYear(), now.getMonth() + mOff, 1), y = first.getFullYear(), m = first.getMonth();
-  const nDays = new Date(y, m + 1, 0).getDate(), lead = (first.getDay() + 6) % 7;
-  const minOff = DATA.length ? monthOffsetOf(DATA[0].date) : 0;
-  $('#mLabel').textContent = T.MONN[m] + (y !== now.getFullYear() ? ' ' + y : '');
-  $('#mNext').disabled = mOff >= 0; $('#mPrev').disabled = mOff <= Math.min(minOff, 0);
-  const keys = []; for (let i = 1; i <= nDays; i++) keys.push(T.dkey(new Date(y, m, i)));
+/* =========================== календарь периода (внутри «Данных») =========================== */
+let selDay = null;
+function renderCal(P){
+  const el = $('#cal'); if (!el) return;
+  const tk = todayKey(), keys = [];
+  for (let d = new Date(P.s); T.dkey(d) <= T.dkey(P.e); d = T.addDays(d, 1)) keys.push(T.dkey(d));
   const withData = keys.filter(k => byDate.get(k));
   if (!selDay || !keys.includes(selDay) || !byDate.get(selDay)) selDay = withData.length ? withData[withData.length - 1] : null;
+  const lead = (P.s.getDay() + 6) % 7;
   let html = ['П','В','С','Ч','П','С','В'].map(w => `<span class="wh">${w}</span>`).join('');
   for (let i = 0; i < lead; i++) html += '<span></span>';
-  keys.forEach((k, i) => {
+  keys.forEach(k => {
     const d = byDate.get(k), fut = k > tk, isT = k === tk;
     const cls = d ? '' : fut ? 'fut' : isT ? 'today' : 'miss';
-    html += `<div class="cd ${k === selDay ? 'sel' : ''}"><button class="dc ${cls}" data-k="${k}" ${d || isT ? '' : 'disabled'} aria-label="${T.dLong(k)}">${d ? '<canvas></canvas>' : isT ? I.plus : ''}</button><small class="num">${i + 1}</small></div>`;
+    html += `<div class="cd ${k === selDay ? 'sel' : ''}" data-k="${k}"><button class="dc ${cls}" data-k="${k}" ${d || isT ? '' : 'disabled'} aria-label="${T.dLong(k)}">${d ? '<canvas></canvas>' : isT ? I.plus : ''}</button><small class="num">${T.kdate(k).getDate()}</small></div>`;
   });
-  $('#cal').innerHTML = html;
+  el.innerHTML = html;
   $$('#cal .dc').forEach((b, i) => {
     const d = byDate.get(b.dataset.k), cv = b.querySelector('canvas');
     if (cv) T.miniForm(cv, d, b.clientWidth || 44, uOf, 900 + i);
-    b.addEventListener('click', () => { if (byDate.get(b.dataset.k)){ selDay = b.dataset.k; renderMonth(); } else openFlow(); });
+    b.addEventListener('click', () => {
+      if (!byDate.get(b.dataset.k)){ openFlow(); return; }
+      selDay = b.dataset.k; $$('#cal .cd').forEach(c => c.classList.toggle('sel', c.dataset.k === selDay)); renderDayCard();
+    });
   });
   renderDayCard();
 }
-$('#mPrev').addEventListener('click', () => { mOff--; selDay = null; renderMonth(); });
-$('#mNext').addEventListener('click', () => { mOff = Math.min(0, mOff + 1); selDay = null; renderMonth(); });
 function renderDayCard(){
   const el = $('#dayCard'), d = selDay && byDate.get(selDay);
-  if (!d){ el.innerHTML = `<div class="card"><div class="empty">В этом месяце замеров нет.</div></div>`; return; }
+  if (!el) return;
+  if (!d){ el.innerHTML = `<div class="card"><div class="empty">За этот период замеров нет. Нажми на сегодняшний день, чтобы сделать замер.</div></div>`; return; }
   const s = semis(d), ok = d.guess === d.actual;
   el.innerHTML = `<div class="card">
     <div class="daytop"><div><div class="k">${T.dLong(d.date)}${d.time ? ' · ' + d.time : ''}</div><h2 style="margin-top:6px">Звучишь ${T.zIn(d.actual)}</h2><div class="sub">${d.guess == null ? '' : ok ? 'Догадка совпала' : 'Догадка: ' + T.zName(d.guess)}</div></div><div class="dayform"><canvas></canvas></div></div>
@@ -150,7 +150,9 @@ function renderDayCard(){
 
 /* =========================== ДАННЫЕ =========================== */
 let per = 'm', pOff = 0;
-$$('[data-per]').forEach(b => b.addEventListener('click', () => { per = b.dataset.per; pOff = 0; $$('[data-per]').forEach(x => x.setAttribute('aria-selected', x === b)); renderData(); }));
+function setPer(v){ per = v; pOff = 0; $$('[data-per]').forEach(x => x.setAttribute('aria-selected', x.dataset.per === v));
+  if (selDay && v !== 'all'){ const now = new Date(), d = T.kdate(selDay); pOff = v === 'w' ? Math.round((T.monday(d) - T.monday(now))/(7*864e5)) : (d.getFullYear() - now.getFullYear())*12 + d.getMonth() - now.getMonth(); } }
+$$('[data-per]').forEach(b => b.addEventListener('click', () => { setPer(b.dataset.per); renderData(); }));
 $('#pPrev').addEventListener('click', () => { pOff--; renderData(); });
 $('#pNext').addEventListener('click', () => { pOff = Math.min(0, pOff + 1); renderData(); });
 function period(){
@@ -174,11 +176,11 @@ function renderData(){
   $('#pPrev').hidden = $('#pNext').hidden = per === 'all';
   $('#pNext').disabled = pOff >= 0;
   $('#pPrev').disabled = !DATA.length || T.dkey(P.s) <= DATA[0].date;
-  const body = $('#dataBody');
-  if (!D.length){ body.innerHTML = `<div class="card" style="margin-top:14px"><div class="empty">За этот период замеров нет.</div></div>` + how(); return; }
+  const body = $('#dataBody'), calHTML = per === 'all' ? '' : `<div class="cal" id="cal"></div><div id="dayCard"></div>`;
+  if (!D.length){ body.innerHTML = calHTML + (per === 'all' ? `<div class="card" style="margin-top:14px"><div class="empty">Замеров пока нет.</div></div>` : '') + how(); renderCal(P); return; }
   const a = stats(D), b = prev && prev.length ? stats(prev) : null;
   const sub = (v, f) => b && v != null ? P.cmp + ': ' + f : '';
-  body.innerHTML = `
+  body.innerHTML = calHTML + `
     <div class="tiles">
       <div class="tile"><div class="l">Слышишь себя</div><div class="v num">${a.hits}<small> из ${a.guessed}</small></div><div class="s">${b ? P.cmp + ': ' + b.hits + ' из ' + b.guessed : 'догадка совпала с замером'}</div></div>
       <div class="tile"><div class="l">Диапазон</div><div class="v num">${a.range != null ? octs(a.range) : '—'}<small> окт.</small></div><div class="s">${sub(b && b.range, b && b.range != null ? octs(b.range) + ' окт.' : '') || 'по сирене'}</div></div>
@@ -193,6 +195,7 @@ function renderData(){
     <figure class="card" style="margin:12px 0 0"><h2>Устойчивость</h2><p class="sub">Насколько ровно держится «а», в процентах.</p><canvas id="dStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="tip" id="tS"></div></figure>
     <figure class="card" style="margin:12px 0 0"><h2>Долгий выдох</h2><p class="sub">Секунды на «с-с-с». Пунктир — цель 30 секунд.</p><canvas id="dExh" role="img" aria-label="Выдох по дням"></canvas><div class="tip" id="tE"></div></figure>` + how();
   body.querySelectorAll('[data-lab]').forEach(x => x.addEventListener('click', () => setLab(x.dataset.lab)));
+  if (per !== 'all') renderCal(P);
   const share = T.drawBodyShare($('#dBody'), D), top = share.indexOf(Math.max(...share));
   const ga = [0,0,0,0,0], aa = [0,0,0,0,0]; D.forEach(d => { if (d.guess != null) ga[d.guess]++; aa[d.actual]++; });
   const gi = ga.indexOf(Math.max(...ga)), ai = aa.indexOf(Math.max(...aa));
@@ -213,7 +216,7 @@ function how(){ return `<section class="how"><h3>Как это считаетс�
 function setLab(v){
   T.lab.set = v; try { localStorage.setItem('woisee-tracker-labels', v); } catch (e) {}
   buildZones(); if (!$('#flow').hidden) renderStep();
-  if (tab === 'data') renderData(); else if (tab === 'month') renderMonth(); else renderToday();
+  if (tab === 'data') renderData(); else renderToday();
 }
 
 /* =========================== ЗАМЕР =========================== */
@@ -226,14 +229,14 @@ const acc = { a:null, s:null, x:null };
 function resetStep(i){
   if (i === 1) acc.a = { t:0, voicedT:0, midis:[], stabs:[], cents:[], zoneT:[0,0,0,0,0] };
   if (i === 2) acc.s = { t:0, midis:[], zoneT:[0,0,0,0,0] };
-  if (i === 3) acc.x = { t:0, exh:0, on:false, quiet:0 };
+  if (i === 3) acc.x = { t:0, exh:0, hiss:0, on:false };
   fl.done[i] = false;
 }
 const STEP = [
   { kick:'Шаг 1 из 4', title:'Где, по-твоему, звучит твой голос?', hint:'Прислушайся к себе и нажми на зону. Потом замер проверит.' },
   { kick:'Шаг 2 из 4 · а-а-а', title:'Скажи «а-а-а», как обычно говоришь', hint:'Ровно, на удобной ноте. Таймер идёт, только пока звучит голос.' },
   { kick:'Шаг 3 из 4 · сирена', title:'Сирена снизу вверх и обратно', hint:'От самой низкой удобной ноты до самой высокой и вниз. Без крика.' },
-  { kick:'Шаг 4 из 4 · выдох', title:'Вдохни и тяни «с-с-с»', hint:'Ровно, пока хватает воздуха. Секундомер остановится сам, когда замолчишь.' }
+  { kick:'Шаг 4 из 4 · выдох', title:'Вдохни и тяни «с-с-с»', hint:'Вдохни, нажми ▶ и тяни ровно, пока хватает воздуха. Воздух закончился — нажми «Стоп».' }
 ];
 const DUR = { 1:5, 2:11 };
 
@@ -302,7 +305,7 @@ function renderCtl(){
   } else if (i < 4){
     const done = fl.done[i];
     c.innerHTML = `<button class="rbtn back" id="fBack" aria-label="Назад">${I.back}</button>
-      <button class="play ${done ? 'done' : ''}" id="fPlay" aria-label="${done ? 'Ещё раз' : fl.run ? 'Пауза' : 'Старт'}">${done ? I.redo : fl.run ? I.pause : I.play}</button>
+      ${i === 3 && fl.run ? `<button class="play stop" id="fPlay" aria-label="Стоп">${I.stop}<span>Стоп</span></button>` : `<button class="play ${done ? 'done' : ''}" id="fPlay" aria-label="${done ? 'Ещё раз' : fl.run ? 'Пауза' : 'Старт'}">${done ? I.redo : fl.run ? I.pause : I.play}</button>`}
       <button class="next ${done ? 'go' : ''}" id="fNext">${done ? 'Дальше' : 'Пропустить'} ${I.next}</button>`;
     $('#fBack').addEventListener('click', () => go(i - 1));
     $('#fPlay').addEventListener('click', togglePlay);
@@ -322,6 +325,7 @@ async function togglePlay(){
     try { await L.start(); }
     catch (e){ fl.err = 'Микрофон недоступен.'; renderStep(); return; }
   }
+  if (i === 3 && fl.run){ finishStep(); return; }   // the exhale has «Стоп», not a pause
   fl.run = !fl.run;
   if (!fl.run) L.solo.target({ e:.12, hold:0, noise:0 });
   renderCtl(); updateTimer();
@@ -346,9 +350,8 @@ function analyse(info, dt){
     if (z >= 0){ s.midis.push(info.midi); s.zoneT[z] += dt; }
     if (s.t >= DUR[2]) finishStep();
   } else if (i === 3){ const x = acc.x; x.t += dt;
-    if (!info.voiced && info.act && info.noise > .5){ x.exh += dt; x.on = true; x.quiet = 0; }
-    else if (x.on){ x.quiet += dt; if (x.quiet > 1.2) finishStep(); }
-    if (x.t > 60) finishStep();
+    if (!info.voiced && info.act && info.noise > .5){ x.hiss += dt; x.on = true; }
+    x.exh = x.t;   // a stopwatch: from ▶ to «Стоп», nothing stops it on its own
   }
   fl.curZ = i === 3 ? -1 : z >= 0 ? z : info.silent ? -1 : fl.curZ;
   fl.info = info;
@@ -360,9 +363,9 @@ function updateTimer(){
   if (i === 2) n.textContent = fmtS(Math.ceil(DUR[2] - acc.s.t - 1e-6));
   if (i === 3) n.textContent = fmt1(acc.x.exh);
   let sub;
-  if (fl.done[i]) sub = i === 3 ? 'секунд выдоха · готово' : 'готово';
-  else if (!fl.run) sub = i === 3 ? 'нажми ▶ и тяни «с»' : 'нажми ▶ и начни';
-  else if (i === 3) sub = acc.x.on ? 'секунд выдоха' : 'жду «с-с-с»…';
+  if (fl.done[i]) sub = i === 3 ? 'секунд выдоха' : 'готово';
+  else if (!fl.run) sub = i === 3 ? 'нажми ▶ на вдохе' : 'нажми ▶ и начни';
+  else if (i === 3) sub = 'нажми «Стоп», когда воздух закончится';
   else sub = info && info.voiced ? T.noteName(info.midi) + ' · ' + T.zName(T.zoneOf(T.pOf(info.midi, info.cent))) : 'жду звук…';
   s.textContent = sub;
 }
@@ -378,7 +381,7 @@ function compute(){
     exhale: +x.exh.toFixed(1), cent: cent == null ? 0 : +cent.toFixed(3), zones: zt.map(v => +(v/tz).toFixed(3)) };
   r.actual = r.comfort == null ? null : T.zoneOf(T.pOf(r.comfort, r.cent));
   fl.result = r;
-  if (r.comfort != null){ fl.p = T.pOf(r.comfort, r.cent); fl.pShown = fl.p; L.solo.target({ u: r.comfort - 12*(Math.floor(r.comfort/12) - 1), vo:1, noise:0, amp:.55, stab:Math.max(.7, r.stab || .7), e:1, hold:1, cent:.5 }); }
+  if (r.comfort != null){ fl.p = T.pOf(r.comfort, r.cent); fl.pShown = fl.p; L.solo.target({ u: Math.round(r.comfort) - 12*(Math.floor(Math.round(r.comfort)/12) - 1), vo:1, noise:0, amp:.55, stab:Math.max(.7, r.stab || .7), e:1, hold:1, cent:.5 }); }
 }
 function renderResult(){
   const r = fl.result;
@@ -460,9 +463,9 @@ function drawStage(dt){
 
 /* =========================== start =========================== */
 buildZones();
-let rT = 0; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (!flow.hidden) layoutStage(); if (tab === 'today') renderToday(); else if (tab === 'month') renderMonth(); else renderData(); }, 150); });
+let rT = 0; addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (!flow.hidden) layoutStage(); if (tab === 'today') renderToday(); else renderData(); }, 150); });
 const q = new URLSearchParams(location.search);
-setTab(['month', 'data'].includes(q.get('tab')) ? q.get('tab') : 'today');
+setTab(['month', 'data'].includes(q.get('tab')) ? 'data' : 'today');
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (tab === 'data') renderData(); });
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 window.__tracker = { fl, acc, openFlow, go, setTab, refresh, get DATA(){ return DATA; } };
