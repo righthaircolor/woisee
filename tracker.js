@@ -80,7 +80,7 @@ function drawBody(ctx, B, W, H, cxF, hl, tint, t){
     const h = hl[z] || 0; ctx.fillStyle = h > .04 && tint ? tint : C.ink;
     for (const i of B.byZ[z]){
       const a = B.A[i];
-      ctx.globalAlpha = (.16 + .14*a) + h*(.3 + .45*a);
+      ctx.globalAlpha = Math.min(1, (.26 + .24*a) + h*(.3 + .45*a));
       const x = cx + (B.X[i] + sh*.0025*Math.sin(t*.9 + a*40))*H, y = (B.Y[i] + sh*.0018*Math.cos(t*.7 + a*31))*H, s = B.S[i]*(1 + .35*h);
       ctx.fillRect(x - s/2, y - s/2, s, s);
     }
@@ -126,12 +126,16 @@ const STEPS = {
 const ORDER = ['pick', 'a', 'siren', 'sss', 'res'];
 const fl = { step:0, guess:null, demo:false, run:false, done:{}, curZ:-1, p:.3, pShown:.3, hl:[0,0,0,0,0], formA:0, result:null, info:null, auto:0, raf:0, last:0, T:0, ctx:null, onSave:null, key:'', saved:-1 };
 const acc = { a:null, s:null, x:null };
+/* while a step sounds, its living form is grabbed 12 times a second (the same capture the exercises use);
+   the last 3 seconds of «а», the siren and the «с-с-с» go into the picture of the day */
+const rec = { buf:[], last:0, clips:{} };
+const canClip = () => typeof grab === 'function' && typeof gifPut === 'function' && typeof GIF_FPS !== 'undefined';
 let SW = 0, SH = 0, off = null, prevZ = -2, L = null;
 function resetStep(id){
   if (id === 'a') acc.a = { t:0, voicedT:0, midis:[], stabs:[], cents:[], zoneT:[0,0,0,0,0] };
   if (id === 'siren') acc.s = { t:0, midis:[], zoneT:[0,0,0,0,0] };
   if (id === 'sss') acc.x = { t:0, exh:0 };
-  fl.done[id] = false;
+  fl.done[id] = false; delete rec.clips[id]; rec.buf = [];
 }
 function build(){
   if ($('pt')) return;
@@ -187,6 +191,7 @@ function open(ctx, onSave){
   build();
   L = ensureLive(); L.setOpts({ rain: data.profile.rain !== false, crisp: data.profile.lace !== true, mono: '#F4F2EC' });
   L.solo.ghosts.length = 0; L.solo.exh = 0; L.mixT = 0; L.many = 0;
+  rec.buf = []; rec.clips = {};
   Object.assign(fl, { ctx: ctx || null, onSave: onSave || null, step:0, guess:null, demo:false, run:false, done:{}, result:null, curZ:-1, formA:0, info:null, key:dkey(), saved:-1 });
   ['a','siren','sss'].forEach(resetStep);
   L.solo.target({ e:.08, hold:0, noise:0 });
@@ -268,7 +273,12 @@ async function onBar(e){
     fl.run = true; renderBar();
   }
 }
-function finishStep(){ const id = ORDER[fl.step]; fl.run = false; fl.done[id] = true; L.solo.target({ hold:.2 }); const s = $('ptSegs').children[fl.step]; if (s) s.className = 'dn'; renderBar(); }
+function keepClip(id){
+  if (!canClip() || rec.buf.length < GIF_FPS) return;
+  const n = CLIP_SEC*GIF_FPS, fr = rec.buf.length > n + 3 ? rec.buf.slice(-n - 3, -3) : rec.buf.slice(-n);
+  rec.clips[id] = fr.map(f => ({ xy:f.xy, sa:f.sa, ci:f.ci, cols:f.cols })); rec.buf = [];
+}
+function finishStep(){ const id = ORDER[fl.step]; keepClip(id); fl.run = false; fl.done[id] = true; L.solo.target({ hold:.2 }); const s = $('ptSegs').children[fl.step]; if (s) s.className = 'dn'; renderBar(); }
 
 function demoInfo(id, t){
   const up = prints(dkey()).length ? 1.6 : 0;
@@ -319,6 +329,7 @@ function save(){
   if (fl.saved >= 0 && fl.saved < d.prints.length) d.prints[fl.saved] = r; else { d.prints.push(r); fl.saved = d.prints.length - 1; }
   saveDay(k);
   if (!data.profile.ref){ data.profile.ref = Math.round(r.comfort); saveProfile(); }
+  if (canClip()) ['a', 'siren', 'sss'].forEach(id => { const fr = rec.clips[id]; if (fr && fr.length >= GIF_FPS) gifPut('c:' + k + ':p' + fl.saved + '-' + id, { id:'print-' + id, b: id === 'sss' ? 'breath' : 'phon', frames: fr }); });
   if (typeof mom !== 'undefined' && mom.cache) mom.cache.delete('d:' + k);
 }
 const semis = c => c && c.low != null ? Math.round(c.high - c.low) : null;
@@ -338,17 +349,17 @@ function renderResult(){
     $('ptTitle').innerHTML = mv === 0 ? `Голос остался <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>` : `Голос ${mv > 0 ? 'поднялся' : 'опустился'} <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>`;
   } else $('ptTitle').innerHTML = `Ты звучишь <span style="color:${nCol(r.comfort)}">${zIn(r.actual)}</span>`;
   $('ptHint').textContent = guessLine(r);
-  const pv = valid(prev) ? prev : null, s = semis(r), ps = pv ? semis(pv) : null, was = v => pv ? `<span class="pt-was">${v} →</span> ` : '';
-  const rows = [
-    ['Комфортная нота', was(escH(nShort(pv ? pv.comfort : 0))) + `<span class="pt-dot" style="background:${nCol(r.comfort)}"></span>${escH(nName(r.comfort))} · ${Math.round(hz(r.comfort))} Гц`],
-    ['Диапазон сирены', s != null ? was(ps != null ? octs(ps) : '—') + octs(s) + ' окт.' : '—'],
-    ['Устойчивость «а»', r.stab != null ? was(pv && pv.stab != null ? Math.round(pv.stab*100) : '—') + Math.round(r.stab*100) + ' %' : '—'],
-    ['Долгий выдох', r.exhale ? Math.round(r.exhale) + ' с' : '—'],
-    ['Догадка', r.guess == null ? '—' : r.guess === r.actual ? 'совпала' : zName(r.guess)]
-  ];
+  const pv = valid(prev) ? prev : null, s = semis(r), ps = pv ? semis(pv) : null;
+  const zc = ['#5EA879', '#86BE97', '#C9CEC8', '#E780C0', '#ECF176'], z = r.zones || [];
   const toPractice = fl.ctx !== 'after' && !practised(fl.key);
-  $('ptRes').innerHTML = `<ul class="hist pt-table">${rows.map(([l, v]) => `<li><span>${l}</span><span class="m num">${v}</span></li>`).join('')}</ul>
-    ${toPractice ? `<button class="blackbtn wt-cta" id="ptPractice">К практике ${ICO.arrow}</button>` : ''}`;
+  $('ptRes').innerHTML = `<div class="pt-tiles">
+    <div class="pr-tile dark wide"><span>Комфортная нота</span><b class="pt-note"><span class="pt-dot" style="background:${nCol(r.comfort)}"></span>${escH(nName(r.comfort))}</b><span>${Math.round(hz(r.comfort))} Гц · ${zIn(r.actual)}${pv ? ' · было ' + escH(nName(pv.comfort)) : ''}</span></div>
+    <div class="pr-tile dark"><span>Диапазон сирены</span>${s != null ? `<b class="num">${octs(s)}<small>окт.</small></b><span>${escH(nShort(r.low))} — ${escH(nName(r.high))}${ps != null ? ' · было ' + octs(ps) : ''}</span>` : '<b>—</b><span>сирену не услышала</span>'}</div>
+    <div class="pr-tile dark"><span>Устойчивость «а»</span>${r.stab != null ? `<b class="num">${Math.round(r.stab*100)}<small>%</small></b><span>${pv && pv.stab != null ? 'было ' + Math.round(pv.stab*100) + ' %' : 'насколько ровно держалась нота'}</span>` : '<b>—</b>'}</div>
+    <div class="pr-tile dark"><span>Долгий выдох</span>${r.exhale ? `<b class="num">${Math.round(r.exhale)}<small>с</small></b>` : '<b>—</b>'}<span>цель 30–40 с</span></div>
+    <div class="pr-tile dark wide"><span>Где звучал голос</span><div class="pt-zbar">${z.map((v, i) => v > .005 ? `<i style="flex:${v};background:${zc[i]}"></i>` : '').join('')}</div><span class="pt-zl"><span>${zName(0)}</span><span>${zName(4)}</span></span></div>
+  </div>
+  ${toPractice ? `<button class="blackbtn wt-cta" id="ptPractice">К практике ${ICO.arrow}</button>` : ''}`;
   const b = $('ptPractice'); if (b) b.onclick = () => { fl.onSave = null; close(); if (typeof state !== 'undefined'){ state.tab = 'path'; state.choosing = true; render(); scrollTo(0, 0); } };
 }
 function frame(now){
@@ -365,6 +376,7 @@ function frame(now){
       else { L.solo.target({ e:.08, hold:0, noise:0 }); L.solo.exh = 0; }
     } else if (L.on) info = L.update(dt).info;
     if (info) analyse(info, dt);
+    if (canClip() && fl.run && now - rec.last >= 1000/GIF_FPS - 4){ rec.last = now; rec.buf.push(grab(L, 400, 400, .54, now, CLIP_DOTS)); if (rec.buf.length > (CLIP_SEC + 2)*GIF_FPS) rec.buf.shift(); }
     tickBar();
   }
   if (id !== 'pick') L.step(dt);
@@ -407,9 +419,9 @@ function setLabels(v){
    Inside it the dots of the note never stop changing: the form flows from the morning note along the recorded siren
    to the note after practice and back, through every pattern in between, while the dots keep drifting
    between haze and pattern. Nothing switches on or off — it is one continuous flow.
-   One loop is 96 frames (8 s at 12 fps) and closes on itself, so the GIF has no seam; live views pass a
+   One loop is 144 frames (12 s at 12 fps) and closes on itself, so the GIF has no seam; live views pass a
    fractional frame and move at full frame rate. */
-const LOOP = 96, T2 = Math.PI*2;
+const LOOP = 144, T2 = Math.PI*2;
 const cloudCache = new Map();
 function cloud(N){
   if (cloudCache.has(N)) return cloudCache.get(N);
@@ -423,7 +435,7 @@ function noteKeys(k){
   if (P.length){
     const A = P[0].comfort, B = P[P.length - 1].comfort, ct = (P[P.length - 1].contour && P[P.length - 1].contour.length > 6 ? P[P.length - 1].contour : P[0].contour) || [];
     const at = q => ct.length > 6 ? ct[Math.round(q*(ct.length - 1))] : null, hi = at(.5), lo = at(.9);
-    return [A, hi != null ? lerp(A, at(.3), .5) : A + 2, hi != null ? lerp(A, hi, .45) : A + 4, B, lo != null ? lerp(B, lo, .5) : B - 2].map(uOfM);
+    return [A, hi != null ? lerp(A, hi, .4) : A + 3, B, lo != null ? lerp(B, lo, .45) : B - 2].map(uOfM);
   }
   const E = exNotes(k); if (!E.length) return [];
   const ns = E.slice(0, 4).map(n => n.midi); while (ns.length < 3) ns.push(ns[0] + (ns.length === 1 ? 3 : -2));
@@ -435,17 +447,24 @@ function pathU(K, ph){
   const p0 = K[(i - 1 + n) % n], p1 = K[i], p2 = K[(i + 1) % n], p3 = K[(i + 2) % n], t2 = t*t, t3 = t2*t;
   return .5*((2*p1) + (-p0 + p2)*t + (2*p0 - 5*p1 + 4*p2 - p3)*t2 + (-p0 + 3*p1 - 3*p2 + p3)*t3);
 }
+/* the haze: every clip of the day — exercises and the prints' own «а», siren and «с-с-с».
+   A print made before its clips were kept still brings its «с-с-с» as a running noise field. */
 function hazeOf(k, clips, i, ctx, cx, cy, R, mul, mono){
-  const fi = Math.floor(i);
+  const fi = Math.floor(i), ph = (((i % LOOP) + LOOP) % LOOP)/LOOP;
+  const hasSss = (clips || []).some(c => c.id === 'print-sss');
+  if (!hasSss && prints(k).some(c => c.exhale)){
+    const N = Math.round(clamp(R*R*.05, 400, 1800));
+    V3.renderState(ctx, cx, cy, R*1.15, { noise:1, cent:.85, vo:0, stab:.2, hold:0, e:1, amp:.5 }, N, 53, mono || C.ink, .55*mul, Math.max(.8, R/170), 1.3 + 1.2*Math.sin(T2*ph));
+  }
   if (clips && clips.length) paintAt(ctx, dayLayers(clips, fi), layerMul(clips.length)*mul, cx, cy, R*1.18, .8, mono);
-  else { ctx.save(); paintSynth(ctx, k, cx, cy, R*1.05, .07*Math.sin(T2*(i % LOOP)/LOOP), mono); ctx.restore(); }
+  else { ctx.save(); paintSynth(ctx, k, cx, cy, R*1.05, .07*Math.sin(T2*ph), mono); ctx.restore(); }
 }
 /* returns false when the day has no note: then the caller paints it as before */
 function paintDay(ctx, k, clips, i, cx, cy, R, mono){
   const K = noteKeys(k); if (!K.length) return false;
   const ph = (((i % LOOP) + LOOP) % LOOP)/LOOP, still = reduced();
   const u = clamp(still ? K[K.length >= 4 ? 3 : 0] : pathU(K, ph), 0, 47);
-  const order = still ? .85 : .8 + .12*Math.sin(T2*ph*2);   // breathes between haze and pattern, never all the way
+  const order = still ? .85 : .76 + .12*Math.sin(T2*ph);   // breathes between haze and pattern, never all the way
   hazeOf(k, clips, i, ctx, cx, cy, R, 1 - .45*order, mono);
   const N = Math.round(clamp(R*R*.08, 600, 3000)), dot = Math.max(1, R/115), Cl = cloud(N), Q = Cl.Q, o = [0, 0];
   const st = { u, amp:.4, stab:.95, e:1, hold:1, crisp: data.profile.lace !== true, noise:0, cent:.5, vo:1, bx:1 };
@@ -498,13 +517,12 @@ function viewTrack(){
   const k = dkey(), P = prints(k), t = new Date(), h = t.getHours();
   const when = h < 5 ? 'этой ночью' : h < 12 ? 'этим утром' : h < 18 ? 'этим днём' : 'этим вечером';
   const last = P[P.length - 1];
-  const list = P.map(c => `<li><button class="tr-row" data-act="day" data-v="${k}"><span class="num">${c.at}</span><span>Звучишь ${zIn(c.actual)}${c.ctx === 'after' ? '<small>после практики</small>' : ''}</span><span class="tr-n"><span class="pt-dot" style="background:${nCol(c.comfort)}"></span>${escH(nName(c.comfort))}</span></button></li>`).join('');
   return topbar() + `
   <section class="tr-week" aria-label="Неделя">${weekHTML(monday(t))}</section>
   <h1 class="big-title tr-q">${last ? 'Сегодня ты звучишь <span style="color:' + nCol(last.comfort) + '">' + zIn(last.actual) + '</span>' : 'Как ты звучишь ' + when + '?'}</h1>
-  <div class="tr-ring"><canvas id="trRing" aria-hidden="true"></canvas>
-    ${last ? '' : `<button class="go big tr-go" data-act="print">Отпе&shy;чаток</button>`}</div>
-  ${P.length ? `<ul class="hist tr-list">${list}</ul><button class="ghost" data-act="print">Ещё один отпечаток</button>` : `<p class="note tr-note">Полминуты: догадка, «а-а-а», сирена и выдох. Покажет, где в теле живёт голос и на какой ноте.</p>`}
+  <div class="tr-ring">${last ? `<button class="tr-open" data-act="day" data-v="${k}" aria-label="Открыть сегодняшний день"></button>` : ''}<canvas id="trRing" aria-hidden="true"></canvas>
+    ${last ? `<button class="go tr-again" data-act="print" aria-label="Ещё один отпечаток">Ещё</button>` : `<button class="go big tr-go" data-act="print">Отпе&shy;чаток</button>`}</div>
+  ${P.length ? '' : `<p class="note tr-note">Полминуты: догадка, «а-а-а», сирена и выдох. Покажет, где в теле живёт голос и на какой ноте.</p>`}
   ${!practised(k) ? `<button class="blackbtn wt-cta" data-act="topractice">К практике ${ICO.arrow}</button>` : ''}`;
 }
 /* the ring is the flowing dust of the current exercise's outline; the part of the week with voice is bright */
