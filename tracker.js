@@ -808,9 +808,9 @@ function renderProfileIn(root){
     <p class="note">Все отпечатки, наложенные друг на друга. Узор — комфортная нота, кольца вокруг — диапазон.</p>
     <canvas class="pf-cast" id="pfCast" role="img" aria-label="Слепок голоса"></canvas>
     <p class="note" id="pfCastCap"></p>
-    ${a.P.length ? `<div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
+    <div class="pr-h"><h2>Диапазон и нота</h2></div><p class="note">Столбик — сирена от нижней ноты до верхней. Точка — комфортная нота её цветом.</p><div class="pf-fig"><canvas id="pfRange" role="img" aria-label="Диапазон по дням"></canvas><div class="pf-tip" id="pfTipR"></div></div>
     <div class="pr-h"><h2>Устойчивость</h2><span class="note">насколько ровно «а»</span></div><div class="pf-fig"><canvas id="pfStab" role="img" aria-label="Устойчивость по дням"></canvas><div class="pf-tip" id="pfTipS"></div></div>
-    <div class="pr-h"><h2>Долгий выдох</h2><span class="note">цель — 30 секунд</span></div><div class="pf-fig"><canvas id="pfExh" role="img" aria-label="Долгий выдох по дням"></canvas><div class="pf-tip" id="pfTipE"></div></div>` : ''}`;
+    <div class="pr-h"><h2>Долгий выдох</h2><span class="note">цель — 30 секунд</span></div><div class="pf-fig"><canvas id="pfExh" role="img" aria-label="Долгий выдох по дням"></canvas><div class="pf-tip" id="pfTipE"></div></div>`;
   $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { H.lab = x.dataset.lab; renderProfile(); });
   $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
   drawBodyShare($('pfBodyCv'), zones);
@@ -818,13 +818,20 @@ function renderProfileIn(root){
   const CP = []; keys.forEach(k => S.P(k).forEach(c => CP.push(c)));
   drawCast($('pfCast'), CP); castCap($('pfCastCap'), CP);
   if (H.per === 'w') drawCal($('pfCal'), S, P); else drawMap($('pfMap'), S, H.per === 'm' ? P : null);
-  if (a.P.length){
-    const D = keys.filter(k => S.P(k).length).map(k => { const L = S.P(k); return { date:k, m:L[L.length - 1] }; });
-    drawRange($('pfRange'), $('pfTipR'), D);
-    drawLine($('pfStab'), $('pfTipS'), D, d => d.m.stab == null ? null : d.m.stab*100, [40, 100], v => Math.round(v) + ' %');
-    const ex = k => Math.max(0, ...S.P(k).map(c => c.exhale || 0), ...Object.values(S.ex(k)));
-    drawLine($('pfExh'), $('pfTipE'), D, d => ex(d.date) || null, [0, 40], v => Math.round(v) + ' с', 30);
-  }
+  /* charts are always there: a day's point comes from its last print, or — on a day with only practice —
+     from the notes of its exercises (comfortable = the middle held note, range = lowest to highest) */
+  const exm = k => Math.max(0, ...S.P(k).map(c => c.exhale || 0), ...Object.values(S.ex(k)));
+  const D = keys.map(k => {
+    const L = S.P(k); if (L.length) return { date:k, m:L[L.length - 1] };
+    const N = S.notes(k); if (!N.length) return exm(k) ? { date:k, m:null } : null;
+    const ms = N.map(n => n.midi), st = N.filter(n => n.stab != null).map(n => n.stab);
+    return { date:k, m:{ comfort: median(ms), low: ms.length > 1 ? Math.min(...ms) : null, high: ms.length > 1 ? Math.max(...ms) : null, stab: st.length ? mean(st) : null } };
+  }).filter(Boolean);
+  const DN = D.filter(d => d.m), DE = D.filter(d => exm(d.date));
+  const DS = DN.filter(d => d.m.stab != null), none = 'появится после отпечатка или упражнения';
+  if (DN.length) drawRange($('pfRange'), $('pfTipR'), DN); else drawEmpty($('pfRange'), 210, none);
+  if (DS.length) drawLine($('pfStab'), $('pfTipS'), DS, d => d.m.stab*100, [40, 100], v => Math.round(v) + ' %'); else drawEmpty($('pfStab'), 150, 'появится после «а» в отпечатке');
+  if (DE.length) drawLine($('pfExh'), $('pfTipE'), DE, d => exm(d.date) || null, [0, 40], v => Math.round(v) + ' с', 30); else drawEmpty($('pfExh'), 150, 'появится после «с-с-с» на выдохе');
 }
 function drawBodyShare(cv, z){
   const w = cv.clientWidth, h = Math.round(Math.min(w*1.45, 580)), ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h);
@@ -1024,6 +1031,14 @@ function hover(cv, tip, D, getF, html, yAt, redraw){
     redraw(best); const tx = xOf(getF(), D, best), ty = yAt(best);
     tip.innerHTML = html(D[best]); tip.style.left = clamp(tx, 80, card.clientWidth - 80) + 'px'; tip.style.top = Math.max(8, ty - 10) + 'px'; tip.style.opacity = 1; };
   cv.onpointermove = show; cv.onpointerdown = show; cv.onpointerleave = () => { tip.style.opacity = 0; redraw(-1); };
+}
+/* a period without data still shows its chart: empty grid and one quiet line */
+function drawEmpty(cv, h, text){
+  const F = chartFrame(cv, h), ctx = F.ctx;
+  cv.onpointermove = cv.onpointerdown = cv.onpointerleave = null;
+  for (let i = 0; i < 3; i++){ const y = F.t + i/2*(F.h - F.t - F.b); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(F.l, y); ctx.lineTo(F.w - F.r, y); ctx.stroke(); }
+  ctx.fillStyle = C.muted; ctx.font = '500 12px "Inter Tight",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, (F.l + F.w - F.r)/2, (F.t + F.h - F.b)/2 + (F.h - F.t - F.b)/4); ctx.textAlign = 'left';
 }
 function drawRange(cv, tip, D){
   const M = D.map(d => d.m), lo = Math.floor(Math.min(...M.map(m => m.low != null ? m.low : m.comfort)) - 2), hi = Math.ceil(Math.max(...M.map(m => m.high != null ? m.high : m.comfort)) + 2);
