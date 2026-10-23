@@ -84,7 +84,7 @@ const masks = new Map();
 function bodyMask(W, H, cxF){
   const key = W + 'x' + H + ':' + cxF; if (masks.has(key)) return masks.get(key);
   const m = document.createElement('canvas'), d = DPR(); m.width = Math.round(W*d); m.height = Math.round(H*d);
-  const c = m.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.filter = 'blur(' + Math.round(H*.012) + 'px)'; c.fillStyle = '#fff';
+  const c = m.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.filter = 'blur(' + Math.round(H*.016) + 'px)'; c.fillStyle = '#fff';
   const cx = W*cxF, X = x => cx + x*H*BK, Y = y => BY(y)*H;
   c.beginPath(); c.ellipse(X(0), Y(.168), .088*H*BK, .104*H*BK, 0, 0, Math.PI*2); c.fill();
   c.fillRect(X(-.046), Y(.25), .092*H*BK, (BY(.37) - BY(.25))*H);
@@ -150,7 +150,7 @@ const acc = { a:null, s:null, x:null };
    the last 3 seconds of «а», the siren and the «с-с-с» go into the picture of the day */
 const rec = { buf:[], last:0, clips:{} };
 const canClip = () => typeof grab === 'function' && typeof gifPut === 'function' && typeof GIF_FPS !== 'undefined';
-let SW = 0, SH = 0, off = null, off2 = null, prevZ = -2, L = null;
+let SW = 0, SH = 0, off = null, off2 = null, off3 = null, prevZ = -2, L = null;
 function resetStep(id){
   if (id === 'a') acc.a = { t:0, voicedT:0, midis:[], stabs:[], cents:[], zoneT:[0,0,0,0,0], zm:[] };
   if (id === 'siren') acc.s = { t:0, midis:[], zoneT:[0,0,0,0,0], zm:[] };
@@ -442,15 +442,21 @@ function drawStage(dt){
     ctx.beginPath(); ctx.arc(x, yg, 3.5, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = PINK; ctx.beginPath(); ctx.arc(x, ya, 3.5, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
   }
   if (fl.formA > .01){
-    /* the form of the voice lives inside the silhouette: drawn on its own layer, then cut by the body mask */
-    if (!off2) off2 = document.createElement('canvas');
-    const lc = fit(off2, SW, SH); lc.clearRect(0, 0, SW, SH);
-    const F = Math.round(Math.min(SW*.62, SH*.7)), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
+    /* the sound spreads past the body, but the body is where it is strongest: the form is drawn whole,
+       full strength inside the silhouette and about a third outside it, so the voice leaves the body
+       and the head and shoulders still read through it */
+    if (!off2){ off2 = document.createElement('canvas'); off3 = document.createElement('canvas'); }
+    const F = Math.round(Math.min(SW*.7, SH*.78)), oc = fit(off, F, F); oc.clearRect(0, 0, F, F);
     L.draw(oc, F, F, .5);
-    const y = SH*(id === 'sss' ? BY(.55) : BY(yOfP(fl.pShown)));
-    lc.drawImage(off, SW*cxF - F/2, y - F/2, F, F);
-    lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = 'destination-in'; lc.drawImage(bodyMask(SW, SH, cxF), 0, 0); lc.globalCompositeOperation = 'source-over';
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = fl.formA; ctx.drawImage(off2, 0, 0); ctx.globalAlpha = 1; ctx.setTransform(d, 0, 0, d, 0, 0);
+    const y = SH*(id === 'sss' ? BY(.55) : BY(yOfP(fl.pShown))), M = bodyMask(SW, SH, cxF);
+    [[off2, 'destination-in'], [off3, 'destination-out']].forEach(([cv, op]) => {
+      const lc = fit(cv, SW, SH); lc.clearRect(0, 0, SW, SH); lc.drawImage(off, SW*cxF - F/2, y - F/2, F, F);
+      lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = op; lc.drawImage(M, 0, 0); lc.globalCompositeOperation = 'source-over';
+    });
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = fl.formA*.36; ctx.drawImage(off3, 0, 0);
+    ctx.globalAlpha = fl.formA; ctx.drawImage(off2, 0, 0);
+    ctx.globalAlpha = 1; ctx.setTransform(d, 0, 0, d, 0, 0);
   }
 }
 function setLabels(v){
