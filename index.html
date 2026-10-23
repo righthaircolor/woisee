@@ -1431,7 +1431,7 @@ function paintSynth(ctx,k,cx,cy,R,rot,mono){
 }
 function paintPlateFrame(ctx,k,ph,W,H,live){
   W=W||GIF_W;H=H||GIF_H;
-  if(!live&&window.WT){const G=WT.gifLayout(W,H);paintSynth(ctx,k,G.cx,G.cy,G.R,.07*Math.sin(2*Math.PI*ph));return;}
+  if(!live&&window.WT){const G=WT.gifLayout(W,H);paintSynth(ctx,k,G.cx,G.cy,G.R*.8,.07*Math.sin(2*Math.PI*ph));return;}
   paintSynth(ctx,k,W/2,H*(live?.5:.46),W*(live?.4:.38),.07*Math.sin(2*Math.PI*ph));
 }
 /* still pictures of days (the week in the profile): the first frame of the clips, or the rebuilt day */
