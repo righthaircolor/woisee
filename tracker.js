@@ -736,7 +736,8 @@ function renderProfileIn(root){
   const zones = zonesOf(S, keys), cm = comfortOf(S, keys), top = zones ? zones.indexOf(Math.max(...zones)) : null;
   const realFew = !H.sample && Object.keys(data.days).filter(k => prints(k).length).length < 3;
   const cmpTxt = (has, txt, def) => b && has ? P.cmp + ': ' + txt : def;
-  const cal = H.per === 'all' ? `<div class="pr-h"><h2>Карта дней</h2></div><canvas class="pf-map" id="pfMap" role="img" aria-label="Карта дней: кольцо на каждый день, цвета — ноты дня"></canvas><p class="note">Каждый день — кольцо, окрашенное нотами, на которых звучал голос. Бледное кольцо — день без голоса.</p>` : `<div class="pf-cal ${H.per}" id="pfCal"></div>`;
+  const cal = H.per === 'w' ? `<div class="pf-cal w" id="pfCal"></div>`
+    : `<div class="pf-maphead">${WD.map(w => `<span>${w}</span>`).join('')}</div><canvas class="pf-map" id="pfMap" role="img" aria-label="Дни кольцами: цвета — ноты дня; нажатие открывает день"></canvas>${H.per === 'all' ? `<p class="note">Каждый день — кольцо, окрашенное нотами, на которых звучал голос. Нажми на кольцо, чтобы открыть день.</p>` : ''}`;
   $('pfBody').innerHTML = `
     ${cal}
     <div class="pf-voice" id="prNoteCard">
@@ -760,7 +761,7 @@ function renderProfileIn(root){
   $('pfBody').querySelectorAll('[data-lab]').forEach(x => x.onclick = () => { H.lab = x.dataset.lab; renderProfile(); });
   $('pfBody').querySelectorAll('[data-pfs]').forEach(x => x.onclick = () => { H.sample = x.dataset.pfs === '1'; H.off = 0; renderProfile(); });
   drawBodyShare($('pfBodyCv'), zones);
-  if (H.per === 'all') drawMap($('pfMap'), S); else drawCal($('pfCal'), S, P);
+  if (H.per === 'w') drawCal($('pfCal'), S, P); else drawMap($('pfMap'), S, H.per === 'm' ? P : null);
   if (a.P.length){
     const D = keys.filter(k => S.P(k).length).map(k => { const L = S.P(k); return { date:k, m:L[L.length - 1] }; });
     drawRange($('pfRange'), $('pfTipR'), D);
@@ -786,9 +787,10 @@ function drawCal(el, S, P){
   if (H.per === 'm') for (let i = 0; i < (P.s.getDay() + 6) % 7; i++) h += '<span></span>';
   keys.forEach((k, i) => {
     const has = S.voiced(k) || S.P(k).length || S.notes(k).length, fut = k > tk;
-    h += `<div class="pf-cd ${k === tk ? 't' : ''}">${has ? `<button class="pf-dc" ${H.sample ? 'disabled' : `data-act="day" data-v="${k}"`} aria-label="${escH(dateLong(parseKey(k)))}"><canvas data-pfk="${k}"></canvas></button>` : `<span class="pf-dc ${fut ? 'fut' : 'off'}"><i></i></span>`}<small class="num">${H.per === 'w' ? WD[i] : parseKey(k).getDate()}</small></div>`;
+    h += `<div class="pf-cd ${k === tk ? 't' : ''}">${has ? `<button class="pf-dc" data-pfday="${k}" aria-label="${escH(dateLong(parseKey(k)))}"><canvas data-pfk="${k}"></canvas></button>` : `<span class="pf-dc ${fut ? 'fut' : 'off'}"><i></i></span>`}<small class="num">${H.per === 'w' ? WD[i] : parseKey(k).getDate()}</small></div>`;
   });
   el.innerHTML = h;
+  el.querySelectorAll('[data-pfday]').forEach(b => b.onclick = () => dayCard(b.dataset.pfday, S));
   el.querySelectorAll('canvas[data-pfk]').forEach(cv => {
     const k = cv.dataset.pfk;
     if (!H.sample){ paintDayCell(cv, k); return; }
@@ -800,42 +802,64 @@ function drawCal(el, S, P){
    a ring is split into arcs by the notes the day sounded on, coloured by note; a day without voice is a faint trace.
    The rings appear one after another, oldest first, and the dust keeps flowing around them. */
 const map = { raf:0, t0:0, rings:[], cv:null, last:0, flow:0 };
-function drawMap(cv, S){
+function drawMap(cv, S, P){
   if (!cv) return;
-  const keys = S.keys; if (!keys.length){ fit(cv, cv.clientWidth, 40); return; }
-  const first = monday(parseKey(keys[0])), today = new Date(), weeks = Math.round((monday(today) - first)/(7*864e5)) + 1;
-  const W = cv.clientWidth, cw = W/7, rr = cw*.6, Hh = Math.round(weeks*cw + cw*.3);
+  const keys = S.keys, today = new Date(), tk = dkey(today);
+  if (!P && !keys.length){ fit(cv, cv.clientWidth, 40); return; }
+  const from = P ? P.s : parseKey(keys[0]), to = P ? (dkey(P.e) < tk ? P.e : today) : today;
+  const first = monday(from), weeks = Math.max(1, Math.round((monday(to) - first)/(7*864e5)) + 1);
+  const W = cv.clientWidth, cw = W/7, rr = cw*.6, Hh = Math.round(weeks*cw + cw*.3), lo = dkey(from), hi = dkey(to);
   fit(cv, W, Hh);
   const rings = [];
   for (let w = 0; w < weeks; w++) for (let d = 0; d < 7; d++){
-    const k = dkey(addDays(first, w*7 + d)); if (k > dkey(today)) continue;
+    const dt = addDays(first, w*7 + d), k = dkey(dt); if (k < lo || k > hi) continue;
     const notes = []; S.P(k).forEach(c => notes.push(c.comfort)); S.notes(k).slice(0, 6).forEach(n => notes.push(n.midi));
     const pcs = []; notes.forEach(m => { const p = pcOf(m); if (!pcs.includes(p)) pcs.push(p); });
     const has = S.voiced(k) || pcs.length > 0, r = FL.rng(parseInt(k.replace(/-/g, ''), 10) % 2147483647), G = [];
     for (let i = 0, n = has ? 120 : 50; i < n; i++) G.push({ s:r(), sp:.6 + r()*.8, o:FL.gs(r), z:.8 + r()*1.2, a:.45 + r()*.55 });
-    rings.push({ k, x:d*cw + cw/2, y:w*cw + cw/2 + cw*.15, has, cols: pcs.length ? pcs.slice(0, 6).map(p => data.profile.rain !== false ? V3.HUE[p] : C.ink) : [C.ink], G, idx:rings.length });
+    rings.push({ k, num: P ? dt.getDate() : null, x:d*cw + cw/2, y:w*cw + cw/2 + cw*.15, has, cols: pcs.length ? pcs.slice(0, 6).map(p => data.profile.rain !== false ? V3.HUE[p] : C.ink) : [C.ink], G, idx:rings.length });
   }
-  Object.assign(map, { rings, cv, t0:performance.now(), last:performance.now(), rr, W, Hh });
-  cv.onclick = H.sample ? null : ev => { const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top; let best = null, bd = 1e9; rings.forEach(R => { const q = Math.hypot(R.x - x, R.y - y); if (q < bd){ bd = q; best = R; } }); if (best && bd < rr && best.has && typeof openDay === 'function') openDay(best.k); };
+  Object.assign(map, { rings, cv, t0:performance.now(), last:performance.now(), rr, W, Hh, hover:null, S });
+  const hit = ev => { const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top; let best = null, bd = 1e9; rings.forEach(R => { const q = Math.hypot(R.x - x, R.y - y); if (q < bd){ bd = q; best = R; } }); return best && bd < rr*.95 && best.has ? best : null; };
+  cv.onclick = ev => { const R = hit(ev); if (R) dayCard(R.k, S); };
+  cv.onpointermove = ev => { const R = hit(ev); map.hover = R ? R.k : null; cv.style.cursor = R ? 'pointer' : 'default'; };
+  cv.onpointerleave = () => { map.hover = null; };
   cancelAnimationFrame(map.raf); map.raf = requestAnimationFrame(mapFrame);
 }
 function mapFrame(now){
   const cv = map.cv; if (!cv || !cv.isConnected){ map.raf = 0; return; }
   const dt = Math.min(.05, (now - map.last)/1000); map.last = now; map.flow += reduced() ? 0 : dt*.03;
   const ctx = cv.getContext('2d'), d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, map.W, map.Hh);
-  const n = map.rings.length, el = (now - map.t0)/1000, dur = Math.min(2.4, .4 + n*.02);
+  const n = map.rings.length, el = (now - map.t0)/1000, dur = Math.min(2.4, .4 + n*.02), tk = dkey();
   for (const R of map.rings){
     const appear = reduced() ? 1 : clamp((el - dur*R.idx/n)/.5, 0, 1); if (appear <= 0) continue;
-    const nc = R.cols.length, base = R.has ? 1 : .14;
+    const nc = R.cols.length, on = map.hover === R.k, base = R.has ? (on ? 1.4 : 1) : .14, grow = on ? 1.08 : 1;
     for (const p of R.G){
-      const u = ((p.s + map.flow*p.sp) % 1 + 1) % 1, an = -Math.PI/2 + u*Math.PI*2, rad = map.rr*(1 + p.o*.035);
+      const u = ((p.s + map.flow*p.sp*(on ? 3 : 1)) % 1 + 1) % 1, an = -Math.PI/2 + u*Math.PI*2, rad = map.rr*grow*(1 + p.o*.035);
       ctx.fillStyle = R.cols[Math.min(nc - 1, Math.floor(p.s*nc))];
-      ctx.globalAlpha = p.a*base*appear; ctx.fillRect(R.x + Math.cos(an)*rad - p.z/2, R.y + Math.sin(an)*rad - p.z/2, p.z, p.z);
+      ctx.globalAlpha = Math.min(1, p.a*base)*appear; ctx.fillRect(R.x + Math.cos(an)*rad - p.z/2, R.y + Math.sin(an)*rad - p.z/2, p.z, p.z);
     }
+    if (R.num != null){ ctx.globalAlpha = appear; ctx.fillStyle = R.k === tk ? C.ink : C.muted; ctx.font = (R.k === tk ? '700 ' : '500 ') + '11px "Inter Tight",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(R.num, R.x, R.y); }
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = 1; ctx.textAlign = 'left';
   map.raf = reduced() && el > dur + .6 ? 0 : requestAnimationFrame(mapFrame);
 }
+/* the card of a day: hers opens the app's day sheet; a day of the sample opens a sheet built from the sample */
+function dayCard(k, S){
+  if (!H.sample){ if (typeof openDay === 'function') openDay(k); return; }
+  const P = S.P(k), last = P[P.length - 1]; if (!last) return;
+  const d = parseKey(k), title = WDL[d.getDay()] + ', ' + d.getDate() + ' ' + MONG[d.getMonth()];
+  openSheet(`<div class="sec-h"><h3>${escH(title)}</h3><button class="icon-btn plain" data-act="closesheet" aria-label="Закрыть">${ICO.x}</button></div>
+    <div class="pf-sday"><canvas id="pfSday" aria-label="Нота дня"></canvas></div>
+    <ul class="hist">${P.map(c => `<li><span>Отпечаток ${c.at}${c.ctx === 'after' ? ' · после практики' : ''}</span><span class="m"><span class="pt-dot" style="background:${nCol(c.comfort)}"></span>${escH(nName(c.comfort))} · ${zName(c.actual)}</span></li>`).join('')}
+      <li><span>Практика</span><span class="m num">${Math.round(S.sec(k)/60)} мин</span></li>
+      <li><span>Устойчивость «а»</span><span class="m num">${Math.round((last.stab || 0)*100)} %</span></li></ul>
+    <p class="note">Пример, не твои данные.</p>`);
+  const cv = $('pfSday'), sz = cv.clientWidth, ctx = fit(cv, sz, sz);
+  P.forEach((c, i) => V3.renderForm(ctx, sz/2, sz/2, sz*.4, Math.round(uOfM(c.comfort)), 2200, 31 + i, nCol(c.comfort), i === P.length - 1 ? 1 : .35, Math.max(.9, sz/300), 0, true));
+}
+const WDL = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MONG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 /* charts: recessive grid, one ink series, crosshair + tooltip */
 const dShort = k => { const d = parseKey(k); return d.getDate() + ' ' + MONS[d.getMonth()]; };
 function chartFrame(cv, h, l){ const w = cv.clientWidth, ctx = fit(cv, w, h); ctx.clearRect(0, 0, w, h); return { ctx, w, h, l:l || 44, r:12, t:12, b:24 }; }
