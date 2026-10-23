@@ -521,9 +521,8 @@ function viewTrack(){
   <section class="tr-week" aria-label="Неделя">${weekHTML(monday(t))}</section>
   <h1 class="big-title tr-q">${last ? 'Сегодня ты звучишь <span style="color:' + nCol(last.comfort) + '">' + zIn(last.actual) + '</span>' : 'Как ты звучишь ' + when + '?'}</h1>
   <div class="tr-ring">${last ? `<button class="tr-open" data-act="day" data-v="${k}" aria-label="Открыть сегодняшний день"></button>` : ''}<canvas id="trRing" aria-hidden="true"></canvas>
-    ${last ? `<button class="go tr-again" data-act="print" aria-label="Ещё один отпечаток">Ещё</button>` : `<button class="go big tr-go" data-act="print">Отпе&shy;чаток</button>`}</div>
-  ${P.length ? '' : `<p class="note tr-note">Полминуты: догадка, «а-а-а», сирена и выдох. Покажет, где в теле живёт голос и на какой ноте.</p>`}
-  ${!practised(k) ? `<button class="blackbtn wt-cta" data-act="topractice">К практике ${ICO.arrow}</button>` : ''}`;
+    ${last ? '' : `<button class="go big tr-go" data-act="print">Отпе&shy;чаток</button>`}</div>
+  ${P.length ? `<button class="tr-more" data-act="print">Ещё один отпечаток</button>` : `<p class="note tr-note">Полминуты: догадка, «а-а-а», сирена и выдох. Покажет, где в теле живёт голос и на какой ноте.</p>`}`;
 }
 /* the ring is the flowing dust of the current exercise's outline; the part of the week with voice is bright */
 const ring = { P:null, flow:0, t:0, raf:0, last:0, solo:null, cache:null, key:'' };
